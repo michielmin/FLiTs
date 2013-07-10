@@ -45,6 +45,7 @@ endif
 # files to make
 OBJS	      = Modules.o \
 				Main.o \
+				InputOutput.o \
 				Init.o \
 				SetupPaths.o \
 				RaytraceContinuum.o \
@@ -52,7 +53,7 @@ OBJS	      = Modules.o \
 		
 
 # program name and install location
-PROGRAM       = IRlines$(SUFFIX)-$(shell date +%d-%m-%Y)
+PROGRAM       = FLiTs$(SUFFIX)-$(shell date +%d-%m-%Y)
 DEST	      = ${HOME}/bin
 
 # make actions 
