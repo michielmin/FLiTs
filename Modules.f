@@ -4,8 +4,14 @@ c===============================================================================
 	module Constants
 	IMPLICIT NONE
 	real*8 pi,G,Msun,AU,clight
-	parameter(pi=3.1415926536)
+	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
+	parameter(AU=1.49598e13)
+c	parameter(parsec=3.08568025e18)
+c	parameter(Rsun=6.955e10,
+	parameter(Msun=1.98892e33)
+c	parameter(Lsun=3.827e33)
+c	parameter(kb=1.3806503d-16,sigma=5.6704d-5)
 	
 	end module Constants
 
@@ -36,6 +42,11 @@ c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 c molecule names
 	character*10 mol_name(MAXSPECIES)
 
+c the grid setup
+	real*8,allocatable :: R(:),theta(:)
+	integer nR,nTheta
+	real*8 Rin,Rout
+
 
 	type Line
 		integer jup,jlow
@@ -65,6 +76,8 @@ c	Temperature and total gas density
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),ksca(:),kext(:),LRF(:) ! dimension is wavelength
 	end type Cell
+
+	type(Cell),allocatable :: C(:,:)	! dimension nR,nTheta
 	
 	type PathElement
 		real*8 v,d

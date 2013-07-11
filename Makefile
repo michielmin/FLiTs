@@ -46,7 +46,9 @@ endif
 OBJS	      = Modules.o \
 				Main.o \
 				InputOutput.o \
+				Subroutines.o \
 				Init.o \
+				ReadStructure.o \
 				SetupPaths.o \
 				RaytraceContinuum.o \
 				RaytraceLines.o
@@ -60,7 +62,7 @@ DEST	      = ${HOME}/bin
 all:		version $(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git rev-parse HEAD)\"" > gitversion.h
 clean:;		rm -f $(OBJS) $(PROGRAM)
-install:	$(PROGRAM)
+install:	version $(PROGRAM)
 		mv $(PROGRAM) $(DEST)
 echo:;		@echo $(SUFFIX)
 

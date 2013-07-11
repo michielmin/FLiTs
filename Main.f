@@ -22,7 +22,7 @@ c===============================================================================
 c initialization
 	call Initialize()
 c read in density, temperature, opacity, and local radiation field
-c	call ReadStructure()
+	call ReadStructure()
 c read in line data: which lines, Einstein coefficients of all lines
 c	call ReadLineData()
 c setup/readin level populations
