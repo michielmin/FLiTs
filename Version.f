@@ -8,11 +8,10 @@
 	end
 	
 	
-	subroutine VersionGIT(string)
-	character*500 string
+	character*500 function VersionGIT()
 #include "gitversion.h"
 
-	string=gitversion
+	VersionGIT=gitversion
 	
 	return
 	end

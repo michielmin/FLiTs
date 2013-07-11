@@ -3,8 +3,9 @@ c module containing the physical constants in cgs
 c=========================================================================================
 	module Constants
 	IMPLICIT NONE
-	real*8 pi,G,Msun,AU
+	real*8 pi,G,Msun,AU,clight
 	parameter(pi=3.1415926536)
+	parameter(clight=2.9979245800d10) !cm/s
 	
 	end module Constants
 
@@ -13,10 +14,28 @@ c global setup for the FLiTs
 c=========================================================================================
 	module GlobalSetup
 	IMPLICIT NONE
+c number of species
+	integer MAXSPECIES,nspecies
+	parameter(MAXSPECIES=20)
 c stellar parameters
 	real*8 Mstar
 c wavelength grid and resolution
 	real*8 lmin,lmax,rcont,rlines
+	
+c string converting functions
+	character*20 int2string,dbl2string
+	external int2string,dbl2string
+	
+c input files
+	character*500 linefile(MAXSPECIES)
+	character*500 structfile
+c homogenous abundance
+	real*8 abun_hom(MAXSPECIES)
+c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
+	integer structtype
+c molecule names
+	character*10 mol_name(MAXSPECIES)
+
 
 	type Line
 		integer jup,jlow
@@ -60,6 +79,11 @@ c number of elements
 		integer n
 		type(PathElement),pointer :: start
 	end type Path
+	
+	
+c==============================
+	type(Molecule),allocatable :: Mol(:)
+	
 	
 	end module GlobalSetup
 

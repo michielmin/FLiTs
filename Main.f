@@ -12,35 +12,37 @@ c That's it, have fun!
 c=========================================================================================
 	program FLiTs
 	IMPLICIT NONE
+	character*500 VersionGIT
 
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
+	call output("Git submit: "//trim(VersionGIT()))
 	call output("==================================================================")
 
 c initialization
 	call Initialize()
 c read in density, temperature, opacity, and local radiation field
-	call ReadStructure()
+c	call ReadStructure()
 c read in line data: which lines, Einstein coefficients of all lines
-	call ReadLineData()
+c	call ReadLineData()
 c setup/readin level populations
-	call SetupLevels()
+c	call SetupLevels()
 c prepare the remaining things in the structure for the raytracing
-	call PrepareStructure()
+c	call PrepareStructure()
 	
 c the action starts!!
 c first setup the paths
-	call SetupPaths()
+c	call SetupPaths()
 c now do the continuum raytracing at the reduced spectral resolution
-	call RaytraceContinuum()
+c	call RaytraceContinuum()
 
 
 c and now the real interesting part!!
 c do the line raytracing
-	call RaytraceLines()
+c	call RaytraceLines()
 
 c finally write all the output files
-	call OutputFiles()
+c	call OutputFiles()
 	
 c well that's it. we seem to be done!
 c have a good day

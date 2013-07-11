@@ -53,7 +53,7 @@ OBJS	      = Modules.o \
 		
 
 # program name and install location
-PROGRAM       = FLiTs$(SUFFIX)-$(shell date +%d-%m-%Y)
+PROGRAM       = FLiTs		#$(SUFFIX)-$(shell date +%d-%m-%Y)
 DEST	      = ${HOME}/bin
 
 # make actions 

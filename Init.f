@@ -4,35 +4,41 @@ c specified.
 c=========================================================================================
 	subroutine Initialize()
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	integer ncla	! number of command line arguments
-	character*1000 line,inputfile
+	character*1000 readline,inputfile
 	character*100 key,value
+	integer nabun,nnames,i
 
 	call SetDefaults()
 	
 c set the number of species to 0
 	nspecies=0
+	nabun=0
+	nnames=0
 
 	call getarg(1,inputfile)
 	open(unit=20,file=inputfile,RECL=1000)
 	
-	ncla=1
+	ncla=-1
+20	ncla=ncla+1
 10	continue
-	if(ncla.eq.1) then
+	if(ncla.eq.0) then
 		call ignorestar(20)
-		read(20,'(a1000)',end=20,err=20) line
+		read(20,'(a1000)',end=20,err=20) readline
 	else
-20		call getarg(1+ncla,line)
-		if(line(1:2).eq.'-s') then
+		call getarg(1+ncla,readline)
+		if(readline(1:2).eq.'-s') then
 			ncla=ncla+1
-			call getarg(2+ncla,line)
-			call output("Command line argument: " // trim(line))
+			call getarg(1+ncla,readline)
+			call output("Command line argument: " // trim(readline))
 			ncla=ncla+1
 		else
-			if(line.ne.' ') then
+			if(readline.ne.' ') then
 c				try to read another command line argument
-				goto 20
+				ncla=ncla+1
+				goto 10
 			else
 c				all arguments are read
 				goto 30
@@ -40,7 +46,9 @@ c				all arguments are read
 		endif
 	endif
 
-	call get_key_value(line,key,value)
+	if(readline.eq.' ') goto 10
+
+	call get_key_value(readline,key,value)
 
 	select case(key)
 		case("mstar")
@@ -51,7 +59,25 @@ c				all arguments are read
 			read(value,*) structtype
 		case("linefile")
 			nspecies=nspecies+1
+			if(nspecies.gt.MAXSPECIES) then
+				call output("Please increase the maximum number of species in Modules.f")
+				stop
+			endif
 			read(value,*) linefile(nspecies)
+		case("abun")
+			nabun=nabun+1
+			if(nabun.gt.MAXSPECIES) then
+				call output("Please increase the maximum number of species in Modules.f")
+				stop
+			endif
+			read(value,*) abun_hom(nabun)
+		case("name")
+			nnames=nnames+1
+			if(nnames.gt.MAXSPECIES) then
+				call output("Please increase the maximum number of species in Modules.f")
+				stop
+			endif
+			mol_name(nnames)=value
 		case("lmin")
 			read(value,*) lmin
 		case("lmax")
@@ -71,6 +97,25 @@ c read another command, so go back
 30	continue
 	close(unit=20)
 
+c everything is read in now
+c output the setup to the screen and the log file
+	call output("==================================================================")
+
+	rlines=1d0/(sqrt((1d0+rlines*1d5/clight)/(1d0-rlines*1d5/clight))-1d0)
+
+	call output("Mass of the star:   "//trim(dbl2string(Mstar,'(f13.4)'))//" Msun")
+	call output("Minimum wavelength: "//trim(dbl2string(lmin,'(f13.4)'))//" micron")
+	call output("Maximum wavelength: "//trim(dbl2string(lmax,'(f13.4)'))//" micron")
+	call output("Resolution cont.:   "//trim(dbl2string(rcont,'(f13.4)'))//" (dlam/lam)")
+	call output("Resolution lines:   "//trim(dbl2string(rlines,'(f13.4)'))//" (dlam/lam)")
+
+	call output("==================================================================")
+	do i=1,nspecies
+		call output("Species "//trim(mol_name(i)))
+		call output("Line file: "//trim(linefile(i)))
+		if(structtype.eq.1) call output("Homogeneous abundance: "//trim(dbl2string(abun_hom(i),'(e13.2)')))
+	enddo				
+
 	
 	return
 	end
@@ -81,8 +126,9 @@ c key=value syntax. Key is transformed to lowercase.
 c=========================================================================================
 	subroutine get_key_value(line,key,value)
 	IMPLICIT NONE
-	character line*(*)
+	character*1000 line
 	character*100 key,value
+	integer i
 	
 	key=line(1:index(line,'=')-1)
 	value=line(index(line,'=')+1:len_trim(line))
@@ -95,3 +141,28 @@ c===============================================================================
 		endif
 	enddo
 
+	return
+	end
+	
+c=========================================================================================
+c This subroutine sets the default values for the global variables
+c=========================================================================================
+	subroutine SetDefaults()
+	use GlobalSetup
+	IMPLICIT NONE
+	
+	Mstar=1d0
+	structfile='denstemp.fits.gz'
+	structtype=1
+	lmin=5
+	lmax=50
+	rcont=100		! given as lam/dlam
+	rlines=1d0		! given in km/s
+	
+	abun_hom=1d-4	! with respect to the total gass mass
+	
+	mol_name(1:MAXSPECIES)='UNKNOWN'
+	
+	return
+	end
+	
