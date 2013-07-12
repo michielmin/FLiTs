@@ -81,12 +81,12 @@ c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),ksca(:),kext(:),LRF(:) ! dimension is wavelength
 	end type Cell
 
-	type(Cell),allocatable :: C(:,:)	! dimension nR,nTheta
+	type(Cell),allocatable,target :: C(:,:)	! dimension nR,nTheta
 	
 	type PathElement
 		real*8 v,d
 		type(Cell),pointer :: C
-		type(Path),pointer :: next
+		type(PathElement),pointer :: next
 	end type PathElement
 
 	type Path
@@ -98,8 +98,15 @@ c starting element
 		type(PathElement),pointer :: start
 c surface area of this path in the image and its coordinates
 		real*8 A,R1,R2,phi1,phi2,R,phi
+		real*8 vx,vy,vz,x,y,z
 	end type Path
 	
+	type Tracer
+		real*8 x,y,z,vx,vy,vz
+		integer edgeNr,i,j
+		logical onEdge
+	end type Tracer
+
 	
 c==============================
 	type(Molecule),allocatable :: Mol(:)
