@@ -3,15 +3,16 @@ c module containing the physical constants in cgs
 c=========================================================================================
 	module Constants
 	IMPLICIT NONE
-	real*8 pi,G,Msun,AU,clight
+	real*8 pi,G,Msun,AU,clight,Rsun
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
 	parameter(AU=1.49598e13)
 c	parameter(parsec=3.08568025e18)
-c	parameter(Rsun=6.955e10,
+	parameter(Rsun=6.955e10)
 	parameter(Msun=1.98892e33)
 c	parameter(Lsun=3.827e33)
 c	parameter(kb=1.3806503d-16,sigma=5.6704d-5)
+	parameter(G=6.67300d-8) ! in cm^3/g/s^2
 	
 	end module Constants
 
@@ -24,9 +25,9 @@ c number of species
 	integer MAXSPECIES,nspecies
 	parameter(MAXSPECIES=20)
 c stellar parameters
-	real*8 Mstar
+	real*8 Mstar,Rstar
 c wavelength grid and resolution
-	real*8 lmin,lmax,rcont,rlines
+	real*8 lmin,lmax,rlines,vresolution
 	
 c string converting functions
 	character*20 int2string,dbl2string
@@ -42,11 +43,15 @@ c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 c molecule names
 	character*10 mol_name(MAXSPECIES)
 
-c the grid setup
-	real*8,allocatable :: R(:),theta(:)
-	integer nR,nTheta
-	real*8 Rin,Rout
-
+c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
+	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
+	integer nR,nTheta,nlam
+	real*8 Rin,Rout,inc
+	real*8,allocatable :: lam_cont(:)
+	
+c the image grid
+	integer nImR,nImPhi
+	real*8,allocatable :: ImR(:),imPhi(:)
 
 	type Line
 		integer jup,jlow
@@ -72,7 +77,7 @@ c cell structure
 	type Cell
 		type(MoleculeT),allocatable :: Mol(:) ! dimension is number of species
 c	Temperature and total gas density
-		real*8 T,dens
+		real*8 T,dens,v
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),ksca(:),kext(:),LRF(:) ! dimension is wavelength
 	end type Cell
@@ -90,13 +95,17 @@ c minimum and maximum velocity encountered in this path
 		real*8 vmin,vmax
 c number of elements
 		integer n
+c starting element
 		type(PathElement),pointer :: start
+c surface area of this path in the image and its coordinates
+		real*8 A,R1,R2,phi1,phi2
 	end type Path
 	
 	
 c==============================
 	type(Molecule),allocatable :: Mol(:)
 	
+	type(Path),allocatable :: P(:,:)
 	
 	end module GlobalSetup
 

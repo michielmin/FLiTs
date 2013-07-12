@@ -52,7 +52,9 @@ c				all arguments are read
 
 	select case(key)
 		case("mstar")
-			read(value,*) mstar
+			read(value,*) Mstar
+		case("rstar")
+			read(value,*) Rstar
 		case("structfile")
 			structfile=value
 		case("structtype")
@@ -82,10 +84,10 @@ c				all arguments are read
 			read(value,*) lmin
 		case("lmax")
 			read(value,*) lmax
-		case("rcont")
-			read(value,*) rcont
-		case("rlines")
+		case("rlines")	! given in cm/s
 			read(value,*) rlines
+		case("inc")	! with respect to pole on
+			read(value,*) inc
 		case default
 			call output("Unknown keyword: " // trim(key))
 			stop
@@ -101,12 +103,12 @@ c everything is read in now
 c output the setup to the screen and the log file
 	call output("==================================================================")
 
-	rlines=1d0/(sqrt((1d0+rlines*1d5/clight)/(1d0-rlines*1d5/clight))-1d0)
+	vresolution=rlines
+	rlines=1d0/(sqrt((1d0+rlines/clight)/(1d0-rlines/clight))-1d0)
 
 	call output("Mass of the star:   "//trim(dbl2string(Mstar,'(f13.4)'))//" Msun")
 	call output("Minimum wavelength: "//trim(dbl2string(lmin,'(f13.4)'))//" micron")
 	call output("Maximum wavelength: "//trim(dbl2string(lmax,'(f13.4)'))//" micron")
-	call output("Resolution cont.:   "//trim(dbl2string(rcont,'(f13.4)'))//" (dlam/lam)")
 	call output("Resolution lines:   "//trim(dbl2string(rlines,'(f13.4)'))//" (dlam/lam)")
 
 	call output("==================================================================")
@@ -152,12 +154,13 @@ c===============================================================================
 	IMPLICIT NONE
 	
 	Mstar=1d0
-	structfile='denstemp.fits.gz'
+	Rstar=1d0
+	structfile='forFLiTs.fits.gz'
 	structtype=1
 	lmin=5
 	lmax=50
-	rcont=100		! given as lam/dlam
-	rlines=1d0		! given in km/s
+	rlines=1d5		! given in cm/s
+	inc=35d0
 	
 	abun_hom=1d-4	! with respect to the total gass mass
 	

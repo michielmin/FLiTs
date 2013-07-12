@@ -32,7 +32,7 @@ c	call PrepareStructure()
 	
 c the action starts!!
 c first setup the paths
-c	call SetupPaths()
+	call SetupPaths()
 c now do the continuum raytracing at the reduced spectral resolution
 c	call RaytraceContinuum()
 
