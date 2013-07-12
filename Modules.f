@@ -98,7 +98,7 @@ c number of elements
 c starting element
 		type(PathElement),pointer :: start
 c surface area of this path in the image and its coordinates
-		real*8 A,R1,R2,phi1,phi2
+		real*8 A,R1,R2,phi1,phi2,R,phi
 	end type Path
 	
 	

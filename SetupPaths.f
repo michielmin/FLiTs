@@ -54,7 +54,9 @@
 	
 	call sort(imR,nImR)
 	
-	
+	do i=1,nImPhi
+		ImPhi(i)=pi*(real(i)-0.5)/real(nImPhi)
+	enddo
 
 	return
 	end
