@@ -51,7 +51,6 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	
 c the image grid
 	integer nImR,nImPhi
-	real*8,allocatable :: ImR(:),imPhi(:)
 
 	type Line
 		integer jup,jlow

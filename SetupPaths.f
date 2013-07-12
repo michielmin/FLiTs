@@ -4,6 +4,7 @@
 	IMPLICIT NONE
 	integer ip,jp,i,j,ir
 	real*8 inc_min
+	real*8,allocatable :: imR(:),imPhi(:)
 	
 	inc_min=5d0
 	
@@ -56,6 +57,26 @@
 	
 	do i=1,nImPhi
 		ImPhi(i)=pi*(real(i)-0.5)/real(nImPhi)
+	enddo
+
+	allocate(P(nImR,nImPhi))
+	do i=1,nImR
+		if(i.ne.1) P(i,1)%R1=sqrt(ImR(i-1)*ImR(i))
+		if(i.ne.nImR) P(i,1)%R2=sqrt(ImR(i)*ImR(i+1))
+	enddo
+	P(1,1)%R1=ImR(1)**2/P(1,1)%R2
+	P(nImR,1)%R2=ImR(nImR)**2/P(nImR,1)%R1
+
+	do i=1,nImR
+		do j=1,nImPhi
+			P(i,j)%R=ImR(i)
+			P(i,j)%Phi=ImPhi(j)
+			P(i,j)%phi1=pi*real(j-1)/real(nImPhi)
+			P(i,j)%phi2=pi*real(j)/real(nImPhi)
+			P(i,j)%R1=P(i,1)%R1
+			P(i,j)%R2=P(i,1)%R2
+			P(i,j)%A=pi*(P(i,j)%R2**2-P(i,j)%R1**2)/real(2*nImPhi)
+		enddo
 	enddo
 
 	return
