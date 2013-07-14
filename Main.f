@@ -34,7 +34,7 @@ c the action starts!!
 c first setup the paths
 	call SetupPaths()
 c now do the continuum raytracing at the reduced spectral resolution
-c	call RaytraceContinuum()
+	call RaytraceContinuum()
 
 
 c and now the real interesting part!!

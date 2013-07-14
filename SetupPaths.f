@@ -3,16 +3,19 @@
 	use Constants
 	IMPLICIT NONE
 	integer ip,jp,i,j,k,ir
-	real*8 inc_min,ct
+	real*8 inc_min,ct,res_inc
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
 	
+c for inclinations smaller don't use the additional radial points
 	inc_min=5d0
+c increase the resolution in velocity by this factor
+	res_inc=2d0
 	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
 	
-	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)
+	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
 	if(nImPhi.lt.10) nImPhi=10
 	if(nImPhi.gt.180) nImPhi=180
 	
@@ -22,7 +25,7 @@
 		nImR=nR
 	endif
 
-	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)
+	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
 
 	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
 	call output("Number of phi image points:    "//trim(int2string(nImPhi,'(i5)')))
