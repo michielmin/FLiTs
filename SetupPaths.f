@@ -121,9 +121,8 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	type(Tracer) trac
 	real*8 x,y,z,phi,d
-	integer inext,jnext,ntrace,i,j
+	integer inext,jnext,ntrace,i,j,k
 	logical hitstar
-	type(PathElement),pointer :: current
 
 	P(i,j)%n=0
 	P(i,j)%x=trac%x
@@ -133,27 +132,30 @@ c-----------------------------------------------------------------------
 	P(i,j)%vy=trac%vy
 	P(i,j)%vz=trac%vz
 
-	allocate(P(i,j)%start)
-	current => P(i,j)%start
+	allocate(P(i,j)%v(1000))
+	allocate(P(i,j)%v1(1000))
+	allocate(P(i,j)%v2(1000))
+	allocate(P(i,j)%d(1000))
+	allocate(P(i,j)%i(1000))
+	allocate(P(i,j)%j(1000))
 
 1	continue
 
 	call Trace2edge(trac,d,inext,jnext)
 
 	P(i,j)%n=P(i,j)%n+1
+	k=P(i,j)%n
 
-	current%d=d
+	P(i,j)%d(k)=d
 
-	current%C => C(trac%i,trac%j)
-	
-	current%i=trac%i
-	current%j=trac%j
+	P(i,j)%i(k)=trac%i
+	P(i,j)%j(k)=trac%j
 	
 	x=trac%x+trac%vx*d/2d0
 	y=trac%y+trac%vy*d/2d0
 	z=trac%z+trac%vz*d/2d0
 
-	current%v=current%C%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	P(i,j)%v(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d
@@ -169,9 +171,6 @@ c		p%hitstar=.true.
 
 	trac%i=inext
 	trac%j=jnext
-
-	allocate(current%next)
-	current => current%next
 
 	goto 1
 
