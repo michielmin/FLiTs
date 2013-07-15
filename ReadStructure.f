@@ -1,13 +1,21 @@
 	subroutine ReadStructure()
 	use GlobalSetup
 	IMPLICIT NONE
-	integer i
+	integer i,j
 	
 	if(structtype.eq.1) then
 		call ReadMCMaxStructure()
 	else if(structtype.eq.2) then
 c		call ReadProDiMoStructure()
 	endif
+	
+	do i=0,nR
+		do j=1,nTheta
+			C(i,j)%iT=C(i,j)%T+0.5d0
+			if(C(i,j)%iT.lt.1) C(i,j)%iT=1
+			if(C(i,j)%iT.gt.MAXT) C(i,j)%iT=MAXT
+		enddo
+	enddo
 	
 	return
 	end
@@ -28,11 +36,16 @@ c===============================================================================
 	
 	do i=1,nR
 		do j=1,nTheta
-			C(i,j)%kext(1:nlam)=C(i,j)%kext(1:nlam)*C(i,j)%dens
-			C(i,j)%kabs(1:nlam)=C(i,j)%kabs(1:nlam)*C(i,j)%dens
-			C(i,j)%ksca(1:nlam)=C(i,j)%ksca(1:nlam)*C(i,j)%dens
+			C(i,j)%kext(1:nlam)=C(i,j)%kext(1:nlam)*C(i,j)%dens/100d0
+			C(i,j)%kabs(1:nlam)=C(i,j)%kabs(1:nlam)*C(i,j)%dens/100d0
 			C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/R_av(i))
 		enddo
+	enddo
+	i=0
+	do j=1,nTheta
+		C(i,j)%kext(1:nlam)=1d-70
+		C(i,j)%kabs(1:nlam)=1d-70
+		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
 	enddo
 	
 	return
@@ -106,13 +119,13 @@ c-----------------------------------------------------------------------
 		call ftgkys(unit,hdu,vars(i),comment,status)
 	enddo
 	
-	allocate(C(nR,nTheta))
+	allocate(C(0:nR,nTheta))
 	allocate(R(nR+1))
 	allocate(Theta(nTheta+1))
-	do i=1,nR
+	do i=0,nR
 		do j=1,nTheta
 			allocate(C(i,j)%kabs(nlam))
-			allocate(C(i,j)%ksca(nlam))
+			allocate(C(i,j)%albedo(nlam))
 			allocate(C(i,j)%kext(nlam))
 		enddo
 	enddo
@@ -205,7 +218,7 @@ c in the theta grid we actually store cos(theta) for convenience
 						do l=1,nlam
 							C(i,j)%kext(l)=array(i,j,l,1)
 							C(i,j)%kabs(l)=array(i,j,l,2)
-							C(i,j)%ksca(l)=array(i,j,l,3)
+							C(i,j)%albedo(l)=array(i,j,l,3)/C(i,j)%kext(l)
 						enddo
 					enddo
 				enddo

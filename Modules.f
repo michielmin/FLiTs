@@ -51,6 +51,11 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	
 c the image grid
 	integer nImR,nImPhi
+	
+c store all the blackbodies
+	integer MAXT
+	parameter(MAXT=5000)
+	real*8,allocatable :: BB(:,:)	! dimensions nlam,MAXT
 
 	type Line
 		integer jup,jlow
@@ -77,16 +82,18 @@ c cell structure
 		type(MoleculeT),allocatable :: Mol(:) ! dimension is number of species
 c	Temperature and total gas density
 		real*8 T,dens,v
+		integer iT
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
-		real*8,allocatable :: kabs(:),ksca(:),kext(:),LRF(:) ! dimension is wavelength
+		real*8,allocatable :: kabs(:),albedo(:),kext(:),LRF(:) ! dimension is wavelength
 	end type Cell
 
 	type(Cell),allocatable,target :: C(:,:)	! dimension nR,nTheta
 	
 	type PathElement
-		real*8 v,d
+		real*8 v,d,v1,v2
 		type(Cell),pointer :: C
 		type(PathElement),pointer :: next
+		integer i,j
 	end type PathElement
 
 	type Path

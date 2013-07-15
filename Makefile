@@ -22,7 +22,7 @@ ifeq ($(debug),true)
 endif
 
 # Platform specific compilation options
-FLAG_ALL      = -O3 -extend-source -traceback -zero -prec-div $(MULTICORE) $(DEBUGGING)
+FLAG_ALL      = -O0 -extend-source -traceback -zero -prec-div $(MULTICORE) $(DEBUGGING)
 FLAG_LINUX    = -msse3 -prefetch
 FLAG_MAC      = -mssse3 -opt-prefetch -static-intel
 

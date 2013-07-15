@@ -16,7 +16,7 @@ c increase the resolution in velocity by this factor
 	call output("Setup up the paths for raytracing")
 	
 	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
-	if(nImPhi.lt.10) nImPhi=10
+	if(nImPhi.lt.30) nImPhi=30
 	if(nImPhi.gt.180) nImPhi=180
 	
 	if(inc.gt.inc_min) then
@@ -90,7 +90,7 @@ c increase the resolution in velocity by this factor
 		trac%z=sqrt(R(nR+1)**2-P(i,j)%R**2)
 		trac%edgeNr=2
 		trac%onEdge=.true.
-		call rotate(trac%x,trac%y,trac%z,0d0,1d0,0d0,inc)
+		call rotate(trac%x,trac%y,trac%z,0d0,1d0,0d0,inc*pi/180d0)
 		ct=abs(trac%z)/R(nR+1)
 		trac%i=nR
 		do k=1,nTheta
@@ -102,7 +102,7 @@ c increase the resolution in velocity by this factor
 		trac%vx=0d0
 		trac%vy=0d0
 		trac%vz=-1d0
-		call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc)
+		call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
 		call tracepath(trac,i,j)
 	enddo
@@ -146,6 +146,9 @@ c-----------------------------------------------------------------------
 
 	current%C => C(trac%i,trac%j)
 	
+	current%i=trac%i
+	current%j=trac%j
+	
 	x=trac%x+trac%vx*d/2d0
 	y=trac%y+trac%vy*d/2d0
 	z=trac%z+trac%vz*d/2d0
@@ -156,7 +159,7 @@ c-----------------------------------------------------------------------
 	trac%y=trac%y+trac%vy*d
 	trac%z=trac%z+trac%vz*d
 
-	if(inext.ge.nR) then
+	if(inext.gt.nR) then
 		return
 	endif
 	if(inext.lt.0) then
