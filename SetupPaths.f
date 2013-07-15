@@ -83,6 +83,8 @@ c increase the resolution in velocity by this factor
 		enddo
 	enddo
 
+	vmin=1d30
+	vmax=-1d30
 	do i=1,nImR
 	do j=1,nImPhi
 		trac%x=P(i,j)%R*cos(P(i,j)%Phi)
@@ -104,10 +106,15 @@ c increase the resolution in velocity by this factor
 		trac%vz=-1d0
 		call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
+		P(i,j)%vmin=1d30
+		P(i,j)%vmax=-1d30
 		call tracepath(trac,i,j)
+		if(P(i,j)%vmax.gt.vmax) vmax=P(i,j)%vmax
+		if(P(i,j)%vmin.lt.vmin) vmin=P(i,j)%vmin
 	enddo
 	enddo
-
+	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
+     &			//" km/s")
 
 	return
 	end
@@ -151,15 +158,32 @@ c-----------------------------------------------------------------------
 	P(i,j)%i(k)=trac%i
 	P(i,j)%j(k)=trac%j
 	
+	x=trac%x
+	y=trac%y
+	z=trac%z
+
+	P(i,j)%v1(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+
 	x=trac%x+trac%vx*d/2d0
 	y=trac%y+trac%vy*d/2d0
 	z=trac%z+trac%vz*d/2d0
 
-	P(i,j)%v(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	P(i,j)%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+
+c here I still have to add the turbulent velocity widening of the line
+c add this for all species to get the absolute max and min velocity contributing.
+	if(P(i,j)%v(k).gt.P(i,j)%vmax) P(i,j)%vmax=P(i,j)%v(k)
+	if(P(i,j)%v(k).lt.P(i,j)%vmin) P(i,j)%vmin=P(i,j)%v(k)
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d
 	trac%z=trac%z+trac%vz*d
+
+	x=trac%x
+	y=trac%y
+	z=trac%z
+
+	P(i,j)%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
 
 	if(inext.gt.nR) then
 		return

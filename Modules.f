@@ -51,6 +51,7 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	
 c the image grid
 	integer nImR,nImPhi
+	real*8 vmin,vmax
 	
 c store all the blackbodies
 	integer MAXT
@@ -60,6 +61,7 @@ c store all the blackbodies
 	type Line
 		integer jup,jlow
 		real*8 Aul,Blu,Bul
+		integer imol,iline
 	end type Line
 
 	type Molecule
@@ -100,6 +102,8 @@ c surface area of this path in the image and its coordinates
 
 		real*8,allocatable :: v(:),d(:),v1(:),v2(:)
 		integer,allocatable :: i(:),j(:)
+		
+		real*8,allocatable :: flux_cont(:)
 	end type Path
 	
 	type Tracer

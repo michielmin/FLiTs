@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,j,ilam,k
-	real*8 flux,lam0,T,Planck,wl1,wl2,flux0
+	real*8 flux,lam0,T,Planck,wl1,wl2
 	
 	allocate(BB(nlam,MAXT))
 	do ilam=1,nlam
@@ -24,8 +24,8 @@
 		flux=0d0
 		do i=1,nImR
 			do j=1,nImPhi
-				call TraceFlux(P(i,j),ilam,flux0)
-				flux=flux+flux0*P(i,j)%A
+				call TraceFlux(P(i,j),ilam,P(i,j)%flux_cont(ilam))
+				flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A
 			enddo
 		enddo
 		write(20,*) lam_cont(ilam),flux
