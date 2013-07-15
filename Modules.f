@@ -106,6 +106,7 @@ c starting element
 c surface area of this path in the image and its coordinates
 		real*8 A,R1,R2,phi1,phi2,R,phi
 		real*8 vx,vy,vz,x,y,z
+		real*8,allocatable :: flux_cont(:)
 	end type Path
 	
 	type Tracer
