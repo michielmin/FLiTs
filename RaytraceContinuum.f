@@ -14,23 +14,15 @@
 	enddo
 	
 	open(unit=20,file='out.dat')
-	lam0=lmin
-	ilam=1
-	do while(lam0.lt.lmax)
-		wl1=(lam_cont(ilam+1)-lam0)/(lam_cont(ilam+1)-lam_cont(ilam))
-		wl2=1d0-wl1
+	do ilam=1,nlam
 		flux=0d0
 		do i=1,nImR
 			do j=1,nImPhi
-				call TraceFlux(P(i,j),lam0,ilam,wl1,wl2,flux0)
+				call TraceFlux(P(i,j),ilam,flux0)
 				flux=flux+flux0*P(i,j)%A
 			enddo
 		enddo
-		write(20,*) lam0,flux
-		lam0=lam0+lam0/rlines
-		do while(lam0.gt.lam_cont(ilam+1))
-			ilam=ilam+1
-		enddo
+		write(20,*) lam_cont(ilam),flux
 	enddo
 	close(unit=20)
 	
@@ -38,11 +30,11 @@
 	end
 	
 	
-	subroutine TraceFlux(p0,lam0,ilam,wl1,wl2,flux)
+	subroutine TraceFlux(p0,ilam,flux)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,ilam
-	real*8 lam0,tau,exptau,flux,wl1,wl2,fact
+	real*8 tau,exptau,flux,fact
 	type(Path) p0
 
 	fact=1d0
@@ -50,14 +42,13 @@
 	do k=1,p0%n
 		i=p0%i(k)
 		j=p0%j(k)
-		tau=(wl1*C(i,j)%kext(ilam)+wl2*C(i,j)%kext(ilam+1))*p0%d(k)
+		tau=C(i,j)%kext(ilam)*p0%d(k)
 		if(tau.gt.1d-6) then
 			exptau=exp(-tau)
 		else
 			exptau=1d0-tau
 		endif
-		flux=flux+(wl1*BB(ilam,C(i,j)%iT)*(1d0-C(i,j)%albedo(ilam))+
-     &		wl2*BB(ilam+1,C(i,j)%iT)*(1d0-C(i,j)%albedo(ilam+1)))*(1d0-exptau)*fact
+		flux=flux+BB(ilam,C(i,j)%iT)*(1d0-C(i,j)%albedo(ilam))*(1d0-exptau)*fact
 		fact=fact*exptau
 		if(fact.lt.1d-6) exit
 	enddo
