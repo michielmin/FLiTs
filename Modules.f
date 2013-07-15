@@ -89,24 +89,17 @@ c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 
 	type(Cell),allocatable,target :: C(:,:)	! dimension nR,nTheta
 	
-	type PathElement
-		real*8 v,d,v1,v2
-		type(Cell),pointer :: C
-		type(PathElement),pointer :: next
-		integer i,j
-	end type PathElement
-
 	type Path
 c minimum and maximum velocity encountered in this path
 		real*8 vmin,vmax
 c number of elements
 		integer n
-c starting element
-		type(PathElement),pointer :: start
 c surface area of this path in the image and its coordinates
 		real*8 A,R1,R2,phi1,phi2,R,phi
 		real*8 vx,vy,vz,x,y,z
-		real*8,allocatable :: flux_cont(:)
+
+		real*8,allocatable :: v(:),d(:),v1(:),v2(:)
+		integer,allocatable :: i(:),j(:)
 	end type Path
 	
 	type Tracer

@@ -2,8 +2,8 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,ilam
-	real*8 flux,T,Planck
+	integer i,j,ilam,k
+	real*8 flux,lam0,T,Planck,wl1,wl2,flux0
 	
 	allocate(BB(nlam,MAXT))
 	do ilam=1,nlam
@@ -24,8 +24,8 @@
 		flux=0d0
 		do i=1,nImR
 			do j=1,nImPhi
-				call TraceFluxCont(i,j,ilam,P(i,j)%flux_cont(ilam))
-				flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A
+				call TraceFlux(P(i,j),ilam,flux0)
+				flux=flux+flux0*P(i,j)%A
 			enddo
 		enddo
 		write(20,*) lam_cont(ilam),flux
@@ -36,27 +36,27 @@
 	end
 	
 	
-	subroutine TraceFluxCont(i,j,ilam,flux)
+	subroutine TraceFlux(p0,ilam,flux)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,ilam
-	real*8 lam0,tau,exptau,flux,wl1,wl2,fact
-	type(PathElement),pointer :: current
+	real*8 tau,exptau,flux,fact
+	type(Path) p0
 
-	current => P(i,j)%start
 	fact=1d0
 	flux=0d0
-	do k=1,P(i,j)%n-1
-		tau=current%C%kext(ilam)*current%d
+	do k=1,p0%n
+		i=p0%i(k)
+		j=p0%j(k)
+		tau=C(i,j)%kext(ilam)*p0%d(k)
 		if(tau.gt.1d-6) then
 			exptau=exp(-tau)
 		else
 			exptau=1d0-tau
 		endif
-		flux=flux+BB(ilam,current%C%iT)*(1d0-current%C%albedo(ilam))*(1d0-exptau)*fact
+		flux=flux+BB(ilam,C(i,j)%iT)*(1d0-C(i,j)%albedo(ilam))*(1d0-exptau)*fact
 		fact=fact*exptau
 		if(fact.lt.1d-6) exit
-		current => current%next
 	enddo
 	
 	return
