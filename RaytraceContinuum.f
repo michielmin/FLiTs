@@ -21,14 +21,23 @@
 	
 	open(unit=20,file='out.dat')
 	do ilam=2,nlam-1
+		call tellertje(ilam-1,nlam-2)
 		if(lam_cont(ilam-1).lt.lmax.and.lam_cont(ilam+1).gt.lmin) then
 		flux=0d0
+!$OMP PARALLEL
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,j)
+!$OMP& SHARED(ilam,P,flux,nImR,nImPhi)
+!$OMP DO
 		do i=1,nImR
 			do j=1,nImPhi
 				call TraceFluxCont(P(i,j),ilam,P(i,j)%flux_cont(ilam))
 				flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A
 			enddo
 		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 		write(20,*) lam_cont(ilam),flux
 		endif
 	enddo

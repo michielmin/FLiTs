@@ -1,7 +1,25 @@
+	subroutine outputform(string,form)
+	IMPLICIT NONE
+	character string*(*)
+	character,intent(in),optional :: form*(*)
+
+	if(form.ne.' ') then
+		write(*,form) trim(string)
+	else
+		write(*,'(a)') trim(string)
+	endif
+	
+	return
+	end
+
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
 	subroutine output(string)
 	IMPLICIT NONE
 	character string*(*)
-	
+
 	write(*,'(a)') trim(string)
 	
 	return

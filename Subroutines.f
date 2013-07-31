@@ -69,3 +69,25 @@ c-----------------------------------------------------------------------
 	return
 	end
 
+
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+
+	subroutine tellertje(i,n)
+	IMPLICIT NONE
+	integer i,n,f
+	
+	if(i.eq.1) call output("....................")
+	f=int(20d0*dble(i)/dble(n))
+	
+	if(20d0*real(i-1)/real(n).lt.real(f)
+     &   .and.20d0*real(i+1)/real(n).gt.real(f)) then
+		call outputform(".",'(a1,$)')
+	endif
+	
+	if(i.eq.n) call output("")
+
+	return
+	end
+

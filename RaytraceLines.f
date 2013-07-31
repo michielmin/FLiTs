@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,ilam,k,n1,n2
+	integer i,j,ilam,k,n1,n2,nl
 	real*8 flux,lam,T,Planck,wl1,wl2,v,flux0
 	
 	open(unit=20,file='out.dat')
@@ -13,10 +13,16 @@
 		ilam=ilam+1
 	enddo
 	v=-70d5
+	nl=0
 	do while(lam.lt.lmax)
 		flux=0d0
 		n1=0
 		n2=0
+!$OMP PARALLEL IF(.true.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,j,flux0)
+!$OMP& SHARED(ilam,P,flux,nImR,nImPhi,n1,n2,v)
+!$OMP DO
 		do i=1,nImR
 			do j=1,nImPhi
 				if(v.gt.P(i,j)%vmin.and.v.lt.P(i,j)%vmax) then
@@ -29,19 +35,28 @@
 				flux=flux+flux0*P(i,j)%A/2d0
 				if(v.lt.-P(i,j)%vmin.and.v.gt.-P(i,j)%vmax) then
 					call TraceFluxLines(P(i,j),ilam,flux0,-1d0)
+					n1=n1+1
 				else
 					flux0=P(i,j)%flux_cont(ilam)
+					n2=n2+1
 				endif
 				flux=flux+flux0*P(i,j)%A/2d0
 			enddo
 		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 		write(20,*) lam,flux,real(n1)/real(n1+n2)
 		lam=lam*(1d0+1d0/rlines)
 		do while(lam.gt.lam_cont(ilam+1))
 			ilam=ilam+1
 		enddo
 		v=v+vresolution
-		if(v.gt.70d5) v=-70d5
+		if(v.gt.70d5) then
+			v=-70d5
+			call output("another line" // int2string(nl,'(i4)'))
+			nl=nl+1
+		endif
 	enddo
 	close(unit=20)
 	

@@ -159,8 +159,8 @@ c===============================================================================
 	structtype=1
 	lmin=5
 	lmax=50
-	rlines=1d5		! given in cm/s
 	inc=35d0
+	vresolution=1d5	! given in cm/s
 	
 	abun_hom=1d-4	! with respect to the total gass mass
 	
