@@ -20,15 +20,17 @@
 	enddo
 	
 	open(unit=20,file='out.dat')
-	do ilam=1,nlam
+	do ilam=2,nlam-1
+		if(lam_cont(ilam-1).lt.lmax.and.lam_cont(ilam+1).gt.lmin) then
 		flux=0d0
 		do i=1,nImR
 			do j=1,nImPhi
-				call TraceFlux(P(i,j),ilam,P(i,j)%flux_cont(ilam))
+				call TraceFluxCont(P(i,j),ilam,P(i,j)%flux_cont(ilam))
 				flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A
 			enddo
 		enddo
 		write(20,*) lam_cont(ilam),flux
+		endif
 	enddo
 	close(unit=20)
 	
@@ -36,7 +38,7 @@
 	end
 	
 	
-	subroutine TraceFlux(p0,ilam,flux)
+	subroutine TraceFluxCont(p0,ilam,flux)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,ilam

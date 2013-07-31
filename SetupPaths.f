@@ -10,7 +10,7 @@
 c for inclinations smaller don't use the additional radial points
 	inc_min=5d0
 c increase the resolution in velocity by this factor
-	res_inc=2d0
+	res_inc=1d0
 	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
@@ -20,7 +20,7 @@ c increase the resolution in velocity by this factor
 	if(nImPhi.gt.180) nImPhi=180
 	
 	if(inc.gt.inc_min) then
-		nImR=nR*2+nTheta*2
+		nImR=nR*2+nTheta*2/5
 	else
 		nImR=nR
 	endif
@@ -43,7 +43,7 @@ c increase the resolution in velocity by this factor
 			ir=ir+1
 			imR(ir)=abs(R_av(i)*sin(inc*pi/180d0))
 		enddo
-		do i=1,nTheta
+		do i=1,nTheta,5
 			ir=ir+1
 			imR(ir)=abs(R(1)*sin(theta_av(i)-inc))
 			ir=ir+1
@@ -83,7 +83,6 @@ c increase the resolution in velocity by this factor
 		enddo
 	enddo
 
-	vmin=1d30
 	vmax=-1d30
 	do i=1,nImR
 	do j=1,nImPhi
@@ -109,8 +108,8 @@ c increase the resolution in velocity by this factor
 		P(i,j)%vmin=1d30
 		P(i,j)%vmax=-1d30
 		call tracepath(trac,i,j)
-		if(P(i,j)%vmax.gt.vmax) vmax=P(i,j)%vmax
-		if(P(i,j)%vmin.lt.vmin) vmin=P(i,j)%vmin
+		if(abs(P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
+		if(abs(P(i,j)%vmin).gt.vmax) vmax=abs(P(i,j)%vmin)
 	enddo
 	enddo
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))

@@ -51,7 +51,7 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	
 c the image grid
 	integer nImR,nImPhi
-	real*8 vmin,vmax
+	real*8 vmax
 	
 c store all the blackbodies
 	integer MAXT

@@ -84,8 +84,8 @@ c				all arguments are read
 			read(value,*) lmin
 		case("lmax")
 			read(value,*) lmax
-		case("rlines")	! given in cm/s
-			read(value,*) rlines
+		case("vres")	! given in cm/s
+			read(value,*) vresolution
 		case("inc")	! with respect to pole on
 			read(value,*) inc
 		case default
@@ -103,13 +103,13 @@ c everything is read in now
 c output the setup to the screen and the log file
 	call output("==================================================================")
 
-	vresolution=rlines
-	rlines=1d0/(sqrt((1d0+rlines/clight)/(1d0-rlines/clight))-1d0)
+	rlines=1d0/(sqrt((1d0+vresolution/clight)/(1d0-vresolution/clight))-1d0)
 
 	call output("Mass of the star:   "//trim(dbl2string(Mstar,'(f13.4)'))//" Msun")
 	call output("Minimum wavelength: "//trim(dbl2string(lmin,'(f13.4)'))//" micron")
 	call output("Maximum wavelength: "//trim(dbl2string(lmax,'(f13.4)'))//" micron")
 	call output("Resolution lines:   "//trim(dbl2string(rlines,'(f13.4)'))//" (dlam/lam)")
+	call output("Velocity resolution:"//trim(dbl2string(vresolution,'(f13.4)'))//" cm/s")
 
 	call output("==================================================================")
 	do i=1,nspecies

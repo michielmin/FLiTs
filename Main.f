@@ -39,7 +39,7 @@ c now do the continuum raytracing at the reduced spectral resolution
 
 c and now the real interesting part!!
 c do the line raytracing
-c	call RaytraceLines()
+	call RaytraceLines()
 
 c finally write all the output files
 c	call OutputFiles()
