@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir
+	integer ip,jp,i,j,k,ir,nRreduce
 	real*8 inc_min,ct,res_inc
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
@@ -12,6 +12,8 @@ c for inclinations smaller don't use the additional radial points
 c increase the resolution in velocity by this factor
 	res_inc=1d0
 	
+	nrReduce=2
+	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
 	
@@ -20,12 +22,12 @@ c increase the resolution in velocity by this factor
 	if(nImPhi.gt.180) nImPhi=180
 	
 	if(inc.gt.inc_min) then
-		nImR=nR*2+nTheta*2/5
+		nImR=nR*2/nRreduce+nTheta*2/10
 	else
-		nImR=nR
+		nImR=nR/nRreduce
 	endif
 
-	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
+	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/nImPhi
 
 	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
 	call output("Number of phi image points:    "//trim(int2string(nImPhi,'(i5)')))
@@ -34,16 +36,16 @@ c increase the resolution in velocity by this factor
 	allocate(imPhi(nImPhi))
 	
 	ir=0
-	do i=1,nR
+	do i=1,nR,nRreduce
 		ir=ir+1
 		imR(ir)=R_av(i)
 	enddo
 	if(inc.gt.inc_min) then
-		do i=1,nR
+		do i=1,nR,nRreduce
 			ir=ir+1
 			imR(ir)=abs(R_av(i)*sin(inc*pi/180d0))
 		enddo
-		do i=1,nTheta,5
+		do i=1,nTheta,10
 			ir=ir+1
 			imR(ir)=abs(R(1)*sin(theta_av(i)-inc))
 			ir=ir+1
@@ -171,8 +173,8 @@ c-----------------------------------------------------------------------
 
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
-	if(P(i,j)%v(k).gt.P(i,j)%vmax) P(i,j)%vmax=P(i,j)%v(k)
-	if(P(i,j)%v(k).lt.P(i,j)%vmin) P(i,j)%vmin=P(i,j)%v(k)
+	if(P(i,j)%v(k).gt.P(i,j)%vmax.and.trac%i.gt.0) P(i,j)%vmax=P(i,j)%v(k)
+	if(P(i,j)%v(k).lt.P(i,j)%vmin.and.trac%i.gt.0) P(i,j)%vmin=P(i,j)%v(k)
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d

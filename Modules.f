@@ -84,6 +84,8 @@ c cell structure
 		type(MoleculeT),allocatable :: Mol(:) ! dimension is number of species
 c	Temperature and total gas density
 		real*8 T,dens,v
+		real*8,allocatable :: profile(:)
+		real*8 kext_l,albedo_l,BB_l
 		integer iT
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),albedo(:),kext(:),LRF(:) ! dimension is wavelength
@@ -116,7 +118,7 @@ c surface area of this path in the image and its coordinates
 c==============================
 	type(Molecule),allocatable :: Mol(:)
 	
-	type(Path),allocatable :: P(:,:)
+	type(Path),allocatable,target :: P(:,:)
 	
 	end module GlobalSetup
 

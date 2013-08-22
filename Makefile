@@ -18,7 +18,7 @@ endif
 
 # array boundary check
 ifeq ($(debug),true)
-  DEBUGGING = -debug -check bounds -ftrapuv #-fpe0 -O0
+  DEBUGGING = -debug -check bounds -ftrapuv #-O0 #-fpe0
 endif
 
 # Platform specific compilation options
