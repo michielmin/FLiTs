@@ -16,6 +16,7 @@
 	open(unit=20,file='out.dat')
 
 	nv=int(vmax*1.5/vresolution)
+	nvprofile=int(vmax*vres_mult/vresolution)
 
 	allocate(flux(-nv:nv))
 
@@ -26,14 +27,14 @@
 	enddo
 	do i=0,nR
 		do j=1,nTheta
-			allocate(C(i,j)%profile(-nv:nv))
+			allocate(C(i,j)%profile(-nvprofile:nvprofile))
 		enddo
 	enddo
 
 	do i=0,nR
 		do j=1,nTheta
-			do k=-nv,nv
-				C(i,j)%profile(k)=((real(k)*vresolution)/C(i,j)%line_width)**2
+			do k=-nvprofile,nvprofile
+				C(i,j)%profile(k)=((real(k)*vresolution/vres_mult)/C(i,j)%line_width)**2
 			enddo
 			C(i,j)%profile=clight*exp(-C(i,j)%profile)/(C(i,j)%line_width*sqrt(pi))
 		enddo
@@ -85,7 +86,7 @@
 					if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
 						flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
 					else
-						call TraceFluxLines(PP,flux0,iv,nv,vmult)
+						call TraceFluxLines(PP,flux0,iv,vmult)
 					endif
 					do vmult=-1,1,2
 						flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
@@ -117,26 +118,27 @@
 	end
 	
 	
-	subroutine TraceFluxLines(p0,flux,ii,nv,vmult)
+	subroutine TraceFluxLines(p0,flux,ii,vmult)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,vmult,iv,ii,nv
-	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d
+	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d,tau_tot
 	type(Path) p0
 	type(Cell),pointer :: CC
 
 	fact=1d0
 	flux=0d0
+	tau_tot=0d0
 
 	do k=1,p0%n
 		i=p0%i(k)
 		if(i.ne.0) then
 			j=p0%j(k)
 			CC => C(i,j)
-			iv=int(p0%v(k)/vresolution)
+			iv=int(p0%v(k)*vres_mult/vresolution)
 			jj=ii-iv
-			if(jj.lt.-nv) jj=-nv
-			if(jj.gt.nv) jj=nv
+			if(jj.lt.-nvprofile) jj=-nvprofile
+			if(jj.gt.nvprofile) jj=nvprofile
 			profile=CC%profile(jj)
 
 			tau_dust=CC%kext_l
@@ -158,7 +160,8 @@ c	gas source function
 			endif
 
 			fact=fact*exptau
-			if(fact.lt.1d-6) exit
+			tau_tot=tau_tot+tau_d
+			if(tau_tot.gt.tau_max) exit
 		endif
 	enddo
 	

@@ -35,7 +35,7 @@
 		do j=1,nTheta
 			C(i,j)%line_width=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol%M))
 			C(i,j)%line_width=C(i,j)%line_width+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
-			if(C(i,j)%line_width.lt.vresolution) C(i,j)%line_width=vresolution
+			if(C(i,j)%line_width.lt.vresolution/vres_mult) C(i,j)%line_width=vresolution/vres_mult
 		enddo
 	enddo
 	

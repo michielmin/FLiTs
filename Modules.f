@@ -27,7 +27,8 @@ c===============================================================================
 c stellar parameters
 	real*8 Mstar,Rstar
 c wavelength grid and resolution
-	real*8 lmin,lmax,rlines,vresolution
+	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max
+	integer nvprofile
 	
 c string converting functions
 	character*20 int2string,dbl2string

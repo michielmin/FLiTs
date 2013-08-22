@@ -66,6 +66,10 @@ c				all arguments are read
 			read(value,*) lmax
 		case("vres")	! given in cm/s
 			read(value,*) vresolution
+		case("vres_mult")	! given in cm/s
+			read(value,*) vres_mult
+		case("tau_max")	! given in cm/s
+			read(value,*) tau_max
 		case("inc")	! with respect to pole on
 			read(value,*) inc
 		case default
@@ -89,7 +93,8 @@ c output the setup to the screen and the log file
 	call output("Minimum wavelength: "//trim(dbl2string(lmin,'(f13.4)'))//" micron")
 	call output("Maximum wavelength: "//trim(dbl2string(lmax,'(f13.4)'))//" micron")
 	call output("Resolution lines:   "//trim(dbl2string(rlines,'(f13.4)'))//" (dlam/lam)")
-	call output("Velocity resolution:"//trim(dbl2string(vresolution,'(f13.4)'))//" cm/s")
+	call output("Velocity resolution:"//trim(dbl2string(vresolution/1d5,'(f13.4)'))//" km/s")
+	call output("Inclination angle:  "//trim(dbl2string(inc,'(f13.4)'))//" degrees")
 
 	call output("==================================================================")
 	call output("Line file: "//trim(linefile))
@@ -137,6 +142,8 @@ c===============================================================================
 	lmax=50
 	inc=35d0
 	vresolution=1d5	! given in cm/s
+	vres_mult=10d0
+	tau_max=15d0
 		
 	Mol%M=28	! default is CO
 	LTE=.true.	! default is LTE for now
