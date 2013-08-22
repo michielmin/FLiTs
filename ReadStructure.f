@@ -11,7 +11,7 @@ c		call ReadProDiMoStructure()
 	
 	do i=0,nR
 		do j=1,nTheta
-			C(i,j)%iT=C(i,j)%T+0.5d0
+			C(i,j)%iT=C(i,j)%Tdust+0.5d0
 			if(C(i,j)%iT.lt.1) C(i,j)%iT=1
 			if(C(i,j)%iT.gt.MAXT) C(i,j)%iT=MAXT
 		enddo
@@ -199,7 +199,8 @@ c in the theta grid we actually store cos(theta) for convenience
 			case ('TEMP')
 				do i=1,nR
 					do j=1,nTheta
-						C(i,j)%T=array(i,j,1,1)
+						C(i,j)%Tdust=array(i,j,1,1)
+						C(i,j)%Tgas=C(i,j)%Tdust
 					enddo
 				enddo
 			case ('GASDENS')

@@ -9,15 +9,10 @@ c===============================================================================
 	integer ncla	! number of command line arguments
 	character*1000 readline,inputfile
 	character*100 key,value
-	integer nabun,nnames,i
+	integer i
 
 	call SetDefaults()
 	
-c set the number of species to 0
-	nspecies=0
-	nabun=0
-	nnames=0
-
 	call getarg(1,inputfile)
 	open(unit=20,file=inputfile,RECL=1000)
 	
@@ -60,26 +55,11 @@ c				all arguments are read
 		case("structtype")
 			read(value,*) structtype
 		case("linefile")
-			nspecies=nspecies+1
-			if(nspecies.gt.MAXSPECIES) then
-				call output("Please increase the maximum number of species in Modules.f")
-				stop
-			endif
-			read(value,*) linefile(nspecies)
-		case("abun")
-			nabun=nabun+1
-			if(nabun.gt.MAXSPECIES) then
-				call output("Please increase the maximum number of species in Modules.f")
-				stop
-			endif
-			read(value,*) abun_hom(nabun)
-		case("name")
-			nnames=nnames+1
-			if(nnames.gt.MAXSPECIES) then
-				call output("Please increase the maximum number of species in Modules.f")
-				stop
-			endif
-			mol_name(nnames)=value
+			read(value,*) linefile
+		case("mass_mol")
+			read(value,*) Mol%M
+		case("lte")
+			read(value,*) LTE
 		case("lmin")
 			read(value,*) lmin
 		case("lmax")
@@ -112,11 +92,7 @@ c output the setup to the screen and the log file
 	call output("Velocity resolution:"//trim(dbl2string(vresolution,'(f13.4)'))//" cm/s")
 
 	call output("==================================================================")
-	do i=1,nspecies
-		call output("Species "//trim(mol_name(i)))
-		call output("Line file: "//trim(linefile(i)))
-		if(structtype.eq.1) call output("Homogeneous abundance: "//trim(dbl2string(abun_hom(i),'(e13.2)')))
-	enddo				
+	call output("Line file: "//trim(linefile))
 
 	
 	return
@@ -161,10 +137,9 @@ c===============================================================================
 	lmax=50
 	inc=35d0
 	vresolution=1d5	! given in cm/s
-	
-	abun_hom=1d-4	! with respect to the total gass mass
-	
-	mol_name(1:MAXSPECIES)='UNKNOWN'
+		
+	Mol%M=28	! default is CO
+	LTE=.true.	! default is LTE for now
 	
 	return
 	end

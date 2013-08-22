@@ -2,10 +2,17 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce
+	integer ip,jp,i,j,k,ir,nRreduce,ilam
 	real*8 inc_min,ct,res_inc
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
+
+	ilam1=1
+	ilam2=nlam
+	do ilam=1,nlam
+		if(lam_cont(ilam).lt.lmin) ilam1=ilam
+		if(lam_cont(nlam+1-ilam).gt.lmax) ilam2=nlam+1-ilam
+	enddo
 	
 c for inclinations smaller don't use the additional radial points
 	inc_min=5d0
@@ -19,7 +26,7 @@ c increase the resolution in velocity by this factor
 	
 	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
 	if(nImPhi.lt.30) nImPhi=30
-	if(nImPhi.gt.180) nImPhi=180
+	if(nImPhi.gt.90) nImPhi=90
 	
 	if(inc.gt.inc_min) then
 		nImR=nR*2/nRreduce+nTheta*2/10
@@ -27,7 +34,7 @@ c increase the resolution in velocity by this factor
 		nImR=nR/nRreduce
 	endif
 
-	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/nImPhi
+	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/(nImPhi/3)
 
 	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
 	call output("Number of phi image points:    "//trim(int2string(nImPhi,'(i5)')))
@@ -128,7 +135,7 @@ c-----------------------------------------------------------------------
 	use GlobalSetup
 	IMPLICIT NONE
 	type(Tracer) trac
-	real*8 x,y,z,phi,d
+	real*8 x,y,z,phi,d,vtot,taumin
 	integer inext,jnext,ntrace,i,j,k
 	logical hitstar
 
@@ -146,6 +153,8 @@ c-----------------------------------------------------------------------
 	allocate(P(i,j)%d(1000))
 	allocate(P(i,j)%i(1000))
 	allocate(P(i,j)%j(1000))
+
+	taumin=0d0
 
 1	continue
 
@@ -173,8 +182,10 @@ c-----------------------------------------------------------------------
 
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
-	if(P(i,j)%v(k).gt.P(i,j)%vmax.and.trac%i.gt.0) P(i,j)%vmax=P(i,j)%v(k)
-	if(P(i,j)%v(k).lt.P(i,j)%vmin.and.trac%i.gt.0) P(i,j)%vmin=P(i,j)%v(k)
+	vtot=abs(P(i,j)%v(k))+3d0*C(trac%i,trac%j)%line_width
+	if(vtot.gt.P(i,j)%vmax.and.trac%i.gt.0.and.taumin.lt.13d0) P(i,j)%vmax=vtot
+	vtot=abs(P(i,j)%v(k))-3d0*C(trac%i,trac%j)%line_width
+	if(vtot.lt.P(i,j)%vmin.and.trac%i.gt.0.and.taumin.lt.13d0) P(i,j)%vmin=vtot
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d
@@ -185,6 +196,8 @@ c add this for all species to get the absolute max and min velocity contributing
 	z=trac%z
 
 	P(i,j)%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+
+	if(trac%i.gt.0) taumin=taumin+minval(C(trac%i,trac%j)%kext(ilam1:ilam2))*d
 
 	if(inext.gt.nR) then
 		return

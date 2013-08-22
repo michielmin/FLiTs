@@ -49,6 +49,9 @@ OBJS	      = Modules.o \
 				Subroutines.o \
 				Init.o \
 				ReadStructure.o \
+				ReadLineData.o \
+				ComputeLTE.o \
+				PrepareStructure.o \
 				SetupPaths.o \
 				RaytraceContinuum.o \
 				RaytraceLines.o

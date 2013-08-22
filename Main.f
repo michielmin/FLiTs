@@ -24,11 +24,10 @@ c initialization
 c read in density, temperature, opacity, and local radiation field
 	call ReadStructure()
 c read in line data: which lines, Einstein coefficients of all lines
-c	call ReadLineData()
 c setup/readin level populations
-c	call SetupLevels()
+	call ReadLineData()
 c prepare the remaining things in the structure for the raytracing
-c	call PrepareStructure()
+	call PrepareStructure()
 	
 c the action starts!!
 c first setup the paths
