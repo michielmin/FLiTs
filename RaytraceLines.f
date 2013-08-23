@@ -63,13 +63,15 @@
 				C(i,j)%albedo_l=wl1*C(i,j)%albedo(ilam)+wl2*C(i,j)%albedo(ilam+1)
 				C(i,j)%BB_l=wl1*BB(ilam,C(i,j)%iT)+wl2*BB(ilam+1,C(i,j)%iT)
 
-				if(C(i,j)%npop(LL%jup).gt.0d0) then
-					C(i,j)%line_emis=C(i,j)%npop(LL%jup)*LL%Aul/(C(i,j)%npop(LL%jlow)*LL%Blu-C(i,j)%npop(LL%jup)*LL%Bul)
-				else
-					C(i,j)%line_emis=0d0
-				endif
+c				if(C(i,j)%npop(LL%jup).ne.C(i,j)%npop(LL%jlow)) then
+c					C(i,j)%line_emis=C(i,j)%npop(LL%jup)*LL%Aul/(C(i,j)%npop(LL%jlow)*LL%Blu-C(i,j)%npop(LL%jup)*LL%Bul)
+c				else
+c					C(i,j)%line_emis=0d0
+c				endif
 				fact=hplanck*C(i,j)%N/(4d0*pi)
 				C(i,j)%line_abs=fact*(C(i,j)%npop(LL%jlow)*LL%Blu-C(i,j)%npop(LL%jup)*LL%Bul)
+
+				C(i,j)%line_emis=fact*C(i,j)%npop(LL%jup)*LL%Aul
 			enddo
 		enddo
 
@@ -148,7 +150,7 @@
 c	dust thermal source function
 			S=CC%BB_l*(1d0-CC%albedo_l)*tau_dust
 c	gas source function
-			S=S+CC%line_emis*tau_gas
+			S=S+CC%line_emis*profile
 
 			tau_d=tau*p0%d(k)
 			if(tau_d.gt.1d-4) then

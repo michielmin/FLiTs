@@ -18,7 +18,7 @@ c for inclinations smaller don't use the additional radial points
 	inc_min=5d0
 c increase the resolution in velocity by this factor
 	res_inc=1d0
-	
+
 	nrReduce=2
 	
 	call output("==================================================================")
@@ -29,7 +29,7 @@ c increase the resolution in velocity by this factor
 	if(nImPhi.gt.90) nImPhi=90
 	
 	if(inc.gt.inc_min) then
-		nImR=nR*2/nRreduce+nTheta*2/10
+		nImR=nR*2/nRreduce+nTheta*3/5
 	else
 		nImR=nR/nRreduce
 	endif
@@ -52,11 +52,13 @@ c increase the resolution in velocity by this factor
 			ir=ir+1
 			imR(ir)=abs(R_av(i)*sin(inc*pi/180d0))
 		enddo
-		do i=1,nTheta,10
+		do i=1,nTheta,5
 			ir=ir+1
-			imR(ir)=abs(R(1)*sin(theta_av(i)-inc))
+			imR(ir)=abs(R(1)*sin(theta_av(i)+inc*pi/180d0))
 			ir=ir+1
-			imR(ir)=abs(R(1)*sin(pi-theta_av(i)+inc))
+			imR(ir)=abs(R(1)*sin(theta_av(i)-inc*pi/180d0))
+			ir=ir+1
+			imR(ir)=abs(R(1)*sin(theta_av(i)))
 		enddo
 	endif
 
@@ -65,7 +67,7 @@ c increase the resolution in velocity by this factor
 		ir=ir+1
 		imR(ir)=10d0**(log10(Rstar*Rsun)+log10(R(nR+1)/(Rstar*Rsun))*(real(i)-0.1)/real(j))
 	enddo
-	
+
 	call sort(imR,nImR)
 	
 	do i=1,nImPhi
