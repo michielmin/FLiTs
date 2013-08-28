@@ -44,7 +44,7 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
 	integer nR,nTheta,nlam,ilam1,ilam2
 	real*8 Rin,Rout,inc
-	real*8,allocatable :: lam_cont(:)
+	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
 c the image grid
 	integer nImR,nImPhi

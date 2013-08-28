@@ -83,25 +83,10 @@ c read another command, so go back
 30	continue
 	close(unit=20)
 
-c everything is read in now
-c output the setup to the screen and the log file
-	call output("==================================================================")
-
-	rlines=1d0/(sqrt((1d0+vresolution/clight)/(1d0-vresolution/clight))-1d0)
-
-	call output("Mass of the star:   "//trim(dbl2string(Mstar,'(f13.4)'))//" Msun")
-	call output("Minimum wavelength: "//trim(dbl2string(lmin,'(f13.4)'))//" micron")
-	call output("Maximum wavelength: "//trim(dbl2string(lmax,'(f13.4)'))//" micron")
-	call output("Resolution lines:   "//trim(dbl2string(rlines,'(f13.4)'))//" (dlam/lam)")
-	call output("Velocity resolution:"//trim(dbl2string(vresolution/1d5,'(f13.4)'))//" km/s")
-	call output("Inclination angle:  "//trim(dbl2string(inc,'(f13.4)'))//" degrees")
-
-	call output("==================================================================")
-	call output("Line file: "//trim(linefile))
-
 	
 	return
 	end
+
 
 c=========================================================================================
 c This subroutine just seperates the key and value component of a string given

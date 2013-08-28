@@ -13,7 +13,7 @@
 
 	call cpu_time(starttime)
 
-	open(unit=20,file='out.dat')
+	open(unit=20,file='out.dat',RECL=1000)
 
 	nv=int(vmax*1.5/vresolution)
 	nvprofile=int(vmax*vres_mult/vresolution)
@@ -83,12 +83,12 @@ c				endif
 !$OMP DO
 			do j=1,nImPhi
 				PP => P(i,j)
-				vmult=1
 				do iv=-nv,nv
+					vmult=1
 					if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
 						flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
 					else
-						call TraceFluxLines(PP,flux0,iv,vmult)
+						call TraceFluxLines(PP,flux0,iv,vmult,1)
 					endif
 					do vmult=-1,1,2
 						flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
@@ -120,10 +120,10 @@ c				endif
 	end
 	
 	
-	subroutine TraceFluxLines(p0,flux,ii,vmult)
+	subroutine TraceFluxLines(p0,flux,ii,vmult,nn)
 	use GlobalSetup
 	use Constants
-	integer i,j,k,vmult,iv,ii,nv
+	integer i,j,k,vmult,iv,ii,nv,nn
 	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d,tau_tot
 	type(Path) p0
 	type(Cell),pointer :: CC
@@ -137,20 +137,23 @@ c				endif
 		if(i.ne.0) then
 			j=p0%j(k)
 			CC => C(i,j)
-			iv=int(p0%v(k)*vres_mult/vresolution)
-			jj=ii-iv
-			if(jj.lt.-nvprofile) jj=-nvprofile
-			if(jj.gt.nvprofile) jj=nvprofile
-			profile=CC%profile(jj)
-
 			tau_dust=CC%kext_l
-			tau_gas=profile*CC%line_abs
-			tau=tau_dust+tau_gas
-
 c	dust thermal source function
 			S=CC%BB_l*(1d0-CC%albedo_l)*tau_dust
+
+			tau=tau_dust
+			do il=1,nn
+				jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
+				if(jj.lt.-nvprofile) jj=-nvprofile
+				if(jj.gt.nvprofile) jj=nvprofile
+				profile=CC%profile(jj)
+
+				tau_gas=profile*CC%line_abs
+
 c	gas source function
-			S=S+CC%line_emis*profile
+				S=S+CC%line_emis*profile
+				tau=tau+tau_gas
+			enddo
 
 			tau_d=tau*p0%d(k)
 			if(tau_d.gt.1d-4) then
