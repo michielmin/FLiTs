@@ -28,6 +28,7 @@
 	do i=0,nR
 		do j=1,nTheta
 			allocate(C(i,j)%profile(-nvprofile:nvprofile))
+			allocate(C(i,j)%profile_nz(-nvprofile:nvprofile))
 		enddo
 	enddo
 
@@ -35,6 +36,11 @@
 		do j=1,nTheta
 			do k=-nvprofile,nvprofile
 				C(i,j)%profile(k)=((real(k)*vresolution/vres_mult)/C(i,j)%line_width)**2
+				if(abs(C(i,j)%profile(k)).lt.5d0) then
+					C(i,j)%profile_nz(k)=.true.
+				else
+					C(i,j)%profile_nz(k)=.false.
+				endif
 			enddo
 			C(i,j)%profile=clight*exp(-C(i,j)%profile)/(C(i,j)%line_width*sqrt(pi))
 		enddo
@@ -172,13 +178,13 @@ c	dust scattering source function
 				jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
 				if(jj.lt.-nvprofile) jj=-nvprofile
 				if(jj.gt.nvprofile) jj=nvprofile
-				profile=CC%profile(jj)
-
-				tau_gas=profile*CC%line_abs
-
+				if(CC%profile_nz(jj)) then
+					profile=CC%profile(jj)
+					tau_gas=profile*CC%line_abs
 c	gas source function
-				S=S+CC%line_emis*profile
-				tau=tau+tau_gas
+					S=S+CC%line_emis*profile
+					tau=tau+tau_gas
+				endif
 			enddo
 
 			tau_d=tau*p0%d(k)

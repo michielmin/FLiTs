@@ -76,6 +76,7 @@ c	Temperature and total gas density
 c	properties of the molecule
 		real*8 line_width
 		real*8,allocatable :: profile(:)
+		logical,allocatable :: profile_nz(:)
 		real*8,allocatable :: npop(:) ! dimension is number of levels
 		real*8 line_emis,line_abs
 		real*8 kext_l,albedo_l,BB_l,LRF_l
