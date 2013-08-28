@@ -101,6 +101,8 @@ c===============================================================================
 	call ftgkyd(unit,'Mstar',Mstar,comment,status)
 	call ftgkyd(unit,'Rstar',Rstar,comment,status)
 
+	call ftgkyd(unit,'distance',distance,comment,status)
+
 	call ftgkyj(unit,'n_rad',nR,comment,status)
 	call ftgkyj(unit,'nz',nTheta,comment,status)
 	
@@ -254,6 +256,7 @@ c in the theta grid we actually store cos(theta) for convenience
 
 	do i=1,nlam
 		Fstar(i)=array(i,1,1,1)
+		Fstar(i)=Fstar(i)*lam_cont(i)*1d3*1d-4/clight
 	enddo
 
 	deallocate(array)
@@ -299,6 +302,7 @@ c in the theta grid we actually store cos(theta) for convenience
 		do j=1,nTheta
 			do l=1,nlam
 				C(i,j)%LRF(l)=array(i,nTheta+1-j,l,1)
+				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			enddo
 		enddo
 	enddo

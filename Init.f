@@ -121,7 +121,7 @@ c===============================================================================
 	
 	Mstar=1d0
 	Rstar=1d0
-	structfile='forFLiTs.fits.gz'
+	structfile='forProDiMo.fits.gz'
 	structtype=1
 	lmin=5
 	lmax=50

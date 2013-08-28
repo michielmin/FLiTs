@@ -3,11 +3,11 @@ c module containing the physical constants in cgs
 c=========================================================================================
 	module Constants
 	IMPLICIT NONE
-	real*8 pi,G,Msun,AU,clight,Rsun,mp,kb,hplanck
+	real*8 pi,G,Msun,AU,clight,Rsun,mp,kb,hplanck,parsec
 	parameter(pi=3.14159265358979323846264338328d0)
 	parameter(clight=2.9979245800d10) !cm/s
 	parameter(AU=1.49598e13)
-c	parameter(parsec=3.08568025e18)
+	parameter(parsec=3.08568025e18)
 	parameter(Rsun=6.955e10)
 	parameter(Msun=1.98892e33)
 c	parameter(Lsun=3.827e33)
@@ -25,7 +25,7 @@ c===============================================================================
 	module GlobalSetup
 	IMPLICIT NONE
 c stellar parameters
-	real*8 Mstar,Rstar
+	real*8 Mstar,Rstar,distance
 c wavelength grid and resolution
 	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max
 	integer nvprofile
@@ -43,7 +43,7 @@ c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
 	integer nR,nTheta,nlam,ilam1,ilam2
-	real*8 Rin,Rout,inc
+	real*8 Rin,Rout,inc,Fstar_l
 	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
 c the image grid
@@ -78,7 +78,7 @@ c	properties of the molecule
 		real*8,allocatable :: profile(:)
 		real*8,allocatable :: npop(:) ! dimension is number of levels
 		real*8 line_emis,line_abs
-		real*8 kext_l,albedo_l,BB_l
+		real*8 kext_l,albedo_l,BB_l,LRF_l
 		integer iT
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),albedo(:),kext(:),LRF(:) ! dimension is wavelength
@@ -111,6 +111,7 @@ c surface area of this path in the image and its coordinates
 c==============================
 	
 	type(Path),allocatable,target :: P(:,:)
+	type(Path),target :: path2star
 	type(Molecule) Mol
 	
 	end module GlobalSetup

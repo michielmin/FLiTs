@@ -6,6 +6,7 @@
 	real*8 inc_min,ct,res_inc
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
+	type(Path),pointer :: PP
 
 	ilam1=1
 	ilam2=nlam
@@ -90,13 +91,14 @@ c increase the resolution in velocity by this factor
 			P(i,j)%phi2=pi*real(j)/real(nImPhi)
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
-			P(i,j)%A=pi*(P(i,j)%R2**2-P(i,j)%R1**2)/real(2*nImPhi)
+			P(i,j)%A=pi*(P(i,j)%R2**2-P(i,j)%R1**2)/real(nImPhi)
 		enddo
 	enddo
 
 	vmax=-1d30
 	do i=1,nImR
 	do j=1,nImPhi
+		PP => P(i,j)
 		trac%x=P(i,j)%R*cos(P(i,j)%Phi)
 		trac%y=P(i,j)%R*sin(P(i,j)%Phi)
 		trac%z=sqrt(R(nR+1)**2-P(i,j)%R**2)
@@ -118,13 +120,45 @@ c increase the resolution in velocity by this factor
 
 		P(i,j)%vmin=1d30
 		P(i,j)%vmax=-1d30
-		call tracepath(trac,i,j)
+		call tracepath(trac,PP)
 		if(abs(P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
 		if(abs(P(i,j)%vmin).gt.vmax) vmax=abs(P(i,j)%vmin)
 	enddo
 	enddo
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
      &			//" km/s")
+
+	path2star%R=0d0
+	path2star%Phi=0d0
+	path2star%phi1=0d0
+	path2star%phi2=2d0*pi
+	path2star%R1=0d0
+	path2star%R2=Rstar*Rsun
+	path2star%A=pi*(path2star%R2**2-path2star%R1**2)
+
+	trac%x=0d0
+	trac%y=0d0
+	trac%z=R(nR+1)
+	trac%edgeNr=2
+	trac%onEdge=.true.
+	call rotate(trac%x,trac%y,trac%z,0d0,1d0,0d0,inc*pi/180d0)
+	ct=abs(trac%z)/R(nR+1)
+	trac%i=nR
+	do k=1,nTheta
+		if(ct.lt.Theta(k).and.ct.ge.Theta(k+1)) then
+			trac%j=k
+		endif
+	enddo
+
+	trac%vx=0d0
+	trac%vy=0d0
+	trac%vz=-1d0
+	call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
+
+	path2star%vmin=1d30
+	path2star%vmax=-1d30
+	PP => path2star
+	call tracepath(trac,PP)
 
 	return
 	end
@@ -133,28 +167,29 @@ c increase the resolution in velocity by this factor
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine tracepath(trac,i,j)
+	subroutine tracepath(trac,PP)
 	use GlobalSetup
 	IMPLICIT NONE
 	type(Tracer) trac
 	real*8 x,y,z,phi,d,vtot,taumin
 	integer inext,jnext,ntrace,i,j,k
 	logical hitstar
+	type(Path) PP
 
-	P(i,j)%n=0
-	P(i,j)%x=trac%x
-	P(i,j)%y=trac%y
-	P(i,j)%z=trac%z
-	P(i,j)%vx=trac%vx
-	P(i,j)%vy=trac%vy
-	P(i,j)%vz=trac%vz
+	PP%n=0
+	PP%x=trac%x
+	PP%y=trac%y
+	PP%z=trac%z
+	PP%vx=trac%vx
+	PP%vy=trac%vy
+	PP%vz=trac%vz
 
-	allocate(P(i,j)%v(1000))
-	allocate(P(i,j)%v1(1000))
-	allocate(P(i,j)%v2(1000))
-	allocate(P(i,j)%d(1000))
-	allocate(P(i,j)%i(1000))
-	allocate(P(i,j)%j(1000))
+	allocate(PP%v(1000))
+	allocate(PP%v1(1000))
+	allocate(PP%v2(1000))
+	allocate(PP%d(1000))
+	allocate(PP%i(1000))
+	allocate(PP%j(1000))
 
 	taumin=0d0
 
@@ -162,32 +197,32 @@ c-----------------------------------------------------------------------
 
 	call Trace2edge(trac,d,inext,jnext)
 
-	P(i,j)%n=P(i,j)%n+1
-	k=P(i,j)%n
+	PP%n=PP%n+1
+	k=PP%n
 
-	P(i,j)%d(k)=d
+	PP%d(k)=d
 
-	P(i,j)%i(k)=trac%i
-	P(i,j)%j(k)=trac%j
+	PP%i(k)=trac%i
+	PP%j(k)=trac%j
 	
 	x=trac%x
 	y=trac%y
 	z=trac%z
 
-	P(i,j)%v1(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	PP%v1(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
 
 	x=trac%x+trac%vx*d/2d0
 	y=trac%y+trac%vy*d/2d0
 	z=trac%z+trac%vz*d/2d0
 
-	P(i,j)%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+	PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
 
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
-	vtot=abs(P(i,j)%v(k))+3d0*C(trac%i,trac%j)%line_width
-	if(vtot.gt.P(i,j)%vmax.and.trac%i.gt.0.and.taumin.lt.tau_max) P(i,j)%vmax=vtot
-	vtot=abs(P(i,j)%v(k))-3d0*C(trac%i,trac%j)%line_width
-	if(vtot.lt.P(i,j)%vmin.and.trac%i.gt.0.and.taumin.lt.tau_max) P(i,j)%vmin=vtot
+	vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width
+	if(vtot.gt.PP%vmax.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax=vtot
+	vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width
+	if(vtot.lt.PP%vmin.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin=vtot
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d
@@ -197,7 +232,7 @@ c add this for all species to get the absolute max and min velocity contributing
 	y=trac%y
 	z=trac%z
 
-	P(i,j)%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	PP%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
 
 	if(trac%i.gt.0) taumin=taumin+minval(C(trac%i,trac%j)%kext(ilam1:ilam2))*d
 

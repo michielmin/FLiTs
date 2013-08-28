@@ -22,7 +22,7 @@
 
 	lam=lmin
 	ilam=1
-	do while(lam.gt.lam_cont(ilam+1))
+	do while(lam.gt.lam_cont(ilam+1).and.ilam.lt.nlam)
 		ilam=ilam+1
 	enddo
 	do i=0,nR
@@ -51,7 +51,7 @@
 		nl=nl+1
 
 		ilam=ilam1
-		do while(lam.gt.lam_cont(ilam+1))
+		do while(lam.gt.lam_cont(ilam+1).and.ilam.lt.nlam)
 			ilam=ilam+1
 		enddo
 		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
@@ -62,6 +62,7 @@
 				C(i,j)%kext_l=wl1*C(i,j)%kext(ilam)+wl2*C(i,j)%kext(ilam+1)
 				C(i,j)%albedo_l=wl1*C(i,j)%albedo(ilam)+wl2*C(i,j)%albedo(ilam+1)
 				C(i,j)%BB_l=wl1*BB(ilam,C(i,j)%iT)+wl2*BB(ilam+1,C(i,j)%iT)
+				C(i,j)%LRF_l=wl1*C(i,j)%LRF(ilam)+wl2*C(i,j)%LRF(ilam+1)
 
 c				if(C(i,j)%npop(LL%jup).ne.C(i,j)%npop(LL%jlow)) then
 c					C(i,j)%line_emis=C(i,j)%npop(LL%jup)*LL%Aul/(C(i,j)%npop(LL%jlow)*LL%Blu-C(i,j)%npop(LL%jup)*LL%Bul)
@@ -74,13 +75,9 @@ c				endif
 				C(i,j)%line_emis=fact*C(i,j)%npop(LL%jup)*LL%Aul
 			enddo
 		enddo
+		Fstar_l=wl1*Fstar(ilam)+wl2*Fstar(ilam+1)
 
 		do i=1,nImR
-!$OMP PARALLEL IF(.false.)
-!$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(flux0,iv,j,PP,vmult)
-!$OMP& SHARED(i,ilam,P,flux,nImR,nImPhi,nv,vresolution,wl1,wl2)
-!$OMP DO
 			do j=1,nImPhi
 				PP => P(i,j)
 				do iv=-nv,nv
@@ -95,17 +92,42 @@ c				endif
 					enddo
 				enddo
 			enddo
-!$OMP END DO
-!$OMP FLUSH
-!$OMP END PARALLEL
 		enddo
+		PP => path2star
+		do iv=-nv,nv
+			if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
+				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+			else
+				call Trace2StarLines(PP,flux0,iv,1)
+			endif
+			do vmult=-1,1,2
+				flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+			enddo
+		enddo
+
 		do i=-nv,nv
-			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),flux(i),real(i)*vresolution/1d5
+			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),
+     &					flux(i)*1e23/(distance*parsec)**2,
+     &					real(i)*vresolution/1d5
 		enddo
 		
 		endif
 
 	enddo
+
+	do ilam=1,nlam
+		if(lam_cont(ilam-1).lt.lmax.and.lam_cont(ilam+1).gt.lmin) then
+			flux0=0d0
+			do i=1,nImR
+				do j=1,nImPhi
+					PP => P(i,j)
+					flux0=flux0+PP%flux_cont(ilam)*PP%A
+				enddo
+			enddo
+			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
+		endif
+	enddo
+
 	close(unit=20)
 	
 	call cpu_time(stoptime)
@@ -114,6 +136,7 @@ c				endif
      &			//" s")
 	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))
      &			//" s")
+
 
 
 	return
@@ -140,6 +163,8 @@ c				endif
 			tau_dust=CC%kext_l
 c	dust thermal source function
 			S=CC%BB_l*(1d0-CC%albedo_l)*tau_dust
+c	dust scattering source function
+			S=S+CC%LRF_l*CC%albedo_l*tau_dust
 
 			tau=tau_dust
 			do il=1,nn
@@ -169,6 +194,40 @@ c	gas source function
 			if(tau_tot.gt.tau_max) exit
 		endif
 	enddo
+	
+	return
+	end
+	
+
+
+
+	subroutine Trace2StarLines(p0,flux,ii,nn)
+	use GlobalSetup
+	use Constants
+	integer i,j,k,iv,ii,nv,nn
+	real*8 tau,flux,profile
+	type(Path) p0
+	type(Cell),pointer :: CC
+
+	tau=0d0
+
+	do k=1,p0%n
+		i=p0%i(k)
+		if(i.eq.0) exit
+		j=p0%j(k)
+		CC => C(i,j)
+		tau=tau+CC%kext_l
+
+		do il=1,nn
+			jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
+			if(jj.lt.-nvprofile) jj=-nvprofile
+			if(jj.gt.nvprofile) jj=nvprofile
+			profile=CC%profile(jj)
+			tau=tau+profile*CC%line_abs
+		enddo
+	enddo
+
+	flux=Fstar_l*exp(-tau)
 	
 	return
 	end
