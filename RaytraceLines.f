@@ -124,6 +124,7 @@ c				endif
 					flux0=flux0+PP%flux_cont(ilam)*PP%A
 				enddo
 			enddo
+			flux0=flux0+path2star%flux_cont(ilam)*path2star%A
 			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
 		endif
 	enddo
