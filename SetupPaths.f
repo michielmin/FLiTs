@@ -120,6 +120,7 @@ c increase the resolution in velocity by this factor
 
 		P(i,j)%vmin=1d30
 		P(i,j)%vmax=-1d30
+		P(i,j)%npopmax=0
 		call tracepath(trac,PP)
 		if(abs(P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
 		if(abs(P(i,j)%vmin).gt.vmax) vmax=abs(P(i,j)%vmin)
@@ -157,6 +158,7 @@ c increase the resolution in velocity by this factor
 
 	path2star%vmin=1d30
 	path2star%vmax=-1d30
+	path2star%npopmax=0
 	PP => path2star
 	call tracepath(trac,PP)
 
@@ -172,7 +174,7 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	type(Tracer) trac
 	real*8 x,y,z,phi,d,vtot,taumin
-	integer inext,jnext,ntrace,i,j,k
+	integer inext,jnext,ntrace,i,j,k,ipop
 	logical hitstar
 	type(Path) PP
 
@@ -223,6 +225,11 @@ c add this for all species to get the absolute max and min velocity contributing
 	if(vtot.gt.PP%vmax.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax=vtot
 	vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width
 	if(vtot.lt.PP%vmin.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin=vtot
+
+	do ipop=Mol%nlevels,1,-1
+		if(C(trac%i,trac%j)%npop(ipop).gt.1d-150) exit
+	enddo
+	if(ipop.gt.PP%npopmax) PP%npopmax=ipop
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d

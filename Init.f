@@ -55,7 +55,9 @@ c				all arguments are read
 		case("structtype")
 			read(value,*) structtype
 		case("linefile")
-			read(value,*) linefile
+			linefile=value
+		case("popfile")
+			popfile=value
 		case("mass_mol")
 			read(value,*) Mol%M
 		case("lte")
@@ -122,6 +124,7 @@ c===============================================================================
 	Mstar=1d0
 	Rstar=1d0
 	structfile='forProDiMo.fits.gz'
+	popfile=' '
 	structtype=1
 	lmin=5
 	lmax=50
@@ -131,7 +134,7 @@ c===============================================================================
 	tau_max=15d0
 		
 	Mol%M=28	! default is CO
-	LTE=.true.	! default is LTE for now
+	LTE=.false.	! default is non-LTE
 	
 	return
 	end

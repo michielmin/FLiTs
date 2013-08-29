@@ -37,6 +37,7 @@ c string converting functions
 c input files
 	character*500 linefile
 	character*500 structfile
+	character*500 popfile
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 	integer structtype,LTE
 
@@ -91,7 +92,7 @@ c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 c minimum and maximum velocity encountered in this path
 		real*8 vmin,vmax
 c number of elements
-		integer n
+		integer n,npopmax
 c surface area of this path in the image and its coordinates
 		real*8 A,R1,R2,phi1,phi2,R,phi
 		real*8 vx,vy,vz,x,y,z

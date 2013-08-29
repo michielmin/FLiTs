@@ -371,7 +371,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR
 		do j=1,nTheta
 			C(i,j)%dens=array(i,nTheta+1-j,1,1)
-			if(C(i,j)%dens.lt.1d-50) C(i,j)%dens=1d-50
+			if(C(i,j)%dens.lt.1d-50) C(i,j)%dens=1d-60
 		enddo
 	enddo
 
@@ -451,6 +451,7 @@ c in the theta grid we actually store cos(theta) for convenience
 		C(i,j)%kext(1:nlam)=1d-70
 		C(i,j)%kabs(1:nlam)=1d-70
 		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
+		C(i,j)%dens=1d-60
 	enddo
 	
 	return

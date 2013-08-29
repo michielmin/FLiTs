@@ -15,7 +15,7 @@
 
 	open(unit=20,file='out.dat',RECL=1000)
 
-	nv=int(vmax*1.5/vresolution)
+	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
 
 	allocate(flux(-nv:nv))
@@ -36,7 +36,7 @@
 		do j=1,nTheta
 			do k=-nvprofile,nvprofile
 				C(i,j)%profile(k)=((real(k)*vresolution/vres_mult)/C(i,j)%line_width)**2
-				if(abs(C(i,j)%profile(k)).lt.5d0) then
+				if(abs(C(i,j)%profile(k)).lt.3d0) then
 					C(i,j)%profile_nz(k)=.true.
 				else
 					C(i,j)%profile_nz(k)=.false.
@@ -47,6 +47,9 @@
 	enddo
 
 	nl=0
+	
+	print*,Mol%nlines
+	
 	do ilines=1,Mol%nlines
 		call tellertje(ilines,Mol%nlines)
 		flux=0d0
@@ -70,11 +73,6 @@
 				C(i,j)%BB_l=wl1*BB(ilam,C(i,j)%iT)+wl2*BB(ilam+1,C(i,j)%iT)
 				C(i,j)%LRF_l=wl1*C(i,j)%LRF(ilam)+wl2*C(i,j)%LRF(ilam+1)
 
-c				if(C(i,j)%npop(LL%jup).ne.C(i,j)%npop(LL%jlow)) then
-c					C(i,j)%line_emis=C(i,j)%npop(LL%jup)*LL%Aul/(C(i,j)%npop(LL%jlow)*LL%Blu-C(i,j)%npop(LL%jup)*LL%Bul)
-c				else
-c					C(i,j)%line_emis=0d0
-c				endif
 				fact=hplanck*C(i,j)%N/(4d0*pi)
 				C(i,j)%line_abs=fact*(C(i,j)%npop(LL%jlow)*LL%Blu-C(i,j)%npop(LL%jup)*LL%Bul)
 
@@ -86,17 +84,22 @@ c				endif
 		do i=1,nImR
 			do j=1,nImPhi
 				PP => P(i,j)
-				do iv=-nv,nv
-					vmult=1
-					if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
-						flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-					else
-						call TraceFluxLines(PP,flux0,iv,vmult,1)
-					endif
-					do vmult=-1,1,2
-						flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+				if(PP%npopmax.gt.LL%jlow) then
+					do iv=-nv,nv
+						vmult=1
+						if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
+							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+						else
+							call TraceFluxLines(PP,flux0,iv,vmult,1)
+						endif
+						do vmult=-1,1,2
+							flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+						enddo
 					enddo
-				enddo
+				else
+					flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+					flux(-nv:nv)=flux(-nv:nv)+flux0*PP%A
+				endif
 			enddo
 		enddo
 		PP => path2star
@@ -114,7 +117,8 @@ c				endif
 		do i=-nv,nv
 			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),
      &					flux(i)*1e23/(distance*parsec)**2,
-     &					real(i)*vresolution/1d5
+     &					real(i)*vresolution/1d5,
+     &					LL%jlow,LL%jup
 		enddo
 		
 		endif
