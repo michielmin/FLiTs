@@ -13,6 +13,13 @@
 
 	call cpu_time(starttime)
 
+	do i=1,nImR
+		do j=1,nImPhi
+			allocate(P(i,j)%cont_contr(P(i,j)%n))
+			allocate(P(i,j)%exptau_dust(P(i,j)%n))
+		enddo
+	enddo
+
 	open(unit=20,file='out.dat',RECL=1000)
 
 	nv=int(vmax*1.1/vresolution)+1
@@ -85,12 +92,13 @@
 			do j=1,nImPhi
 				PP => P(i,j)
 				if(PP%npopmax.gt.LL%jlow) then
+					call ContContrPath(PP)
 					do iv=-nv,nv
 						vmult=1
 						if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
 							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
 						else
-							call TraceFluxLines(PP,flux0,iv,vmult,1)
+							call TraceFluxLines(PP,flux0,iv,vmult)
 						endif
 						do vmult=-1,1,2
 							flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
@@ -107,7 +115,7 @@
 			if(real(iv*vresolution).gt.PP%vmax.or.real(iv*vresolution).lt.PP%vmin) then
 				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
 			else
-				call Trace2StarLines(PP,flux0,iv,1)
+				call Trace2StarLines(PP,flux0,iv)
 			endif
 			do vmult=-1,1,2
 				flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
@@ -154,7 +162,7 @@
 	end
 	
 	
-	subroutine TraceFluxLines(p0,flux,ii,vmult,nn)
+	subroutine ContContrPath(p0)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,vmult,iv,ii,nv,nn
@@ -162,8 +170,6 @@
 	type(Path) p0
 	type(Cell),pointer :: CC
 
-	fact=1d0
-	flux=0d0
 	tau_tot=0d0
 
 	do k=1,p0%n
@@ -178,26 +184,76 @@ c	dust scattering source function
 			S=S+CC%LRF_l*CC%albedo_l*tau_dust
 
 			tau=tau_dust
-			do il=1,nn
-				jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
-				if(jj.lt.-nvprofile) jj=-nvprofile
-				if(jj.gt.nvprofile) jj=nvprofile
-				if(CC%profile_nz(jj)) then
-					profile=CC%profile(jj)
-					tau_gas=profile*CC%line_abs
-c	gas source function
-					S=S+CC%line_emis*profile
-					tau=tau+tau_gas
-				endif
-			enddo
 
 			tau_d=tau*p0%d(k)
 			if(tau_d.gt.1d-4) then
-				exptau=exp(-tau_d)
-				flux=flux+S*(1d0-exptau)*fact/tau
+				p0%exptau_dust(k)=exp(-tau_d)
+				p0%cont_contr(k)=S*(1d0-p0%exptau_dust(k))/tau
 			else
-				exptau=1d0-tau_d
-				flux=flux+S*p0%d(k)*fact
+				p0%exptau_dust(k)=1d0-tau_d
+				p0%cont_contr(k)=S*p0%d(k)
+			endif
+
+			tau_tot=tau_tot+tau_d
+			if(tau_tot.gt.tau_max) exit
+		endif
+	enddo
+	
+	return
+	end
+	
+
+
+	subroutine TraceFluxLines(p0,flux,ii,vmult)
+	use GlobalSetup
+	use Constants
+	integer i,j,k,vmult,iv,ii,nv
+	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d,tau_tot
+	type(Path) p0
+	type(Cell),pointer :: CC
+
+	fact=1d0
+	flux=0d0
+	tau_tot=0d0
+
+	do k=1,p0%n
+		i=p0%i(k)
+		if(i.ne.0) then
+			j=p0%j(k)
+			CC => C(i,j)
+
+			tau=0d0
+			S=0d0
+			jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
+			if(jj.lt.-nvprofile) jj=-nvprofile
+			if(jj.gt.nvprofile) jj=nvprofile
+			if(CC%profile_nz(jj)) then
+				profile=CC%profile(jj)
+				tau_gas=profile*CC%line_abs
+c	gas source function
+				S=S+CC%line_emis*profile
+				tau=tau+tau_gas
+
+				tau_dust=CC%kext_l
+c	dust thermal source function
+				S=S+CC%BB_l*(1d0-CC%albedo_l)*tau_dust
+c	dust scattering source function
+				S=S+CC%LRF_l*CC%albedo_l*tau_dust
+
+				tau=tau+tau_dust
+
+				tau_d=tau*p0%d(k)
+				if(tau_d.gt.1d-4) then
+					exptau=exp(-tau_d)
+					flux=flux+S*(1d0-exptau)*fact/tau
+				else
+					exptau=1d0-tau_d
+					flux=flux+S*p0%d(k)*fact
+				endif
+			else
+				tau_d=CC%kext_l*p0%d(k)
+				exptau=p0%exptau_dust(k)
+				flux=flux+p0%cont_contr(k)*fact
 			endif
 
 			fact=fact*exptau
@@ -212,10 +268,10 @@ c	gas source function
 
 
 
-	subroutine Trace2StarLines(p0,flux,ii,nn)
+	subroutine Trace2StarLines(p0,flux,ii)
 	use GlobalSetup
 	use Constants
-	integer i,j,k,iv,ii,nv,nn
+	integer i,j,k,iv,ii,nv
 	real*8 tau,flux,profile
 	type(Path) p0
 	type(Cell),pointer :: CC
@@ -229,13 +285,11 @@ c	gas source function
 		CC => C(i,j)
 		tau=tau+CC%kext_l
 
-		do il=1,nn
-			jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
-			if(jj.lt.-nvprofile) jj=-nvprofile
-			if(jj.gt.nvprofile) jj=nvprofile
-			profile=CC%profile(jj)
-			tau=tau+profile*CC%line_abs
-		enddo
+		jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
+		if(jj.lt.-nvprofile) jj=-nvprofile
+		if(jj.gt.nvprofile) jj=nvprofile
+		profile=CC%profile(jj)
+		tau=tau+profile*CC%line_abs
 	enddo
 
 	flux=Fstar_l*exp(-tau)

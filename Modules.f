@@ -100,7 +100,9 @@ c surface area of this path in the image and its coordinates
 		real*8,allocatable :: v(:),d(:),v1(:),v2(:)
 		integer,allocatable :: i(:),j(:)
 		
-		real*8,allocatable :: flux_cont(:)
+		real*8,allocatable :: flux_cont(:) !continuum contribution at each wavelength
+		real*8,allocatable :: cont_contr(:) !continuum contribution at each path element
+		real*8,allocatable :: exptau_dust(:) !dust optical depth at each path element
 	end type Path
 	
 	type Tracer
