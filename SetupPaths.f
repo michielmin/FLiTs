@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer ip,jp,i,j,k,ir,nRreduce,ilam
-	real*8 inc_min,ct,res_inc
+	real*8 inc_min,ct,res_inc,maxdv
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
@@ -95,7 +95,8 @@ c increase the resolution in velocity by this factor
 		enddo
 	enddo
 
-	vmax=-1d30
+	vmax=0d0
+	maxdv=0d0
 	do i=1,nImR
 	do j=1,nImPhi
 		PP => P(i,j)
@@ -118,12 +119,13 @@ c increase the resolution in velocity by this factor
 		trac%vz=-1d0
 		call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
-		P(i,j)%vmin=0d0
-		P(i,j)%vmax=0d0
+		P(i,j)%vmin=1d30
+		P(i,j)%vmax=-1d30
 		P(i,j)%npopmax=0
 		call tracepath(trac,PP)
-		if(abs(P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
-		if(abs(P(i,j)%vmin).gt.vmax) vmax=abs(P(i,j)%vmin)
+		if((P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
+		if((-P(i,j)%vmin).gt.vmax) vmax=abs(P(i,j)%vmin)
+		if((P(i,j)%vmax-P(i,j)%vmin).gt.maxdv) maxdv=(P(i,j)%vmax-P(i,j)%vmin)
 	enddo
 	enddo
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
@@ -156,8 +158,8 @@ c increase the resolution in velocity by this factor
 	trac%vz=-1d0
 	call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
-	path2star%vmin=0d0
-	path2star%vmax=0d0
+	path2star%vmin=1d30
+	path2star%vmax=-1d30
 	path2star%npopmax=0
 	PP => path2star
 	call tracepath(trac,PP)

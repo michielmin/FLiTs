@@ -24,6 +24,7 @@
 	do i=1,Mol%nlines
 		read(80,*) j,Mol%L(i)%jup,Mol%L(i)%jlow,Mol%L(i)%Aul,Mol%L(i)%freq,Mol%E(Mol%L(i)%jup)	!Mol%L(i)%Eup
 		Mol%L(i)%freq=Mol%L(i)%freq*1d9
+		Mol%L(i)%lam=clight*1d4/(Mol%L(i)%freq)
 
 		i_low=Mol%L(i)%jlow
 		i_up=Mol%L(i)%jup

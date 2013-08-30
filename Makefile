@@ -53,6 +53,7 @@ OBJS	      = Modules.o \
 				ComputeLTE.o \
 				PrepareStructure.o \
 				SetupPaths.o \
+				SortLines.o \
 				RaytraceContinuum.o \
 				RaytraceLines.o
 		
