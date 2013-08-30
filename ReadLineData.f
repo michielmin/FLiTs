@@ -232,10 +232,10 @@ c set default names of the species
 			do k=1,naxes(1)
 				C(i,j)%npop(k)=array(k,i,nTheta+1-j,1)
 			enddo
-			do k=2,naxes(1)
-				C(i,j)%npop(k)=C(i,j)%npop(k-1)*C(i,j)%npop(k)
-			enddo
-			C(i,j)%npop(1)=1d0-sum(C(i,j)%npop(2:naxes(1)))
+c			do k=2,naxes(1)
+c				C(i,j)%npop(k)=C(i,j)%npop(k-1)*C(i,j)%npop(k)
+c			enddo
+c			C(i,j)%npop(1)=1d0-sum(C(i,j)%npop(2:naxes(1)))
 		enddo
 	enddo
 
