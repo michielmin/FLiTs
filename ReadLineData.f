@@ -40,8 +40,10 @@
 	
 	do i=0,nR
 		do j=1,nTheta
-			C(i,j)%line_width=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol%M))
-			C(i,j)%line_width=C(i,j)%line_width+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+			if(popfile.eq.' ') then
+				C(i,j)%line_width=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol%M))
+				C(i,j)%line_width=C(i,j)%line_width+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+			endif
 			if(C(i,j)%line_width.lt.vresolution/vres_mult) C(i,j)%line_width=vresolution/vres_mult
 		enddo
 	enddo
@@ -192,6 +194,29 @@ c set default names of the species
 		goto 1
 	endif
 
+	naxis=3
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+
+	do i=naxis+1,4
+		naxes(i)=1
+	enddo
+	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
+
+	! read_image
+	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+
+	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+
+	do i=1,nR
+		do j=1,nTheta
+			C(i,j)%line_width=array_d(ipop,i,nTheta+1-j,1)*1d5
+		enddo
+	enddo
+
+	deallocate(array_d)
+	
 	!------------------------------------------------------------------------------
 	! HDU 5... : level populations
 	!------------------------------------------------------------------------------
