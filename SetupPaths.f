@@ -118,8 +118,8 @@ c increase the resolution in velocity by this factor
 		trac%vz=-1d0
 		call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
-		P(i,j)%vmin=1d30
-		P(i,j)%vmax=-1d30
+		P(i,j)%vmin=0d0
+		P(i,j)%vmax=0d0
 		P(i,j)%npopmax=0
 		call tracepath(trac,PP)
 		if(abs(P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
@@ -156,8 +156,8 @@ c increase the resolution in velocity by this factor
 	trac%vz=-1d0
 	call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
-	path2star%vmin=1d30
-	path2star%vmax=-1d30
+	path2star%vmin=0d0
+	path2star%vmax=0d0
 	path2star%npopmax=0
 	PP => path2star
 	call tracepath(trac,PP)
@@ -199,7 +199,11 @@ c-----------------------------------------------------------------------
 
 	call Trace2edge(trac,d,inext,jnext)
 
-	PP%n=PP%n+1
+	if(PP%n.eq.0) then
+		PP%n=PP%n+1
+	else if(C(PP%i(k),PP%j(k))%dens.gt.1d-50.and.PP%i(k).gt.0) then
+		PP%n=PP%n+1
+	endif
 	k=PP%n
 
 	PP%d(k)=d
@@ -221,10 +225,12 @@ c-----------------------------------------------------------------------
 
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
-	vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width
-	if(vtot.gt.PP%vmax.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax=vtot
-	vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width
-	if(vtot.lt.PP%vmin.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin=vtot
+	if(C(trac%i,trac%j)%dens.gt.1d-50) then
+		vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width
+		if(vtot.gt.PP%vmax.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax=vtot
+		vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width
+		if(vtot.lt.PP%vmin.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin=vtot
+	endif
 
 	do ipop=Mol%nlevels,1,-1
 		if(C(trac%i,trac%j)%npop(ipop).gt.1d-150) exit
