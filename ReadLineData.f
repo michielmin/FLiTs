@@ -44,7 +44,9 @@
 				C(i,j)%line_width=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol%M))
 				C(i,j)%line_width=C(i,j)%line_width+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
 			endif
-			if(C(i,j)%line_width.lt.vresolution/vres_mult) C(i,j)%line_width=vresolution/vres_mult
+			if((C(i,j)%line_width/3d0).lt.vresolution/vres_mult) then
+				vres_mult=vresolution*3d0/C(i,j)%line_width
+			endif
 		enddo
 	enddo
 	
