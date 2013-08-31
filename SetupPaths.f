@@ -2,8 +2,8 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam
-	real*8 inc_min,ct,res_inc,maxdv
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol
+	real*8 inc_min,ct,res_inc
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
@@ -96,7 +96,6 @@ c increase the resolution in velocity by this factor
 	enddo
 
 	vmax=0d0
-	maxdv=0d0
 	do i=1,nImR
 	do j=1,nImPhi
 		PP => P(i,j)
@@ -119,13 +118,17 @@ c increase the resolution in velocity by this factor
 		trac%vz=-1d0
 		call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
-		P(i,j)%vmin=1d30
-		P(i,j)%vmax=-1d30
-		P(i,j)%npopmax=0
+		allocate(P(i,j)%vmin(nmol))
+		allocate(P(i,j)%vmax(nmol))
+		allocate(P(i,j)%npopmax(nmol))
+		P(i,j)%vmin(1:nmol)=1d30
+		P(i,j)%vmax(1:nmol)=-1d30
+		P(i,j)%npopmax(1:nmol)=0
 		call tracepath(trac,PP)
-		if((P(i,j)%vmax).gt.vmax) vmax=abs(P(i,j)%vmax)
-		if((-P(i,j)%vmin).gt.vmax) vmax=abs(P(i,j)%vmin)
-		if((P(i,j)%vmax-P(i,j)%vmin).gt.maxdv) maxdv=(P(i,j)%vmax-P(i,j)%vmin)
+		do imol=1,nmol
+			if((P(i,j)%vmax(imol)).gt.vmax) vmax=abs(P(i,j)%vmax(imol))
+			if((-P(i,j)%vmin(imol)).gt.vmax) vmax=abs(P(i,j)%vmin(imol))
+		enddo
 	enddo
 	enddo
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
@@ -158,9 +161,12 @@ c increase the resolution in velocity by this factor
 	trac%vz=-1d0
 	call rotate(trac%vx,trac%vy,trac%vz,0d0,1d0,0d0,inc*pi/180d0)
 
-	path2star%vmin=1d30
-	path2star%vmax=-1d30
-	path2star%npopmax=0
+	allocate(path2star%vmin(nmol))
+	allocate(path2star%vmax(nmol))
+	allocate(path2star%npopmax(nmol))
+	path2star%vmin(1:nmol)=1d30
+	path2star%vmax(1:nmol)=-1d30
+	path2star%npopmax(1:nmol)=0
 	PP => path2star
 	call tracepath(trac,PP)
 
@@ -176,7 +182,7 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	type(Tracer) trac
 	real*8 x,y,z,phi,d,vtot,taumin
-	integer inext,jnext,ntrace,i,j,k,ipop
+	integer inext,jnext,ntrace,i,j,k,ipop,imol
 	logical hitstar
 	type(Path) PP
 
@@ -228,16 +234,18 @@ c-----------------------------------------------------------------------
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
 	if(C(trac%i,trac%j)%dens.gt.1d-50) then
-		vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width
-		if(vtot.gt.PP%vmax.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax=vtot
-		vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width
-		if(vtot.lt.PP%vmin.and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin=vtot
+		do imol=1,nmol
+			vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
+			if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
+			vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
+			if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
+			do ipop=Mol(imol)%nlevels,1,-1
+				if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
+			enddo
+			if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
+		enddo
 	endif
 
-	do ipop=Mol%nlevels,1,-1
-		if(C(trac%i,trac%j)%npop(ipop).gt.1d-150) exit
-	enddo
-	if(ipop.gt.PP%npopmax) PP%npopmax=ipop
 
 	trac%x=trac%x+trac%vx*d
 	trac%y=trac%y+trac%vy*d

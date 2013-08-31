@@ -1,39 +1,47 @@
 	subroutine SortLines()
 	use GlobalSetup
 	IMPLICIT NONE
-	type(Line),allocatable :: Line_temp(:)
-	type(Line) Line_min
 	real*8 lam_min
-	integer i,j,imin,nlines_temp
+	integer i,j,imin,imolmin,maxlines,imol
+	logical found
+	logical,allocatable :: used(:,:)
 	
-	allocate(Line_temp(Mol%nlines))
+	call output("Sorting the lines")
+	
+	nlines=0
+	maxlines=0
+	do imol=1,nmol
+		nlines=nlines+Mol(imol)%nlines
+		if(Mol(imol)%nlines.gt.maxlines) maxlines=Mol(imol)%nlines
+	enddo
+	allocate(used(nmol,maxlines))
+	used=.false.
 
-	nlines_temp=0
-	do j=1,Mol%nlines-1
-		lam_min=Mol%L(j)%lam
-		imin=j
-		do i=j,Mol%nlines
-			if(Mol%L(i)%lam.lt.lam_min) then
-				lam_min=Mol%L(i)%lam
-				imin=i
-			endif
+	allocate(Lines(nlines))
+
+	nlines=0
+
+	found=.true.
+	do while(found)
+		found=.false.
+		lam_min=lmax
+		do imol=1,nmol
+			do i=1,Mol(imol)%nlines
+				if(Mol(imol)%L(i)%lam.lt.lam_min.and.
+     &				Mol(imol)%L(i)%lam.gt.lmin.and..not.used(imol,i)) then
+					lam_min=Mol(imol)%L(i)%lam
+					imin=i
+					imolmin=imol
+					found=.true.
+				endif
+			enddo
 		enddo
-		Line_min=Mol%L(j)
-		Mol%L(j)=Mol%L(imin)
-		Mol%L(imin)=Line_min
-		if(Mol%L(j)%lam.gt.lmin.and.Mol%L(j)%lam.lt.lmax) then
-			nlines_temp=nlines_temp+1
-			Line_temp(nlines_temp)=Mol%L(j)
+		if(found) then
+			nlines=nlines+1
+			Lines(nlines)=Mol(imolmin)%L(imin)
+			used(imolmin,imin)=.true.
 		endif
 	enddo
-
-	deallocate(Mol%L)
-
-	Mol%nlines=nlines_temp
-	allocate(Mol%L(Mol%nlines))
-	Mol%L(1:Mol%nlines)=Line_temp(1:Mol%nlines)
-
-	deallocate(Line_temp)
 
 	return
 	end

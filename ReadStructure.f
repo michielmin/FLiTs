@@ -4,12 +4,7 @@
 	IMPLICIT NONE
 	integer i,j
 	
-	if(structtype.eq.1) then
-c		call ReadMCMaxStructure()
-		call ReadForProDiMo()
-	else if(structtype.eq.2) then
-c		call ReadProDiMoStructure()
-	endif
+	call ReadForProDiMo()
 	
 	do i=0,nR
 		do j=1,nTheta
@@ -34,8 +29,9 @@ c output the setup to the screen and the log file
 	call output("Inclination angle:  "//trim(dbl2string(inc,'(f13.4)'))//" degrees")
 
 	call output("==================================================================")
-	call output("Line file: "//trim(linefile))
-
+	do i=1,nmol
+		call output("Line file: "//trim(linefile(i)))
+	enddo
 
 	return
 	end

@@ -17,6 +17,9 @@ c===============================================================================
 	open(unit=20,file=inputfile,RECL=1000)
 	
 	ncla=-1
+
+	nmol=0
+	
 20	ncla=ncla+1
 10	continue
 	if(ncla.eq.0) then
@@ -52,14 +55,11 @@ c				all arguments are read
 			read(value,*) Rstar
 		case("structfile")
 			structfile=value
-		case("structtype")
-			read(value,*) structtype
 		case("linefile")
-			linefile=value
+			nmol=nmol+1
+			linefile(nmol)=value
 		case("popfile")
 			popfile=value
-		case("mass_mol")
-			read(value,*) Mol%M
 		case("lte")
 			read(value,*) LTE
 		case("lmin")
@@ -125,7 +125,6 @@ c===============================================================================
 	Rstar=1d0
 	structfile='forProDiMo.fits.gz'
 	popfile=' '
-	structtype=1
 	lmin=5
 	lmax=50
 	inc=35d0
@@ -133,7 +132,6 @@ c===============================================================================
 	vres_mult=10d0
 	tau_max=15d0
 		
-	Mol%M=28	! default is CO
 	LTE=.false.	! default is non-LTE
 	
 	return

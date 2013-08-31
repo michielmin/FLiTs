@@ -2,37 +2,54 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,i_low,i_up
+	integer i,j,i_low,i_up,imol,maxlevels
 	
-	open(unit=80,file=linefile,RECL=6000)
-	read(80,*)
-	read(80,*) Mol%name
-	read(80,*)
-	read(80,*) Mol%M
-	read(80,*)
-	read(80,*) Mol%nlevels
-	read(80,*)
-	allocate(Mol%E(Mol%nlevels))
-	allocate(Mol%g(Mol%nlevels))
-	do i=1,Mol%nlevels
-		read(80,*) j,Mol%E(i),Mol%g(i)
-	enddo
-	read(80,*)
-	read(80,*) Mol%nlines
-	read(80,*)
-	allocate(Mol%L(Mol%nlines))
-	do i=1,Mol%nlines
-		read(80,*) j,Mol%L(i)%jup,Mol%L(i)%jlow,Mol%L(i)%Aul,Mol%L(i)%freq,Mol%E(Mol%L(i)%jup)	!Mol%L(i)%Eup
-		Mol%L(i)%freq=Mol%L(i)%freq*1d9
-		Mol%L(i)%lam=clight*1d4/(Mol%L(i)%freq)
+	allocate(Mol(nmol))
 
-		i_low=Mol%L(i)%jlow
-		i_up=Mol%L(i)%jup
-		Mol%L(i)%Bul=Mol%L(i)%Aul/(2d0*hplanck*Mol%L(i)%freq**3/clight**2)
-		Mol%L(i)%Blu=Mol%L(i)%Bul*Mol%g(i_up)/Mol%g(i_low)
-	enddo
-	close(unit=80)
+	do imol=1,nmol
+		open(unit=80,file=linefile(imol),RECL=6000)
+		read(80,*)
+		read(80,*) Mol(imol)%name
+		read(80,*)
+		read(80,*) Mol(imol)%M
+		read(80,*)
+		read(80,*) Mol(imol)%nlevels
+		read(80,*)
+		allocate(Mol(imol)%E(Mol(imol)%nlevels))
+		allocate(Mol(imol)%g(Mol(imol)%nlevels))
+		do i=1,Mol(imol)%nlevels
+			read(80,*) j,Mol(imol)%E(i),Mol(imol)%g(i)
+		enddo
+		read(80,*)
+		read(80,*) Mol(imol)%nlines
+		read(80,*)
+		allocate(Mol(imol)%L(Mol(imol)%nlines))
+		do i=1,Mol(imol)%nlines
+			read(80,*) j,Mol(imol)%L(i)%jup,Mol(imol)%L(i)%jlow,Mol(imol)%L(i)%Aul,
+     &				Mol(imol)%L(i)%freq,Mol(imol)%E(Mol(imol)%L(i)%jup)	!Mol%L(i)%Eup
+			Mol(imol)%L(i)%freq=Mol(imol)%L(i)%freq*1d9
+			Mol(imol)%L(i)%lam=clight*1d4/(Mol(imol)%L(i)%freq)
+			Mol(imol)%L(i)%imol=imol
 
+			i_low=Mol(imol)%L(i)%jlow
+			i_up=Mol(imol)%L(i)%jup
+			Mol(imol)%L(i)%Bul=Mol(imol)%L(i)%Aul/(2d0*hplanck*Mol(imol)%L(i)%freq**3/clight**2)
+			Mol(imol)%L(i)%Blu=Mol(imol)%L(i)%Bul*Mol(imol)%g(i_up)/Mol(imol)%g(i_low)
+		enddo
+		close(unit=80)
+	enddo
+
+	maxlevels=0
+	do imol=1,nmol
+		if(Mol(imol)%nlevels.gt.maxlevels) maxlevels=Mol(imol)%nlevels
+	enddo
+	do i=0,nR
+		do j=1,nTheta
+			allocate(C(i,j)%npop(nmol,maxlevels))
+			allocate(C(i,j)%abun(nmol))
+			allocate(C(i,j)%line_width(nmol))
+		enddo
+	enddo
 
 	if(popfile.ne.' ') 	call ReadPopData()
 
@@ -40,11 +57,14 @@
 	
 	do i=0,nR
 		do j=1,nTheta
-			if(popfile.eq.' ') then
-				C(i,j)%line_width=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol%M))
-				C(i,j)%line_width=C(i,j)%line_width+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
-			endif
-			if(C(i,j)%line_width.lt.vresolution/vres_mult) C(i,j)%line_width=vresolution/vres_mult
+			do imol=1,nmol
+				if(popfile.eq.' ') then
+					C(i,j)%line_width(imol)=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol(imol)%M))
+					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)
+     &					+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+				endif
+				if(C(i,j)%line_width(imol).lt.vresolution/vres_mult) C(i,j)%line_width(imol)=vresolution/vres_mult
+			enddo
 		enddo
 	enddo
 	
@@ -61,7 +81,7 @@ c===============================================================================
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nvars,ivars,i,j,l,k,naxis,npopname,ipop
+	integer nvars,ivars,i,j,l,k,naxis,npopname,imol,ipop(nmol),ihdu
 	character*7 vars(10),hdu
 	real,allocatable :: array(:,:,:,:)
 	real*8,allocatable :: array_d(:,:,:,:)
@@ -103,7 +123,9 @@ c set default names of the species
 	npopname=5
 
 	do i=1,npopname
-		if(trim(Mol%name).eq.trim(popname(i))) ipop=i
+		do imol=1,nmol
+			if(trim(Mol(imol)%name).eq.trim(popname(i))) ipop(imol)=i
+		enddo
 	enddo
 
 	!------------------------------------------------------------------------
@@ -174,7 +196,9 @@ c set default names of the species
 	do i=1,nR
 		do j=1,nTheta
 			if(C(i,j)%dens.gt.1d-50) then
-				C(i,j)%abun=array_d(ipop,i,nTheta+1-j,1)*Mol%M*mp/C(i,j)%dens
+				do imol=1,nmol
+					C(i,j)%abun(imol)=array_d(ipop(imol),i,nTheta+1-j,1)*Mol(imol)%M*mp/C(i,j)%dens
+				enddo
 			else
 				C(i,j)%abun=1d-4
 			endif
@@ -211,7 +235,9 @@ c set default names of the species
 
 	do i=1,nR
 		do j=1,nTheta
-			C(i,j)%line_width=array_d(ipop,i,nTheta+1-j,1)*1d5
+			do imol=1,nmol
+				C(i,j)%line_width(imol)=array_d(ipop(imol),i,nTheta+1-j,1)*1d5
+			enddo
 		enddo
 	enddo
 
@@ -221,14 +247,20 @@ c set default names of the species
 	! HDU 5... : level populations
 	!------------------------------------------------------------------------------
 
-	do i=1,ipop
+	ihdu=1
+2	continue
+	
 	!  move to next hdu
-		call ftmrhd(unit,1,hdutype,status)
-		if(status.ne.0) then
-			status=0
-			goto 1
-		endif
+	call ftmrhd(unit,1,hdutype,status)
+	if(status.ne.0) then
+		status=0
+		goto 1
+	endif
+
+	do imol=1,nmol
+		if(ipop(imol).eq.ihdu) exit
 	enddo
+	if(imol.gt.nmol) goto 2	
 
 	naxis=3
 
@@ -245,18 +277,18 @@ c set default names of the species
 
 	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
 
-	if(naxes(1).lt.Mol%nlevels.and..not.LTE) then
+	if(naxes(1).lt.Mol(imol)%nlevels.and..not.LTE) then
+		call output("For species: " //trim(Mol(imol)%name))
 		call output("Assuming levels above " // int2string(naxes(1),'(i4)') // "unpopulated")
 	endif
 
-	if(naxes(1).gt.Mol%nlevels) naxes(1)=Mol%nlevels
+	if(naxes(1).gt.Mol(imol)%nlevels) naxes(1)=Mol(imol)%nlevels
 	do i=1,nR
 		do j=1,nTheta
-			allocate(C(i,j)%npop(Mol%nlevels))
-			C(i,j)%npop(1:Mol%nlevels)=0d0
+			C(i,j)%npop(imol,1:Mol(imol)%nlevels)=0d0
 			tot=0d0
 			do k=1,naxes(1)
-				C(i,j)%npop(k)=array(k,i,nTheta+1-j,1)
+				C(i,j)%npop(imol,k)=array(k,i,nTheta+1-j,1)
 			enddo
 c			do k=2,naxes(1)
 c				C(i,j)%npop(k)=C(i,j)%npop(k-1)*C(i,j)%npop(k)
@@ -267,6 +299,9 @@ c			C(i,j)%npop(1)=1d0-sum(C(i,j)%npop(2:naxes(1)))
 
 	deallocate(array)
 
+	print*,ihdu
+
+	goto 2
 
 1	continue
 
@@ -289,9 +324,10 @@ c			C(i,j)%npop(1)=1d0-sum(C(i,j)%npop(2:naxes(1)))
 	endif
 
 	do j=1,nTheta
-		allocate(C(0,j)%npop(Mol%nlevels))
-		C(0,j)%npop(1:Mol%nlevels)=C(1,j)%npop(1:Mol%nlevels)
-		C(0,j)%abun=C(1,j)%abun
+		do imol=1,nmol
+			C(0,j)%npop(imol,1:Mol(imol)%nlevels)=C(1,j)%npop(imol,1:Mol(imol)%nlevels)
+			C(0,j)%abun(imol)=C(1,j)%abun(imol)
+		enddo
 	enddo
 	
 	return

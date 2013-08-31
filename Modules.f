@@ -35,7 +35,7 @@ c string converting functions
 	external int2string,dbl2string
 	
 c input files
-	character*500 linefile
+	character*500 linefile(50)
 	character*500 structfile
 	character*500 popfile
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
@@ -43,7 +43,7 @@ c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
-	integer nR,nTheta,nlam,ilam1,ilam2
+	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines
 	real*8 Rin,Rout,inc,Fstar_l
 	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
@@ -57,7 +57,7 @@ c store all the blackbodies
 	real*8,allocatable :: BB(:,:)	! dimensions nlam,MAXT
 
 	type Line
-		integer jup,jlow
+		integer jup,jlow,imol
 		real*8 Aul,Blu,Bul,freq,lam,Eup
 	end type Line
 
@@ -73,12 +73,12 @@ c total mass of the molecule
 c cell structure
 	type Cell
 c	Temperature and total gas density
-		real*8 Tdust,Tgas,dens,v,N,abun
+		real*8 Tdust,Tgas,dens,v
 c	properties of the molecule
-		real*8 line_width
-		real*8,allocatable :: profile(:)
-		logical,allocatable :: profile_nz(:)
-		real*8,allocatable :: npop(:) ! dimension is number of levels
+		real*8,allocatable :: line_width(:),abun(:),N(:)  ! dimension nmol
+		real*8,allocatable :: profile(:,:) ! dimension nmol, nvelocity
+		logical,allocatable :: profile_nz(:,:) ! dimension nmol, nvelocity
+		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
 		real*8 line_emis,line_abs
 		real*8 kext_l,albedo_l,BB_l,LRF_l
 		integer iT
@@ -90,9 +90,10 @@ c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 	
 	type Path
 c minimum and maximum velocity encountered in this path
-		real*8 vmin,vmax
+		real*8,allocatable :: vmin(:),vmax(:)
 c number of elements
-		integer n,npopmax
+		integer n
+		integer,allocatable :: npopmax(:)
 c surface area of this path in the image and its coordinates
 		real*8 A,R1,R2,phi1,phi2,R,phi
 		real*8 vx,vy,vz,x,y,z
@@ -116,7 +117,8 @@ c==============================
 	
 	type(Path),allocatable,target :: P(:,:)
 	type(Path),target :: path2star
-	type(Molecule) Mol
+	type(Molecule),allocatable :: Mol(:)
+	type(Line),allocatable :: Lines(:)
 	
 	end module GlobalSetup
 
