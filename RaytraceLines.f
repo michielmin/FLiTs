@@ -9,9 +9,7 @@
 	type(Line) :: LL
 	
 	call output("==================================================================")
-	call output("Tracing the lines")
-
-	call cpu_time(starttime)
+	call output("Preparing the profiles")
 
 	do i=1,nImR
 		do j=1,nImPhi
@@ -40,6 +38,7 @@
 	enddo
 
 	do i=0,nR
+		call tellertje(i+1,nR+1)
 		do j=1,nTheta
 			do imol=1,nmol
 				do k=-nvprofile,nvprofile
@@ -58,6 +57,11 @@
 
 	nl=0
 	
+	call output("==================================================================")
+	call output("Tracing the lines")
+
+	call cpu_time(starttime)
+
 	call output("Tracing " // trim(int2string(nlines,'(i5)')) // " lines")
 
 	do ilines=1,nlines
@@ -160,7 +164,6 @@
      &			//" s")
 	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))
      &			//" s")
-
 
 
 	return

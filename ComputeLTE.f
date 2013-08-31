@@ -8,6 +8,7 @@
 	call output("Computing LTE level populations")
 	
 	do i=0,nR
+	call tellertje(i+1,nR+1)
 	do j=1,nTheta
 		T=C(i,j)%Tgas
 		if(T.lt.3d0) T=3d0

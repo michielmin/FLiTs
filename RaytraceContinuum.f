@@ -4,6 +4,10 @@
 	IMPLICIT NONE
 	integer i,j,ilam,k
 	real*8 flux,lam0,T,Planck,wl1,wl2
+
+	call output("==================================================================")
+	call output("Raytracing the continuum")
+
 	
 	allocate(BB(nlam,MAXT))
 	do ilam=1,nlam

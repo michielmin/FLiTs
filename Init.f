@@ -85,6 +85,7 @@ c read another command, so go back
 30	continue
 	close(unit=20)
 
+	call output("==================================================================")
 	
 	return
 	end

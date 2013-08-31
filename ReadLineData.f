@@ -261,6 +261,7 @@ c set default names of the species
 		if(ipop(imol).eq.ihdu) exit
 	enddo
 	if(imol.gt.nmol) goto 2	
+	print*,imol
 
 	naxis=3
 
@@ -299,7 +300,7 @@ c			C(i,j)%npop(1)=1d0-sum(C(i,j)%npop(2:naxes(1)))
 
 	deallocate(array)
 
-	print*,ihdu
+	ihdu=ihdu+1
 
 	goto 2
 
