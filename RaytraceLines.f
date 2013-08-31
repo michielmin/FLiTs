@@ -58,7 +58,6 @@
 	nl=0
 	
 	call output("==================================================================")
-	call output("Tracing the lines")
 
 	call cpu_time(starttime)
 
