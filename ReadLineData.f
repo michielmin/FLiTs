@@ -261,7 +261,6 @@ c set default names of the species
 		if(ipop(imol).eq.ihdu) exit
 	enddo
 	if(imol.gt.nmol) goto 2	
-	print*,imol
 
 	naxis=3
 
