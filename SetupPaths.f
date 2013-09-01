@@ -20,7 +20,7 @@ c for inclinations smaller don't use the additional radial points
 c increase the resolution in velocity by this factor
 	res_inc=1d0
 
-	nrReduce=2
+	nrReduce=1
 	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
