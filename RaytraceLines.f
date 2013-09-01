@@ -157,17 +157,19 @@
 	enddo
 
 	ilam=ilam+1
-	do while(lam_cont(ilam).lt.lmax)
-		flux0=0d0
-		do i=1,nImR
-			do j=1,nImPhi
-				PP => P(i,j)
-				flux0=flux0+PP%flux_cont(ilam)*PP%A
+	do while(ilam.le.nlam)
+		if(lam_cont(ilam).lt.lmax) then
+			flux0=0d0
+			do i=1,nImR
+				do j=1,nImPhi
+					PP => P(i,j)
+					flux0=flux0+PP%flux_cont(ilam)*PP%A
+				enddo
 			enddo
+			flux0=flux0+path2star%flux_cont(ilam)*path2star%A
+			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
+			ilam=ilam+1
 		enddo
-		flux0=flux0+path2star%flux_cont(ilam)*path2star%A
-		write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
-		ilam=ilam+1
 	enddo
 
 	close(unit=20)
