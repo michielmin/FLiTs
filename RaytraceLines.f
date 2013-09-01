@@ -169,7 +169,7 @@
 			flux0=flux0+path2star%flux_cont(ilam)*path2star%A
 			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
 			ilam=ilam+1
-		enddo
+		endif
 	enddo
 
 	close(unit=20)
