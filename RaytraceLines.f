@@ -26,9 +26,9 @@
 	allocate(flux(-nv:nv))
 
 	lam=lmin
-	ilam=1
-	do while(lam.gt.lam_cont(ilam+1).and.ilam.lt.nlam)
-		ilam=ilam+1
+	ilam1=1
+	do while(lam.gt.lam_cont(ilam1+1).and.ilam1.lt.nlam)
+		ilam1=ilam1+1
 	enddo
 	do i=0,nR
 		do j=1,nTheta
@@ -76,6 +76,21 @@
 		do while(lam.gt.lam_cont(ilam+1).and.ilam.lt.nlam)
 			ilam=ilam+1
 		enddo
+		if(ilam.gt.ilam1) then
+			do k=ilam1+1,ilam
+				flux0=0d0
+				do i=1,nImR
+					do j=1,nImPhi
+						PP => P(i,j)
+						flux0=flux0+PP%flux_cont(k)*PP%A
+					enddo
+				enddo
+				flux0=flux0+path2star%flux_cont(k)*path2star%A
+				write(20,*) lam_cont(k),flux0*1e23/(distance*parsec)**2
+			enddo
+			ilam1=ilam
+		endif
+			
 		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl2=1d0-wl1
 
@@ -141,18 +156,18 @@
 		endif
 	enddo
 
-	do ilam=1,nlam
-		if(lam_cont(ilam).lt.lmax.and.lam_cont(ilam).gt.lmin) then
-			flux0=0d0
-			do i=1,nImR
-				do j=1,nImPhi
-					PP => P(i,j)
-					flux0=flux0+PP%flux_cont(ilam)*PP%A
-				enddo
+	ilam=ilam+1
+	do while(lam_cont(ilam).lt.lmax)
+		flux0=0d0
+		do i=1,nImR
+			do j=1,nImPhi
+				PP => P(i,j)
+				flux0=flux0+PP%flux_cont(ilam)*PP%A
 			enddo
-			flux0=flux0+path2star%flux_cont(ilam)*path2star%A
-			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
-		endif
+		enddo
+		flux0=flux0+path2star%flux_cont(ilam)*path2star%A
+		write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
+		ilam=ilam+1
 	enddo
 
 	close(unit=20)
