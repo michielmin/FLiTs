@@ -62,6 +62,8 @@ c				all arguments are read
 			popfile=value
 		case("lte")
 			read(value,*) LTE
+		case("blend")
+			read(value,*) doblend
 		case("lmin")
 			read(value,*) lmin
 		case("lmax")
@@ -134,6 +136,8 @@ c===============================================================================
 	tau_max=15d0
 		
 	LTE=.false.	! default is non-LTE
+	
+	doblend=.true.
 	
 	return
 	end

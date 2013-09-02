@@ -29,6 +29,7 @@ c stellar parameters
 c wavelength grid and resolution
 	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max
 	integer nvprofile
+	logical doblend
 	
 c string converting functions
 	character*20 int2string,dbl2string
@@ -66,6 +67,7 @@ c store all the blackbodies
 		real*8,allocatable :: v(:)
 		integer n
 		type(Blend),pointer :: next
+		integer,allocatable :: ib0(:),nb0(:)
 	end type Blend
 
 	type Molecule
