@@ -26,7 +26,7 @@
 
 	call DetermineBlends(nv,maxblend)
 
-	allocate(flux(-nv:nv*maxblend))
+	allocate(flux(-nv:nv+nv*2*(maxblend)))
 
 	lam=lmin
 	ilam1=1
@@ -110,18 +110,16 @@
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
 					fact=hplanck*C(i,j)%N(LL%imol)/(4d0*pi)
-					C(i,j)%line_abs(i)=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
-					C(i,j)%line_emis(i)=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
+					C(i,j)%line_abs(ilines)=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
+					C(i,j)%line_emis(ilines)=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
 				enddo
 			enddo
 		enddo
 		Fstar_l=wl1*Fstar(ilam)+wl2*Fstar(ilam+1)
 
 		nvmax=int((vmax+Bl%v(Bl%n))*1.1/vresolution)+1
-	print*,nvmax,Bl%n
 
 		do i=1,nImR
-			call tellertje(i,nImR)
 			do j=1,nImPhi
 				PP => P(i,j)
 				if(Bl%n.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
@@ -268,7 +266,6 @@ c	dust scattering source function
 			gas=.false.
 			do ib=1,Bl%n
 				imol=Bl%L(ib)%imol
-		print*,Mol(imol)%name
 				jj=int((real(vmult)*p0%v(k)+Bl%v(ib))*vres_mult/vresolution-real(ii)*vres_mult)
 				if(jj.lt.-nvprofile) jj=-nvprofile
 				if(jj.gt.nvprofile) jj=nvprofile
@@ -382,7 +379,7 @@ c	dust scattering source function
 			if(i.eq.1) then
 				Bl%v(i)=0d0
 			else
-				f=(Bl%L(i)%lam/Bl%L(i-1)%lam)**2
+				f=(Bl%L(i)%lam/Bl%L(1)%lam)**2
 				Bl%v(i)=clight*(f-1d0)/(f+1d0)
 			endif
 		enddo
