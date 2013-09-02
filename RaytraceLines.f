@@ -2,11 +2,12 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,ilam,k,ilines,vmult,iv,nv,nl,imol
+	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact
 	real*8,allocatable :: flux(:)
 	type(Path),pointer :: PP
 	type(Line) :: LL
+	type(Blend),pointer :: Bl
 	
 	call output("==================================================================")
 	call output("Preparing the profiles")
@@ -23,7 +24,9 @@
 	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
 
-	allocate(flux(-nv:nv))
+	call DetermineBlends(nv,maxblend)
+
+	allocate(flux(-nv:nv*maxblend))
 
 	lam=lmin
 	ilam1=1
@@ -34,6 +37,8 @@
 		do j=1,nTheta
 			allocate(C(i,j)%profile(nmol,-nvprofile:nvprofile))
 			allocate(C(i,j)%profile_nz(nmol,-nvprofile:nvprofile))
+			allocate(C(i,j)%line_abs(maxblend))
+			allocate(C(i,j)%line_emis(maxblend))
 		enddo
 	enddo
 
@@ -63,11 +68,12 @@
 
 	call output("Tracing " // trim(int2string(nlines,'(i5)')) // " lines")
 
-	do ilines=1,nlines
-		call tellertje(ilines,nlines)
+	Bl => Blends
+	do iblends=1,nblends
+		call tellertje(iblends,nblends)
 		flux=0d0
 
-		LL = Lines(ilines)
+		LL = Bl%L(1)
 		lam=clight*1d4/(LL%freq)
 		if(lam.gt.lmin.and.lam.lt.lmax) then
 		nl=nl+1
@@ -101,51 +107,58 @@
 				C(i,j)%BB_l=wl1*BB(ilam,C(i,j)%iT)+wl2*BB(ilam+1,C(i,j)%iT)
 				C(i,j)%LRF_l=wl1*C(i,j)%LRF(ilam)+wl2*C(i,j)%LRF(ilam+1)
 
-				fact=hplanck*C(i,j)%N(LL%imol)/(4d0*pi)
-				C(i,j)%line_abs=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
-
-				C(i,j)%line_emis=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
+				do ilines=1,Bl%n
+					LL = Bl%L(ilines)
+					fact=hplanck*C(i,j)%N(LL%imol)/(4d0*pi)
+					C(i,j)%line_abs(i)=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
+					C(i,j)%line_emis(i)=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
+				enddo
 			enddo
 		enddo
 		Fstar_l=wl1*Fstar(ilam)+wl2*Fstar(ilam+1)
 
+		nvmax=int((vmax+Bl%v(Bl%n))*1.1/vresolution)+1
+	print*,nvmax,Bl%n
+
 		do i=1,nImR
+			call tellertje(i,nImR)
 			do j=1,nImPhi
 				PP => P(i,j)
-				if(PP%npopmax(LL%imol).gt.LL%jlow) then
+				if(Bl%n.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
 					call ContContrPath(PP)
-					do iv=-nv,nv
+					do iv=-nv,nvmax
 						vmult=1
-						if(real(iv*vresolution).gt.PP%vmax(LL%imol)
+						if(Bl%n.gt.1) then
+							do vmult=-1,1,2
+								call TraceFluxLines(PP,flux0,iv,vmult,Bl)
+								flux(iv)=flux(iv)+flux0*PP%A/2d0
+							enddo
+						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
      &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
 							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+							do vmult=-1,1,2
+								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+							enddo
 						else
-							call TraceFluxLines(PP,flux0,iv,LL%imol)
+							call TraceFluxLines(PP,flux0,iv,vmult,Bl)
+							do vmult=-1,1,2
+								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+							enddo
 						endif
-						do vmult=-1,1,2
-							flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
-						enddo
 					enddo
 				else
 					flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-					flux(-nv:nv)=flux(-nv:nv)+flux0*PP%A
+					flux(-nv:nvmax)=flux(-nv:nvmax)+flux0*PP%A
 				endif
 			enddo
 		enddo
 		PP => path2star
-		do iv=-nv,nv
-			if(real(iv*vresolution).gt.PP%vmax(LL%imol)
-     &			.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-			else
-				call Trace2StarLines(PP,flux0,iv,LL%imol)
-			endif
-			do vmult=-1,1,2
-				flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
-			enddo
+		do iv=-nv,nvmax
+			call Trace2StarLines(PP,flux0,iv,Bl)
+			flux(iv)=flux(iv)+flux0*PP%A
 		enddo
 
-		do i=-nv,nv
+		do i=-nv,nvmax
 			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),
      &					flux(i)*1e23/(distance*parsec)**2,
      &					real(i)*vresolution/1d5,
@@ -154,6 +167,8 @@
 		enddo
 		
 		endif
+
+		if(iblends.lt.nblends) Bl => Bl%next
 	enddo
 
 	ilam=ilam+1
@@ -228,13 +243,15 @@ c	dust scattering source function
 	
 
 
-	subroutine TraceFluxLines(p0,flux,ii,imol)
+	subroutine TraceFluxLines(p0,flux,ii,vmult,Bl)
 	use GlobalSetup
 	use Constants
-	integer i,j,k,iv,ii,nv,ilines,imol
+	integer i,j,k,iv,ii,nv,ilines,imol,vmult
 	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d,tau_tot
 	type(Path) p0
 	type(Cell),pointer :: CC
+	type(Blend) Bl
+	logical gas
 
 	fact=1d0
 	flux=0d0
@@ -248,16 +265,24 @@ c	dust scattering source function
 
 			tau=0d0
 			S=0d0
-			jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
-			if(jj.lt.-nvprofile) jj=-nvprofile
-			if(jj.gt.nvprofile) jj=nvprofile
-			if(CC%profile_nz(imol,jj)) then
-				profile=CC%profile(imol,jj)
-				tau_gas=profile*CC%line_abs
+			gas=.false.
+			do ib=1,Bl%n
+				imol=Bl%L(ib)%imol
+		print*,Mol(imol)%name
+				jj=int((real(vmult)*p0%v(k)+Bl%v(ib))*vres_mult/vresolution-real(ii)*vres_mult)
+				if(jj.lt.-nvprofile) jj=-nvprofile
+				if(jj.gt.nvprofile) jj=nvprofile
+				if(CC%profile_nz(imol,jj)) then
+					profile=CC%profile(imol,jj)
+					tau_gas=profile*CC%line_abs(ib)
 c	gas source function
-				S=S+CC%line_emis*profile
-				tau=tau+tau_gas
+					S=S+profile*CC%line_emis(ib)
+					tau=tau+tau_gas
+					gas=.true.
+				endif
+			enddo
 
+			if(gas) then
 				tau_dust=CC%kext_l
 c	dust thermal source function
 				S=S+CC%BB_l*(1d0-CC%albedo_l)*tau_dust
@@ -292,13 +317,14 @@ c	dust scattering source function
 
 
 
-	subroutine Trace2StarLines(p0,flux,ii,imol)
+	subroutine Trace2StarLines(p0,flux,ii,Bl)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,iv,ii,nv,ilines,imol
 	real*8 tau,flux,profile
 	type(Path) p0
 	type(Cell),pointer :: CC
+	type(Blend) Bl
 
 	tau=0d0
 
@@ -309,15 +335,89 @@ c	dust scattering source function
 		CC => C(i,j)
 		tau=tau+CC%kext_l
 
-		jj=int(p0%v(k)*vres_mult/vresolution-real(ii)*vres_mult)
-		if(jj.lt.-nvprofile) jj=-nvprofile
-		if(jj.gt.nvprofile) jj=nvprofile
-		profile=CC%profile(imol,jj)
-		tau=tau+profile*CC%line_abs
+		do ib=1,Bl%n
+			imol=Bl%L(ib)%imol
+			jj=int((p0%v(k)+Bl%v(ib))*vres_mult/vresolution-real(ii)*vres_mult)
+			if(jj.lt.-nvprofile) jj=-nvprofile
+			if(jj.gt.nvprofile) jj=nvprofile
+			profile=CC%profile(imol,jj)
+			tau=tau+profile*CC%line_abs(ib)
+		enddo
 	enddo
 
 	flux=Fstar_l*exp(-tau)
 	
 	return
 	end
+	
+
+	subroutine DetermineBlends(nv,maxblend)
+	use GlobalSetup
+	use Constants
+	integer ilines,ilines0,i,maxblend,nv
+	real*8 maxvshift,maxmult
+	type(Blend),pointer :: Bl
+
+	maxvshift=2d0*real(nv)*vresolution
+	maxmult=sqrt((1d0+maxvshift/clight)/(1d0-maxvshift/clight))
+	
+	Bl => Blends
+
+	ilines=2
+	ilines0=1
+	nblends=0
+	maxblend=0
+	do while(ilines0.le.nlines)
+		Bl%n=1
+		do while((Lines(ilines)%lam/Lines(ilines-1)%lam).lt.maxmult.and.ilines.le.nlines)
+			Bl%n=Bl%n+1
+			ilines=ilines+1
+			if(ilines.gt.nlines) exit
+		enddo
+		allocate(Bl%L(Bl%n))
+		allocate(Bl%v(Bl%n))
+		if(Bl%n.gt.maxblend) maxblend=Bl%n
+		do i=1,Bl%n
+			Bl%L(i) = Lines(ilines0+i-1)
+			if(i.eq.1) then
+				Bl%v(i)=0d0
+			else
+				f=(Bl%L(i)%lam/Bl%L(i-1)%lam)**2
+				Bl%v(i)=clight*(f-1d0)/(f+1d0)
+			endif
+		enddo
+		ilines0=ilines
+		ilines=ilines+1
+		allocate(Bl%next)
+		Bl => Bl%next
+		nblends=nblends+1
+	enddo
+	nblends=nblends-1
+	
+	return
+	end
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	

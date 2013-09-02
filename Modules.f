@@ -43,7 +43,7 @@ c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
-	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines
+	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines,nblends
 	real*8 Rin,Rout,inc,Fstar_l
 	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
@@ -60,6 +60,13 @@ c store all the blackbodies
 		integer jup,jlow,imol
 		real*8 Aul,Blu,Bul,freq,lam,Eup
 	end type Line
+	
+	type Blend
+		type(Line),pointer :: L(:)
+		real*8,allocatable :: v(:)
+		integer n
+		type(Blend),pointer :: next
+	end type Blend
 
 	type Molecule
 		real*8,allocatable :: E(:),g(:) ! dimension is number of levels
@@ -79,7 +86,7 @@ c	properties of the molecule
 		real*8,allocatable :: profile(:,:) ! dimension nmol, nvelocity
 		logical,allocatable :: profile_nz(:,:) ! dimension nmol, nvelocity
 		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
-		real*8 line_emis,line_abs
+		real*8,allocatable :: line_emis(:),line_abs(:)
 		real*8 kext_l,albedo_l,BB_l,LRF_l
 		integer iT
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
@@ -119,6 +126,7 @@ c==============================
 	type(Path),target :: path2star
 	type(Molecule),allocatable :: Mol(:)
 	type(Line),allocatable :: Lines(:)
+	type(Blend),target :: Blends
 	
 	end module GlobalSetup
 
