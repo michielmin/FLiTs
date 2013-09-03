@@ -113,6 +113,11 @@
 		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl2=1d0-wl1
 
+!$OMP PARALLEL IF(.false.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,j,LL,fact,ilines)
+!$OMP& SHARED(C,Bl,wl1,wl2,ilam,nR,nTheta,BB)
+!$OMP DO
 		do i=0,nR
 			do j=1,nTheta
 				C(i,j)%kext_l=wl1*C(i,j)%kext(ilam)+wl2*C(i,j)%kext(ilam+1)
@@ -128,10 +133,18 @@
 				enddo
 			enddo
 		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 		Fstar_l=wl1*Fstar(ilam)+wl2*Fstar(ilam+1)
 
 		nvmax=nv+int(v_blend(nb)/vresolution)
 
+!$OMP PARALLEL IF(.false.)
+!$OMP& DEFAULT(NONE)
+!$OMP& PRIVATE(i,j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0)
+!$OMP& SHARED(P,nImPhi,nImR,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam)
+!$OMP DO
 		do i=1,nImR
 			do j=1,nImPhi
 				PP => P(i,j)
@@ -194,6 +207,9 @@
 				endif
 			enddo
 		enddo
+!$OMP END DO
+!$OMP FLUSH
+!$OMP END PARALLEL
 		PP => path2star
 		do iv=-nv,nvmax
 			if(nb.gt.1) then
