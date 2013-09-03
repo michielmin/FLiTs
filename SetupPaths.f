@@ -2,8 +2,8 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol
-	real*8 inc_min,ct,res_inc
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,ntheta_reduce,ninc
+	real*8 inc_min,ct,res_inc,x,y
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
@@ -21,6 +21,8 @@ c increase the resolution in velocity by this factor
 	res_inc=1d0
 
 	nrReduce=2
+	ntheta_reduce=5
+	ninc=2
 	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
@@ -30,7 +32,7 @@ c increase the resolution in velocity by this factor
 	if(nImPhi.gt.90) nImPhi=90
 	
 	if(inc.gt.inc_min) then
-		nImR=nR*2/nRreduce+nTheta*3/5
+		nImR=nR*ninc/nRreduce+nTheta*2/ntheta_reduce
 	else
 		nImR=nR/nRreduce
 	endif
@@ -44,23 +46,28 @@ c increase the resolution in velocity by this factor
 	allocate(imPhi(nImPhi))
 	
 	ir=0
-	do i=1,nR,nRreduce
-		ir=ir+1
-		imR(ir)=R_av(i)
-	enddo
 	if(inc.gt.inc_min) then
 		do i=1,nR,nRreduce
-			ir=ir+1
-			imR(ir)=abs(R_av(i)*sin(inc*pi/180d0))
+			do j=1,ninc
+				x=R_av(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
+				y=R_av(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
+				ir=ir+1
+				imR(ir)=sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2))
+			enddo
 		enddo
-		do i=1,nTheta,5
+		do i=1,nTheta,ntheta_reduce
 			ir=ir+1
 			imR(ir)=abs(R(1)*sin(theta_av(i)+inc*pi/180d0))
 			ir=ir+1
 			imR(ir)=abs(R(1)*sin(theta_av(i)-inc*pi/180d0))
-			ir=ir+1
-			imR(ir)=abs(R(1)*sin(theta_av(i)))
 		enddo
+	else
+		do i=1,nR,nRreduce
+			do j=1,ninc
+				ir=ir+1
+				imR(ir)=R_av(i)
+			enddo
+		enddo	
 	endif
 
 	j=nImR-ir

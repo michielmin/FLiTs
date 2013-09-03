@@ -5,13 +5,15 @@
 	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nb,ib0,nb0,ib
 	integer,allocatable :: imol_blend(:)
 	real*8,allocatable :: v_blend(:)
-	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact
-	real*8,allocatable :: flux(:)
+	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
+	real*8,allocatable :: flux(:),fluxHR(:)
 	type(Path),pointer :: PP
 	type(Line) :: LL
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
+	
+	idum=42
 	
 	call output("==================================================================")
 	call output("Preparing the profiles")
@@ -20,6 +22,7 @@
 		do j=1,nImPhi
 			allocate(P(i,j)%cont_contr(P(i,j)%n))
 			allocate(P(i,j)%exptau_dust(P(i,j)%n))
+			allocate(P(i,j)%S_dust(P(i,j)%n))
 		enddo
 	enddo
 
@@ -31,6 +34,7 @@
 	call DetermineBlends(nv,maxblend)
 
 	allocate(flux(-nv:nv+nv*2*(maxblend)))
+	allocate(fluxHR(-nv:nv+nv*2*(maxblend)))
 	allocate(imol_blend(maxblend))
 	allocate(v_blend(maxblend))
 
@@ -74,6 +78,8 @@
 
 	call output("Tracing " // trim(int2string(nlines,'(i5)')) // " lines")
 
+	lcmin=lmin
+
 	Bl => Blends
 	do iblends=1,nblends
 		call tellertje(iblends,nblends)
@@ -86,7 +92,7 @@
 		enddo
 
 		LL = Bl%L(1)
-		lam=clight*1d4/(LL%freq)
+		lam=LL%lam
 
 		if(lam.gt.lmin.and.lam.lt.lmax) then
 		nl=nl+nb
@@ -95,20 +101,24 @@
 		do while(lam.gt.lam_cont(ilam+1).and.ilam.lt.nlam)
 			ilam=ilam+1
 		enddo
+
 		if(ilam.gt.ilam1) then
 			do k=ilam1+1,ilam
-				flux0=0d0
-				do i=1,nImR
-					do j=1,nImPhi
-						PP => P(i,j)
-						flux0=flux0+PP%flux_cont(k)*PP%A
+				if(lam_cont(k).gt.lcmin.and.lam_cont(k).lt.Bl%lmin) then
+					flux0=0d0
+					do i=1,nImR
+						do j=1,nImPhi
+							PP => P(i,j)
+							flux0=flux0+PP%flux_cont(k)*PP%A
+						enddo
 					enddo
-				enddo
-				flux0=flux0+path2star%flux_cont(k)*path2star%A
-				write(20,*) lam_cont(k),flux0*1e23/(distance*parsec)**2
+					flux0=flux0+path2star%flux_cont(k)*path2star%A
+					write(20,*) lam_cont(k),flux0*1e23/(distance*parsec)**2
+				endif
 			enddo
 			ilam1=ilam
 		endif
+		lcmin=Bl%lmax
 
 		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl2=1d0-wl1
@@ -273,8 +283,23 @@
 
 		do i=-nv,nvmax
 			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
+			flux(i)=flux(i)+fc
+		enddo
+
+c		fluxHR=flux
+c		flux=0d0
+c		do i=-nv,nvmax
+c			do j=i-4,i+4
+c				k=j
+c				if(j.lt.-nv) k=-nv
+c				if(j.gt.nvmax) k=nvmax
+c				flux(i)=flux(i)+fluxHR(k)/9d0
+c			enddo
+c		enddo
+
+		do i=-nv,nvmax
 			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),
-     &					(fc+flux(i))*1e23/(distance*parsec)**2,
+     &					flux(i)*1e23/(distance*parsec)**2,
      &					real(i)*vresolution/1d5,
      &					trim(Mol(LL%imol)%name),
      &					LL%jlow,LL%jup
@@ -283,6 +308,7 @@
 		endif
 
 		if(iblends.lt.nblends) Bl => Bl%next
+				
 c		call cpu_time(stoptime)
 c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))//" s")
 	enddo
@@ -338,6 +364,8 @@ c	dust thermal source function
 c	dust scattering source function
 			S=S+CC%LRF_l*CC%albedo_l*tau_dust
 
+			p0%S_dust(k)=S
+
 			tau=tau_dust
 
 			tau_d=tau*p0%d(k)
@@ -368,11 +396,12 @@ c	dust scattering source function
 	type(Cell),pointer :: CC
 	type(Blend) Bl
 	logical gas
-
+	
 	fact=1d0
 	flux=0d0
 	tau_tot=0d0
 
+	v=real(ii)+ran2(idum)-0.5d0
 	do k=1,p0%n
 		i=p0%i(k)
 		if(i.ne.0) then
@@ -382,9 +411,10 @@ c	dust scattering source function
 			tau=0d0
 			S=0d0
 			gas=.false.
+
 			do ib=1,nb
 				imol=imol_blend(ib)
-				jj=int((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-real(ii)*vres_mult)
+				jj=int((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-v*vres_mult)
 				if(jj.lt.-nvprofile) jj=-nvprofile
 				if(jj.gt.nvprofile) jj=nvprofile
 				if(CC%profile_nz(imol,jj)) then
@@ -399,10 +429,7 @@ c	gas source function
 
 			if(gas) then
 				tau_dust=CC%kext_l
-c	dust thermal source function
-				S=S+CC%BB_l*(1d0-CC%albedo_l)*tau_dust
-c	dust scattering source function
-				S=S+CC%LRF_l*CC%albedo_l*tau_dust
+				S=S+p0%S_dust(k)
 
 				tau=tau+tau_dust
 
@@ -422,6 +449,7 @@ c	dust scattering source function
 
 			fact=fact*exptau
 			tau_tot=tau_tot+tau_d
+
 			if(tau_tot.gt.tau_max) exit
 		endif
 	enddo
@@ -470,7 +498,7 @@ c	dust scattering source function
 	use GlobalSetup
 	use Constants
 	integer ilines,ilines0,i,maxblend,nv,nvmax,iv
-	real*8 maxvshift,maxmult
+	real*8 maxvshift,maxmult,v
 	type(Blend),pointer :: Bl
 
 	maxvshift=2d0*real(nv)*vresolution
@@ -516,6 +544,11 @@ c	dust scattering source function
 			enddo
 			Bl%nb0(iv)=i-Bl%ib0(iv)+1
 		enddo
+
+		v=-real(nv)*vresolution
+		Bl%lmin=Bl%L(1)%lam*sqrt((1d0+v/clight)/(1d0-v/clight))
+		v=real(nvmax)*vresolution
+		Bl%lmax=Bl%L(1)%lam*sqrt((1d0+v/clight)/(1d0-v/clight))
 
 		ilines0=ilines
 		ilines=ilines+1

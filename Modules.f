@@ -57,6 +57,11 @@ c store all the blackbodies
 	parameter(MAXT=5000)
 	real*8,allocatable :: BB(:,:)	! dimensions nlam,MAXT
 
+c random number generator
+	real*8 ran2
+	external ran2
+	integer idum
+
 	type Line
 		integer jup,jlow,imol
 		real*8 Aul,Blu,Bul,freq,lam,Eup
@@ -68,6 +73,7 @@ c store all the blackbodies
 		integer n
 		type(Blend),pointer :: next
 		integer,allocatable :: ib0(:),nb0(:)
+		real*8 lmin,lmax
 	end type Blend
 
 	type Molecule
@@ -113,6 +119,7 @@ c surface area of this path in the image and its coordinates
 		real*8,allocatable :: flux_cont(:) !continuum contribution at each wavelength
 		real*8,allocatable :: cont_contr(:) !continuum contribution at each path element
 		real*8,allocatable :: exptau_dust(:) !dust optical depth at each path element
+		real*8,allocatable :: S_dust(:) !dust source function at each path element
 	end type Path
 	
 	type Tracer

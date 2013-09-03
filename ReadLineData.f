@@ -60,8 +60,8 @@
 			do imol=1,nmol
 				if(popfile.eq.' ') then
 					C(i,j)%line_width(imol)=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol(imol)%M))
-					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)
-     &					+0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)+
+     &					0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
 				endif
 				if(C(i,j)%line_width(imol).lt.vresolution/vres_mult) C(i,j)%line_width(imol)=vresolution/vres_mult
 			enddo
