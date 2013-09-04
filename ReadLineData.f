@@ -58,11 +58,11 @@
 	do i=0,nR
 		do j=1,nTheta
 			do imol=1,nmol
-				if(popfile.eq.' ') then
+c				if(popfile.eq.' ') then
 					C(i,j)%line_width(imol)=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol(imol)%M))
-					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)+
-     &					0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
-				endif
+c					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)+
+c     &					0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+c				endif
 				if(C(i,j)%line_width(imol).lt.vresolution/vres_mult) C(i,j)%line_width(imol)=vresolution/vres_mult
 			enddo
 		enddo
@@ -119,7 +119,7 @@ c set default names of the species
 	popname(2) = "O"
 	popname(3) = "CO"
 	popname(4) = "o-H2O"
-	popname(5) = "p-H2O"  
+	popname(5) = "p-H2O"
 	npopname=5
 
 	do i=1,npopname
@@ -291,9 +291,9 @@ c set default names of the species
 				C(i,j)%npop(imol,k)=array(k,i,nTheta+1-j,1)
 			enddo
 			do k=2,naxes(1)
-				C(i,j)%npop(k)=C(i,j)%npop(k-1)*C(i,j)%npop(k)
+				C(i,j)%npop(imol,k)=C(i,j)%npop(imol,k-1)*C(i,j)%npop(imol,k)
 			enddo
-			C(i,j)%npop(1)=1d0-sum(C(i,j)%npop(2:naxes(1)))
+			C(i,j)%npop(imol,1)=1d0-sum(C(i,j)%npop(imol,2:naxes(1)))
 		enddo
 	enddo
 

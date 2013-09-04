@@ -27,7 +27,7 @@ c===============================================================================
 c stellar parameters
 	real*8 Mstar,Rstar,distance
 c wavelength grid and resolution
-	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max
+	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max,vres_profile
 	integer nvprofile
 	logical doblend
 	

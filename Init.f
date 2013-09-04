@@ -70,8 +70,12 @@ c				all arguments are read
 			read(value,*) lmax
 		case("vres")	! given in cm/s
 			read(value,*) vresolution
-		case("vres_mult")	! given in cm/s
+		case("vres_mult")
+			call output("vres_mult no longer supported!")
+			stop
 			read(value,*) vres_mult
+		case("vres_profile")	! given in cm/s
+			read(value,*) vres_profile
 		case("tau_max")	! given in cm/s
 			read(value,*) tau_max
 		case("inc")	! with respect to pole on
@@ -86,6 +90,8 @@ c read another command, so go back
 
 30	continue
 	close(unit=20)
+
+	vres_mult=vresolution/vres_profile
 
 	call output("==================================================================")
 	
@@ -132,7 +138,7 @@ c===============================================================================
 	lmax=50
 	inc=35d0
 	vresolution=1d5	! given in cm/s
-	vres_mult=10d0
+	vres_profile=1d4
 	tau_max=15d0
 		
 	LTE=.false.	! default is non-LTE
