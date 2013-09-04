@@ -141,7 +141,7 @@ c-----------------------------------------------------------------------
 	real*8 starttime,stoptime,xx
 	character*20 dbl2string
 	
-	if(i.eq.1) call output("....................")
+	if(i.eq.1) call output("Starting...")
 	f=int(20d0*dble(i)/dble(n))
 	
 	if(20d0*real(i-1)/real(n).lt.real(f)
@@ -154,8 +154,6 @@ c-----------------------------------------------------------------------
      &			//" s left. (" //
      &			trim(dbl2string(xx,'(f5.1)')) // " %)")
 	endif
-	
-	if(i.eq.n) call output("")
 
 	return
 	end
