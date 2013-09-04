@@ -58,11 +58,11 @@
 	do i=0,nR
 		do j=1,nTheta
 			do imol=1,nmol
-c				if(popfile.eq.' ') then
+				if(popfile.eq.' ') then
 					C(i,j)%line_width(imol)=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol(imol)%M))
-c					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)+
-c     &					0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
-c				endif
+					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)+
+     &					0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+				endif
 				if(C(i,j)%line_width(imol).lt.vresolution/vres_mult) C(i,j)%line_width(imol)=vresolution/vres_mult
 			enddo
 		enddo

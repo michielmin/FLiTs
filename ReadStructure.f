@@ -439,14 +439,16 @@ c in the theta grid we actually store cos(theta) for convenience
 	
 	do i=1,nR
 		do j=1,nTheta
-			C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/R_av(i))
+c			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))/R_av(i))
+			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/R_av(i))
 		enddo
 	enddo
 	i=0
 	do j=1,nTheta
 		C(i,j)%kext(1:nlam)=1d-70
 		C(i,j)%kabs(1:nlam)=1d-70
-		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
+c		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
+		C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/(sqrt(R_av(1)*Rstar*Rsun)))
 		C(i,j)%dens=1d-60
 	enddo
 	
