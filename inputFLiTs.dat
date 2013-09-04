@@ -1,0 +1,14 @@
+structfile='forProDiMo.fits.gz'
+popfile='forMCFOST.fits.gz'
+
+linefile='~/ProDiMo/data/COvibrot_Lambda.dat'
+linefile='~/ProDiMo/data/Oatom_Lambda.dat'
+linefile='~/ProDiMo/data/C+_Lambda.dat'
+linefile='~/ProDiMo/data/oH2O_Lambda.dat'
+linefile='~/ProDiMo/data/pH2O_Lambda.dat'
+
+lmin=0.1
+lmax=3500
+
+LTE=.true.
+
