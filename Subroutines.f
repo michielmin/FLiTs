@@ -148,9 +148,11 @@ c-----------------------------------------------------------------------
      &   .and.20d0*real(i+1)/real(n).gt.real(f)) then
 		call cpu_time(stoptime)
 		xx=100d0*real(ii)/real(nn)
-		call output(trim(dbl2string(xx,'(f5.1)')) // " % done")
-		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(ii),'(f8.2)'))
-     &			//" s")
+		call output(trim(dbl2string((stoptime-starttime)/real(ii),'(f8.2)'))
+     &			//" s per line. Approx " // 
+     &			trim(dbl2string((stoptime-starttime)*(nn-ii)/real(ii),'(f8.2)'))
+     &			//" s left. (" //
+     &			trim(dbl2string(xx,'(f5.1)')) // " %)")
 	endif
 	
 	if(i.eq.n) call output("")
