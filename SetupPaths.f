@@ -21,8 +21,8 @@ c increase the resolution in velocity by this factor
 	res_inc=1d0
 
 	nrReduce=2
-	ntheta_reduce=5
-	ninc=2
+	ntheta_reduce=6
+	ninc=3
 	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")

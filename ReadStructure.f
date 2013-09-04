@@ -54,7 +54,7 @@ c===============================================================================
 	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam
 	integer*4 :: istat,stat4,tmp_int,stat5,stat6
 	real  :: nullval
-	real*8  :: nullval_d
+	real*8  :: nullval_d,xx,zz,rr
 	logical*4 :: anynull
 	integer*4, dimension(4) :: naxes
 	character*80 comment,errmessage
@@ -440,7 +440,11 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR
 		do j=1,nTheta
 c			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))/R_av(i))
-			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/R_av(i))
+c			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/R_av(i))
+			xx=R_av(i)
+			zz=xx/tan(theta_av(j))
+			rr=sqrt(xx*xx+zz*zz)
+			C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		enddo
 	enddo
 	i=0
