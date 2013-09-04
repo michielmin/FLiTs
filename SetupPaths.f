@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,ntheta_reduce,ninc
-	real*8 inc_min,ct,res_inc,x,y
+	real*8 ct,res_inc,x,y
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
@@ -15,14 +15,12 @@
 		if(lam_cont(nlam+1-ilam).gt.lmax) ilam2=nlam+1-ilam
 	enddo
 	
-c for inclinations smaller don't use the additional radial points
-	inc_min=1d0
 c increase the resolution in velocity by this factor
 	res_inc=1d0
 
 	nrReduce=2
 	ntheta_reduce=6
-	ninc=2
+	ninc=3
 	
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
@@ -31,11 +29,17 @@ c increase the resolution in velocity by this factor
 	if(nImPhi.lt.30) nImPhi=30
 	if(nImPhi.gt.90) nImPhi=90
 	
-	if(inc.gt.inc_min) then
-		nImR=nR*ninc/nRreduce+nTheta*2/ntheta_reduce
-	else
-		nImR=nR/nRreduce
-	endif
+	ir=0
+	do i=1,nR,nRreduce
+		do j=1,ninc
+			x=R_av(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
+			y=R_av(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
+			if(j.eq.1.or.sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2)).lt.R(1)) ir=ir+1
+		enddo
+	enddo
+
+c	nImR=nR*ninc/nRreduce+nTheta*2/ntheta_reduce
+	nImR=ir+nTheta*2/ntheta_reduce
 
 	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/(nImPhi/3)
 
@@ -46,29 +50,23 @@ c increase the resolution in velocity by this factor
 	allocate(imPhi(nImPhi))
 	
 	ir=0
-	if(inc.gt.inc_min) then
-		do i=1,nR,nRreduce
-			do j=1,ninc
-				x=R_av(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
-				y=R_av(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
+	do i=1,nR,nRreduce
+		do j=1,ninc
+			x=R_av(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
+			y=R_av(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
+			x=sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2))
+			if(j.eq.1.or.x.lt.R(1)) then
 				ir=ir+1
-				imR(ir)=sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2))
-			enddo
+				imR(ir)=x
+			endif
 		enddo
-		do i=1,nTheta,ntheta_reduce
-			ir=ir+1
-			imR(ir)=abs(R(1)*sin(theta_av(i)+inc*pi/180d0))
-			ir=ir+1
-			imR(ir)=abs(R(1)*sin(theta_av(i)-inc*pi/180d0))
-		enddo
-	else
-		do i=1,nR,nRreduce
-			do j=1,ninc
-				ir=ir+1
-				imR(ir)=R_av(i)
-			enddo
-		enddo	
-	endif
+	enddo
+	do i=1,nTheta,ntheta_reduce
+		ir=ir+1
+		imR(ir)=abs(R(1)*sin(theta_av(i)+inc*pi/180d0))
+		ir=ir+1
+		imR(ir)=abs(R(1)*sin(theta_av(i)-inc*pi/180d0))
+	enddo
 
 	j=nImR-ir
 	do i=1,j
