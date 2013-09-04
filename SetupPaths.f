@@ -16,7 +16,7 @@
 	enddo
 	
 c for inclinations smaller don't use the additional radial points
-	inc_min=5d0
+	inc_min=1d0
 c increase the resolution in velocity by this factor
 	res_inc=1d0
 
