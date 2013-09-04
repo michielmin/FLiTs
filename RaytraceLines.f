@@ -82,7 +82,6 @@
 
 	Bl => Blends
 	do iblends=1,nblends
-		call tellertje(iblends,nblends)
 		flux=0d0
 		
 		nb=Bl%n
@@ -311,6 +310,7 @@ c		enddo
 				
 c		call cpu_time(stoptime)
 c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))//" s")
+		call tellertje_time(iblends,nblends,nl,nlines,starttime)
 	enddo
 
 	ilam=ilam+1
@@ -556,7 +556,6 @@ c	gas source function
 		Bl => Bl%next
 		nblends=nblends+1
 	enddo
-	nblends=nblends-1
 	
 	return
 	end

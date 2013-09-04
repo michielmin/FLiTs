@@ -130,3 +130,31 @@ c-----------------------------------------------------------------------
 	return
 	end
 
+c-----------------------------------------------------------------------
+c-----------------------------------------------------------------------
+
+
+	subroutine tellertje_time(i,n,ii,nn,starttime)
+	IMPLICIT NONE
+	integer i,n,f
+	integer ii,nn
+	real*8 starttime,stoptime,xx
+	character*20 dbl2string
+	
+	if(i.eq.1) call output("....................")
+	f=int(20d0*dble(i)/dble(n))
+	
+	if(20d0*real(i-1)/real(n).lt.real(f)
+     &   .and.20d0*real(i+1)/real(n).gt.real(f)) then
+		call cpu_time(stoptime)
+		xx=100d0*real(ii)/real(nn)
+		call output(trim(dbl2string(xx,'(f5.1)')) // " % done")
+		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(ii),'(f8.2)'))
+     &			//" s")
+	endif
+	
+	if(i.eq.n) call output("")
+
+	return
+	end
+
