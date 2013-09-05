@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nb,ib0,nb0,ib
-	integer,allocatable :: imol_blend(:)
+	integer,allocatable :: imol_blend(:),count(:)
 	real*8,allocatable :: v_blend(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
 	real*8,allocatable :: flux(:),fluxHR(:)
@@ -12,6 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
+	character*1000 comment
 	
 	idum=42
 	
@@ -26,7 +27,7 @@
 		enddo
 	enddo
 
-	open(unit=20,file='out.dat',RECL=1000)
+	open(unit=20,file='out.dat',RECL=1500)
 
 	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
@@ -37,6 +38,7 @@
 	allocate(fluxHR(-nv:nv+nv*2*(maxblend)))
 	allocate(imol_blend(maxblend))
 	allocate(v_blend(maxblend))
+	allocate(count(nmol))
 
 	lam=lmin
 	ilam1=1
@@ -296,12 +298,27 @@ c				flux(i)=flux(i)+fluxHR(k)/9d0
 c			enddo
 c		enddo
 
+		if(Bl%n.eq.1) then
+			comment = trim(Mol(Bl%L(1)%imol)%name) // "  up: " // trim(int2string(Bl%L(1)%jup,'(i5)'))
+     &											  // "  low: " // trim(int2string(Bl%L(1)%jlow,'(i5)'))
+		else
+			count=0
+			do i=1,Bl%n
+				count(Bl%L(i)%imol)=count(Bl%L(i)%imol)+1
+			enddo
+			comment = "blend of "
+			do i=1,nmol
+				if(count(i).gt.0) then
+					comment=trim(comment) // trim(int2string(count(i),'(i3)')) // " " // trim(Mol(i)%name)
+				endif
+			enddo
+		endif
+
 		do i=-nv,nvmax
 			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),
      &					flux(i)*1e23/(distance*parsec)**2,
      &					real(i)*vresolution/1d5,
-     &					trim(Mol(LL%imol)%name),
-     &					LL%jlow,LL%jup
+     &					trim(comment)
 		enddo
 		
 		endif
