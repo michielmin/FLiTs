@@ -318,8 +318,6 @@ c set default names of the species
 
 	deallocate(array)
 
-	ihdu=ihdu+1
-
 	goto 2
 
 1	continue
