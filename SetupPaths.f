@@ -38,7 +38,6 @@ c increase the resolution in velocity by this factor
 		enddo
 	enddo
 
-c	nImR=nR*ninc/nRreduce+nTheta*2/ntheta_reduce
 	nImR=ir+nTheta*2/ntheta_reduce
 
 	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/(nImPhi/3)

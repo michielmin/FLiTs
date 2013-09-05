@@ -81,7 +81,7 @@ c===============================================================================
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nvars,ivars,i,j,l,k,naxis,npopname,imol,ipop(nmol),ihdu
+	integer nvars,ivars,i,j,l,k,naxis,nspec,imol,ipop(nmol),ihdu
 	character*7 vars(10),hdu
 	real,allocatable :: array(:,:,:,:)
 	real*8,allocatable :: array_d(:,:,:,:)
@@ -93,7 +93,9 @@ c===============================================================================
 	logical*4 :: anynull
 	integer*4, dimension(4) :: naxes
 	character*80 comment,errmessage
-	character*30 errtext,popname(20)
+	character*30 errtext
+	character*30,allocatable :: popname(:)
+	integer prodimo2mcfost_version
 
 	! Get an unused Logical Unit Number to use to open the FITS file.
 	status=0
@@ -114,16 +116,30 @@ c===============================================================================
 
 	call output("Reading level populations from: "//trim(popfile))
 
-c set default names of the species
-	popname(1) = "C+"
-	popname(2) = "O"
-	popname(3) = "CO"
-	popname(4) = "o-H2O"
-	popname(5) = "p-H2O"
-	npopname=5
 
-	do i=1,npopname
-		do imol=1,nmol
+	call ftgkyj(unit,'prodimo2mcfost',prodimo2mcfost_version,comment,status)
+	call output("prodimo2mcfost version: " // trim(int2string(prodimo2mcfost_version,'(i2)')))
+
+	if(prodimo2mcfost_version.ge.4) then
+		call ftgkyj(unit,'nspec',nspec,comment,status)
+		allocate(popname(nspec))
+		do i=1,nspec
+		    call ftgkys(unit,'species',popname(i),comment,status)
+		enddo
+	else
+c set default names of the species
+		nspec=5
+		allocate(popname(nspec))
+		popname(1) = "C+"
+		popname(2) = "O"
+		popname(3) = "CO"
+		popname(4) = "o-H2O"
+		popname(5) = "p-H2O"
+	endif
+
+
+	do imol=1,nmol
+		do i=1,nspec
 			if(trim(Mol(imol)%name).eq.trim(popname(i))) ipop(imol)=i
 		enddo
 	enddo
@@ -247,11 +263,12 @@ c set default names of the species
 	! HDU 5... : level populations
 	!------------------------------------------------------------------------------
 
-	ihdu=1
+	ihdu=0
 2	continue
 	
 	!  move to next hdu
 	call ftmrhd(unit,1,hdutype,status)
+	ihdu=ihdu+1
 	if(status.ne.0) then
 		status=0
 		goto 1
@@ -277,9 +294,9 @@ c set default names of the species
 
 	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
 
+	call output("Reading from HDU: " // trim(int2string(ihdu,'(i3)')) // ": "  // trim(Mol(imol)%name))
 	if(naxes(1).lt.Mol(imol)%nlevels.and..not.LTE) then
-		call output("For species: " //trim(Mol(imol)%name))
-		call output("Assuming levels above " // int2string(naxes(1),'(i4)') // "unpopulated")
+		call output("Assuming levels above " // trim(int2string(naxes(1),'(i4)')) // " unpopulated")
 	endif
 
 	if(naxes(1).gt.Mol(imol)%nlevels) naxes(1)=Mol(imol)%nlevels
@@ -290,10 +307,12 @@ c set default names of the species
 			do k=1,naxes(1)
 				C(i,j)%npop(imol,k)=array(k,i,nTheta+1-j,1)
 			enddo
-			do k=2,naxes(1)
-				C(i,j)%npop(imol,k)=C(i,j)%npop(imol,k-1)*C(i,j)%npop(imol,k)
-			enddo
-			C(i,j)%npop(imol,1)=1d0-sum(C(i,j)%npop(imol,2:naxes(1)))
+			if(prodimo2mcfost_version.ge.3) then
+				do k=2,naxes(1)
+					C(i,j)%npop(imol,k)=C(i,j)%npop(imol,k-1)*C(i,j)%npop(imol,k)
+				enddo
+				C(i,j)%npop(imol,1)=1d0-sum(C(i,j)%npop(imol,2:naxes(1)))
+			endif
 		enddo
 	enddo
 
@@ -329,6 +348,8 @@ c set default names of the species
 			C(0,j)%abun(imol)=C(1,j)%abun(imol)
 		enddo
 	enddo
+	
+	deallocate(popname)
 	
 	return
 	end
