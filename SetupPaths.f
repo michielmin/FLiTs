@@ -237,8 +237,8 @@ c-----------------------------------------------------------------------
 
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
-	if(C(trac%i,trac%j)%dens.gt.1d-50) then
-		do imol=1,nmol
+	do imol=1,nmol
+		if(C(trac%i,trac%j)%dens*C(trac%i,trac%j)%abun(imol).gt.1d-50.and.trac%j.gt.1) then
 			vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
 			if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
 			vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
@@ -247,8 +247,8 @@ c add this for all species to get the absolute max and min velocity contributing
 				if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
 			enddo
 			if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
-		enddo
-	endif
+		endif
+	enddo
 
 
 	trac%x=trac%x+trac%vx*d

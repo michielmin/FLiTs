@@ -311,7 +311,8 @@ c set default names of the species
 				do k=2,naxes(1)
 					C(i,j)%npop(imol,k)=C(i,j)%npop(imol,k-1)*C(i,j)%npop(imol,k)
 				enddo
-				C(i,j)%npop(imol,1)=1d0-sum(C(i,j)%npop(imol,2:naxes(1)))
+				tot=sum(C(i,j)%npop(imol,1:Mol(imol)%nlevels))
+				C(i,j)%npop(imol,1:Mol(imol)%nlevels)=C(i,j)%npop(imol,1:Mol(imol)%nlevels)/tot
 			endif
 		enddo
 	enddo
