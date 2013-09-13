@@ -144,10 +144,11 @@ c set default names of the species
 		do i=1,nspec
 			if(trim(Mol(imol)%name).eq.trim(popname(i))) ipop(imol)=i
 		enddo
-		if(ipop(imol).eq.0) then
-			print*,trim(Mol(imol)%name)
-			stop
-		endif
+		if(ipop(imol).eq.0) call output("Cannot find species " // 
+     &			trim(Mol(imol)%name) // " in the population file.")
+	enddo
+	do imol=1,nmol
+		if(ipop(imol).eq.0) stop
 	enddo
 
 	!------------------------------------------------------------------------
