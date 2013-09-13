@@ -95,7 +95,6 @@ c===============================================================================
 	call ftgkyd(unit,'Rout',Rout,comment,status)
 
 	call ftgkyd(unit,'Mstar',Mstar,comment,status)
-	Mstar=2.4
 	call ftgkyd(unit,'Rstar',Rstar,comment,status)
 
 	call ftgkyd(unit,'distance',distance,comment,status)

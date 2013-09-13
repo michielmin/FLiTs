@@ -15,7 +15,6 @@
 		do j=0,nTheta
 			if(popfile.eq.' ') C(i,j)%abun(1:nmol)=1d-4
 			allocate(C(i,j)%N(nmol))
-			C(i,j)%dens=C(i,j)%dens*0.71/0.01
 			do imol=1,nmol
 				C(i,j)%N(imol)=C(i,j)%dens*C(i,j)%abun(imol)/(Mol(imol)%M*mp)
 			enddo
