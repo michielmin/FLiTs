@@ -46,7 +46,7 @@
 		ilam1=ilam1+1
 	enddo
 	do i=0,nR
-		do j=1,nTheta
+		do j=0,nTheta
 			allocate(C(i,j)%profile(nmol,-nvprofile:nvprofile))
 			allocate(C(i,j)%profile_nz(nmol,-nvprofile:nvprofile))
 			allocate(C(i,j)%line_abs(maxblend))
@@ -372,8 +372,8 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 
 	do k=1,p0%n
 		i=p0%i(k)
-		if(i.ne.0) then
-			j=p0%j(k)
+		j=p0%j(k)
+		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
 			CC => C(i,j)
 			tau_dust=CC%kext_l
 c	dust thermal source function
@@ -395,7 +395,7 @@ c	dust scattering source function
 			endif
 
 			tau_tot=tau_tot+tau_d
-			if(tau_tot.gt.tau_max) exit
+			if(tau_tot.gt.tau_max) return
 		endif
 	enddo
 	
@@ -421,8 +421,8 @@ c	dust scattering source function
 	v=real(ii)+ran2(idum)-0.5d0
 	do k=1,p0%n
 		i=p0%i(k)
-		if(i.ne.0) then
-			j=p0%j(k)
+		j=p0%j(k)
+		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
 			CC => C(i,j)
 
 			tau=0d0
@@ -467,7 +467,7 @@ c	gas source function
 			fact=fact*exptau
 			tau_tot=tau_tot+tau_d
 
-			if(tau_tot.gt.tau_max) exit
+			if(tau_tot.gt.tau_max) return
 		endif
 	enddo
 	
@@ -492,17 +492,19 @@ c	gas source function
 		i=p0%i(k)
 		if(i.eq.0) exit
 		j=p0%j(k)
-		CC => C(i,j)
-		tau=tau+CC%kext_l
+		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
+			CC => C(i,j)
+			tau=tau+CC%kext_l
 
-		do ib=1,nb
-			imol=imol_blend(ib)
-			jj=int((p0%v(k)+v_blend(ib))*vres_mult/vresolution-real(ii)*vres_mult)
-			if(jj.lt.-nvprofile) jj=-nvprofile
-			if(jj.gt.nvprofile) jj=nvprofile
-			profile=CC%profile(imol,jj)
-			tau=tau+profile*CC%line_abs(ib)
-		enddo
+			do ib=1,nb
+				imol=imol_blend(ib)
+				jj=int((p0%v(k)+v_blend(ib))*vres_mult/vresolution-real(ii)*vres_mult)
+				if(jj.lt.-nvprofile) jj=-nvprofile
+				if(jj.gt.nvprofile) jj=nvprofile
+				profile=CC%profile(imol,jj)
+				tau=tau+profile*CC%line_abs(ib)
+			enddo
+		endif
 	enddo
 
 	flux=Fstar_l*exp(-tau)
@@ -577,17 +579,6 @@ c	gas source function
 	return
 	end
 		
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	
 	

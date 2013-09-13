@@ -141,7 +141,16 @@ c-----------------------------------------------------------------------
 	real*8 starttime,stoptime,xx
 	character*20 dbl2string
 	
-	if(i.eq.1) call output("Starting...")
+	if(i.eq.1) then
+		call cpu_time(stoptime)
+		xx=100d0*real(ii)/real(nn)
+		call output(trim(dbl2string((stoptime-starttime)/real(ii),'(f8.2)'))
+     &			//" s per line. Approx " // 
+     &			trim(dbl2string((stoptime-starttime)*(nn-ii)/real(ii),'(f8.2)'))
+     &			//" s left. (" //
+     &			trim(dbl2string(xx,'(f5.1)')) // " %)")
+	endif
+	
 	f=int(20d0*dble(i)/dble(n))
 	
 	if(20d0*real(i-1)/real(n).lt.real(f)

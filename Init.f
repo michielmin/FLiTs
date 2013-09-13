@@ -50,9 +50,14 @@ c				all arguments are read
 
 	select case(key)
 		case("mstar")
-			read(value,*) Mstar
+			call output("Mstar keyword no longer supported")
+			call output("value is read from the fits file")
+			stop
 		case("rstar")
 			read(value,*) Rstar
+			call output("Rstar keyword no longer supported")
+			call output("value is read from the fits file")
+			stop
 		case("structfile")
 			structfile=value
 		case("linefile")
@@ -64,6 +69,8 @@ c				all arguments are read
 			read(value,*) LTE
 		case("blend")
 			read(value,*) doblend
+		case("cylindrical")
+			read(value,*) cylindrical
 		case("lmin")
 			read(value,*) lmin
 		case("lmax")
@@ -142,6 +149,8 @@ c===============================================================================
 	tau_max=15d0
 		
 	LTE=.false.	! default is non-LTE
+
+	cylindrical=.true.
 	
 	doblend=.true.
 	

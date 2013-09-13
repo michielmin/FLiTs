@@ -3,6 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,j,i_low,i_up,imol,maxlevels
+	real*8 v1,v2
 	
 	allocate(Mol(nmol))
 
@@ -44,7 +45,7 @@
 		if(Mol(imol)%nlevels.gt.maxlevels) maxlevels=Mol(imol)%nlevels
 	enddo
 	do i=0,nR
-		do j=1,nTheta
+		do j=0,nTheta
 			allocate(C(i,j)%npop(nmol,maxlevels))
 			allocate(C(i,j)%abun(nmol))
 			allocate(C(i,j)%line_width(nmol))
@@ -56,12 +57,12 @@
 	if(LTE.or.popfile.eq.' ') call ComputeLTE()
 	
 	do i=0,nR
-		do j=1,nTheta
+		do j=0,nTheta
 			do imol=1,nmol
 				if(popfile.eq.' ') then
-					C(i,j)%line_width(imol)=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol(imol)%M))
-					C(i,j)%line_width(imol)=C(i,j)%line_width(imol)+
-     &					0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+					v1=sqrt(2d0*kb*C(i,j)%Tgas/(mp*Mol(imol)%M))
+					v2=0.5d0*sqrt((7.0/5.0)*kb*C(i,j)%Tgas/(mp*2.3))
+					C(i,j)%line_width(imol)=sqrt(v1**2+v2**2)
 				endif
 				if(C(i,j)%line_width(imol).lt.vresolution/vres_mult) C(i,j)%line_width(imol)=vresolution/vres_mult
 			enddo
@@ -139,9 +140,14 @@ c set default names of the species
 
 
 	do imol=1,nmol
+		ipop(imol)=0
 		do i=1,nspec
 			if(trim(Mol(imol)%name).eq.trim(popname(i))) ipop(imol)=i
 		enddo
+		if(ipop(imol).eq.0) then
+			print*,trim(Mol(imol)%name)
+			stop
+		endif
 	enddo
 
 	!------------------------------------------------------------------------
@@ -175,7 +181,7 @@ c set default names of the species
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
-	do i=1,nR
+	do i=1,nR-1
 		do j=1,nTheta
 			C(i,j)%Tgas=array_d(i,nTheta+1-j,1,1)
 		enddo
@@ -209,7 +215,7 @@ c set default names of the species
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
-	do i=1,nR
+	do i=1,nR-1
 		do j=1,nTheta
 			if(C(i,j)%dens.gt.1d-50) then
 				do imol=1,nmol
@@ -249,7 +255,7 @@ c set default names of the species
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
-	do i=1,nR
+	do i=1,nR-1
 		do j=1,nTheta
 			do imol=1,nmol
 				C(i,j)%line_width(imol)=array_d(ipop(imol),i,nTheta+1-j,1)*1d5
@@ -300,7 +306,7 @@ c set default names of the species
 	endif
 
 	if(naxes(1).gt.Mol(imol)%nlevels) naxes(1)=Mol(imol)%nlevels
-	do i=1,nR
+	do i=1,nR-1
 		do j=1,nTheta
 			C(i,j)%npop(imol,1:Mol(imol)%nlevels)=0d0
 			tot=0d0
@@ -345,6 +351,14 @@ c set default names of the species
 		do imol=1,nmol
 			C(0,j)%npop(imol,1:Mol(imol)%nlevels)=C(1,j)%npop(imol,1:Mol(imol)%nlevels)
 			C(0,j)%abun(imol)=C(1,j)%abun(imol)
+			C(nR,j)%npop(imol,1:Mol(imol)%nlevels)=C(nR-1,j)%npop(imol,1:Mol(imol)%nlevels)
+			C(nR,j)%abun(imol)=C(nR-1,j)%abun(imol)
+		enddo
+	enddo
+	do i=0,nR
+		do imol=1,nmol
+			C(i,0)%npop(imol,1:Mol(imol)%nlevels)=C(i,1)%npop(imol,1:Mol(imol)%nlevels)
+			C(i,0)%abun(imol)=C(i,1)%abun(imol)
 		enddo
 	enddo
 	

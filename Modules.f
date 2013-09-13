@@ -29,7 +29,7 @@ c stellar parameters
 c wavelength grid and resolution
 	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max,vres_profile
 	integer nvprofile
-	logical doblend
+	logical doblend,cylindrical
 	
 c string converting functions
 	character*20 int2string,dbl2string
@@ -44,6 +44,7 @@ c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
+	real*8,allocatable :: R_sphere(:),R_av_sphere(:)
 	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines,nblends
 	real*8 Rin,Rout,inc,Fstar_l
 	real*8,allocatable :: lam_cont(:),Fstar(:)

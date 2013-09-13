@@ -21,7 +21,12 @@ c increase the resolution in velocity by this factor
 	nrReduce=2
 	ntheta_reduce=6
 	ninc=3
-	
+
+c	nrReduce=1
+c	ntheta_reduce=2
+c	ninc=5
+c	res_inc=5d0
+		
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
 	
@@ -32,9 +37,9 @@ c increase the resolution in velocity by this factor
 	ir=0
 	do i=1,nR,nRreduce
 		do j=1,ninc
-			x=R_av(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
-			y=R_av(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
-			if(j.eq.1.or.sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2)).lt.R(1)) ir=ir+1
+			x=R_av_sphere(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
+			y=R_av_sphere(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
+			if(j.eq.1.or.sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2)).lt.R_sphere(1)) ir=ir+1
 		enddo
 	enddo
 
@@ -51,10 +56,10 @@ c increase the resolution in velocity by this factor
 	ir=0
 	do i=1,nR,nRreduce
 		do j=1,ninc
-			x=R_av(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
-			y=R_av(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
+			x=R_av_sphere(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
+			y=R_av_sphere(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
 			x=sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2))
-			if(j.eq.1.or.x.lt.R(1)) then
+			if(j.eq.1.or.x.lt.R_sphere(1)) then
 				ir=ir+1
 				imR(ir)=x
 			endif
@@ -62,15 +67,15 @@ c increase the resolution in velocity by this factor
 	enddo
 	do i=1,nTheta,ntheta_reduce
 		ir=ir+1
-		imR(ir)=abs(R(1)*sin(theta_av(i)+inc*pi/180d0))
+		imR(ir)=abs(R_sphere(1)*sin(theta_av(i)+inc*pi/180d0))
 		ir=ir+1
-		imR(ir)=abs(R(1)*sin(theta_av(i)-inc*pi/180d0))
+		imR(ir)=abs(R_sphere(1)*sin(theta_av(i)-inc*pi/180d0))
 	enddo
 
 	j=nImR-ir
 	do i=1,j
 		ir=ir+1
-		imR(ir)=10d0**(log10(Rstar*Rsun)+log10(R(nR+1)/(Rstar*Rsun))*(real(i)-0.1)/real(j))
+		imR(ir)=10d0**(log10(Rstar*Rsun)+log10(R_sphere(nR+1)/(Rstar*Rsun))*(real(i)-0.1)/real(j))
 	enddo
 
 	call sort(imR,nImR)
@@ -105,13 +110,13 @@ c increase the resolution in velocity by this factor
 		PP => P(i,j)
 		trac%x=P(i,j)%R*cos(P(i,j)%Phi)
 		trac%y=P(i,j)%R*sin(P(i,j)%Phi)
-		trac%z=sqrt(R(nR+1)**2-P(i,j)%R**2)
+		trac%z=sqrt(R_sphere(nR+1)**2-P(i,j)%R**2)
 		trac%edgeNr=2
 		trac%onEdge=.true.
 		call rotate(trac%x,trac%y,trac%z,0d0,1d0,0d0,inc*pi/180d0)
-		ct=abs(trac%z)/R(nR+1)
+		ct=abs(trac%z)/R_sphere(nR+1)
 		trac%i=nR
-		do k=1,nTheta
+		do k=0,nTheta
 			if(ct.lt.Theta(k).and.ct.ge.Theta(k+1)) then
 				trac%j=k
 			endif
@@ -128,6 +133,7 @@ c increase the resolution in velocity by this factor
 		P(i,j)%vmin(1:nmol)=1d30
 		P(i,j)%vmax(1:nmol)=-1d30
 		P(i,j)%npopmax(1:nmol)=0
+
 		call tracepath(trac,PP)
 		do imol=1,nmol
 			if((P(i,j)%vmax(imol)).gt.vmax) vmax=abs(P(i,j)%vmax(imol))
@@ -138,23 +144,24 @@ c increase the resolution in velocity by this factor
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
      &			//" km/s")
 
-	path2star%R=0d0
-	path2star%Phi=0d0
+	path2star%R=Rstar*Rsun/4d0
+	path2star%Phi=pi/4d0
 	path2star%phi1=0d0
 	path2star%phi2=2d0*pi
 	path2star%R1=0d0
 	path2star%R2=Rstar*Rsun
 	path2star%A=pi*(path2star%R2**2-path2star%R1**2)
 
-	trac%x=0d0
-	trac%y=0d0
-	trac%z=R(nR+1)
+	trac%x=path2star%R*cos(path2star%Phi)
+	trac%y=path2star%R*sin(path2star%Phi)
+	trac%z=sqrt(R_sphere(nR+1)**2-path2star%R**2)
+
 	trac%edgeNr=2
 	trac%onEdge=.true.
 	call rotate(trac%x,trac%y,trac%z,0d0,1d0,0d0,inc*pi/180d0)
-	ct=abs(trac%z)/R(nR+1)
+	ct=abs(trac%z)/R_sphere(nR+1)
 	trac%i=nR
-	do k=1,nTheta
+	do k=0,nTheta
 		if(ct.lt.Theta(k).and.ct.ge.Theta(k+1)) then
 			trac%j=k
 		endif
@@ -190,7 +197,7 @@ c-----------------------------------------------------------------------
 	logical hitstar
 	type(Path) PP
 
-	PP%n=0
+	PP%n=1
 	PP%x=trac%x
 	PP%y=trac%y
 	PP%z=trac%z
@@ -211,11 +218,6 @@ c-----------------------------------------------------------------------
 
 	call Trace2edge(trac,d,inext,jnext)
 
-	if(PP%n.eq.0) then
-		PP%n=PP%n+1
-	else if(C(PP%i(k),PP%j(k))%dens.gt.1d-50.and.PP%i(k).gt.0) then
-		PP%n=PP%n+1
-	endif
 	k=PP%n
 
 	PP%d(k)=d
@@ -238,7 +240,8 @@ c-----------------------------------------------------------------------
 c here I still have to add the turbulent velocity widening of the line
 c add this for all species to get the absolute max and min velocity contributing.
 	do imol=1,nmol
-		if(C(trac%i,trac%j)%dens*C(trac%i,trac%j)%abun(imol).gt.1d-50.and.trac%j.gt.1) then
+		if(C(trac%i,trac%j)%dens*C(trac%i,trac%j)%abun(imol).gt.1d-50
+     &		.and.trac%j.gt.0.and.trac%i.lt.nR.and.trac%i.gt.0) then
 			vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
 			if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
 			vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
@@ -274,7 +277,14 @@ c		p%hitstar=.true.
 	trac%i=inext
 	trac%j=jnext
 
+	if(C(PP%i(k),PP%j(k))%dens.gt.1d-50
+     &		.and.PP%i(k).gt.0.and.PP%i(k).lt.nR.and.PP%j(k).gt.0) then
+		PP%n=PP%n+1
+	endif
+
 	goto 1
+
+	PP%n=PP%n-1
 
 	return
 	end
@@ -294,43 +304,83 @@ c-----------------------------------------------------------------------
 	use Constants
 	IMPLICIT NONE
 	type(Tracer) trac
-	real*8 b,v,rr,R1,R2,T1,T2,vR1,vR2,vT1,vT2
+	real*8 b,v,rr,R1,R2,T1,T2,vR1,vR2,vT1,vT2,rcyl,bcyl,R1s,R2s
 	integer inext,jnext
 	logical hitR1,hitR2,hitR,hitT1,hitT2,hitT,hitTsame
 
 	rr=trac%x**2+trac%y**2+trac%z**2
-	if(trac%i.ne.0) then
+	rcyl=trac%x**2+trac%y**2
+
+	if(trac%i.gt.0) then
 		R1=R(trac%i)**2
+		R1s=R_sphere(trac%i)**2
 	else
 		R1=(Rstar*Rsun)**2
 	endif
 	R2=R(trac%i+1)**2
+	R2s=R_sphere(trac%i+1)**2
 	T1=Theta(trac%j)**2
 	T2=Theta(trac%j+1)**2
 
 	b=2d0*(trac%x*trac%vx+trac%y*trac%vy+trac%z*trac%vz)
+	bcyl=2d0*(trac%x*trac%vx+trac%y*trac%vy)/sqrt(trac%vx**2+trac%vy**2)
 
 	if(.not.trac%onEdge) then
-		hitR1=hitR(trac,R1,rr,b,vR1)
-		hitR2=hitR(trac,R2,rr,b,vR2)
+		if(cylindrical.and.trac%i.gt.0.and.trac%j.gt.0) then
+			hitR1=hitR(trac,R1,rcyl,bcyl,vR1)
+			vR1=vR1/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR1=hitR(trac,R1s,rr,b,vR1)
+		endif
+		if(cylindrical.and.trac%i.lt.nR.and.trac%j.gt.0) then
+			hitR2=hitR(trac,R2,rcyl,bcyl,vR2)
+			vR2=vR2/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR2=hitR(trac,R2s,rr,b,vR2)
+		endif
 		hitT1=hitT(trac,T1,rr,b,vT1)
 		hitT2=hitT(trac,T2,rr,b,vT2)
 	else
 	if(trac%edgeNr.eq.1) then
 		hitR1=.false.
 		vR1=1d200
-		hitR2=hitR(trac,R2,rr,b,vR2)
+		if(cylindrical.and.trac%i.lt.nR.and.trac%j.gt.0) then
+			hitR2=hitR(trac,R2,rcyl,bcyl,vR2)
+			vR2=vR2/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR2=hitR(trac,R2s,rr,b,vR2)
+		endif
 		hitT1=hitT(trac,T1,rr,b,vT1)
 		hitT2=hitT(trac,T2,rr,b,vT2)
 	else if(trac%edgeNr.eq.2) then
-		hitR1=hitR(trac,R1,rr,b,vR1)
+		if(cylindrical.and.trac%i.gt.0.and.trac%j.gt.0) then
+			hitR1=hitR(trac,R1,rcyl,bcyl,vR1)
+			vR1=vR1/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR1=hitR(trac,R1s,rr,b,vR1)
+		endif
 		hitR2=.true.
-		vR2=-b
+		if(cylindrical.and.trac%i.lt.nR.and.trac%j.gt.0) then
+			vR2=-bcyl
+			vR2=vR2/sqrt(trac%vx**2+trac%vy**2)
+		else
+			vR2=-b
+		endif
 		hitT1=hitT(trac,T1,rr,b,vT1)
 		hitT2=hitT(trac,T2,rr,b,vT2)
 	else if(trac%edgeNr.eq.3) then
-		hitR1=hitR(trac,R1,rr,b,vR1)
-		hitR2=hitR(trac,R2,rr,b,vR2)
+		if(cylindrical.and.trac%i.gt.0.and.trac%j.gt.0) then
+			hitR1=hitR(trac,R1,rcyl,bcyl,vR1)
+			vR1=vR1/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR1=hitR(trac,R1s,rr,b,vR1)
+		endif
+		if(cylindrical.and.trac%i.lt.nR.and.trac%j.gt.0) then
+			hitR2=hitR(trac,R2,rcyl,bcyl,vR2)
+			vR2=vR2/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR2=hitR(trac,R2s,rr,b,vR2)
+		endif
 		hitT1=.false.
 		vT1=1d200
 		if(trac%j.ne.(nTheta)) then
@@ -344,9 +394,19 @@ c-----------------------------------------------------------------------
 			endif
 		endif
 	else if(trac%edgeNr.eq.4) then
-		hitR1=hitR(trac,R1,rr,b,vR1)
-		hitR2=hitR(trac,R2,rr,b,vR2)
-		if(trac%j.ne.1) then
+		if(cylindrical.and.trac%i.gt.0.and.trac%j.gt.0) then
+			hitR1=hitR(trac,R1,rcyl,bcyl,vR1)
+			vR1=vR1/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR1=hitR(trac,R1s,rr,b,vR1)
+		endif
+		if(cylindrical.and.trac%i.lt.nR.and.trac%j.gt.0) then
+			hitR2=hitR(trac,R2,rcyl,bcyl,vR2)
+			vR2=vR2/sqrt(trac%vx**2+trac%vy**2)
+		else
+			hitR2=hitR(trac,R2s,rr,b,vR2)
+		endif
+		if(trac%j.ne.0) then
 			hitT1=hitT(trac,T1,rr,b,vT1)
 		else
 			hitT1=.false.
@@ -360,6 +420,7 @@ c-----------------------------------------------------------------------
 		endif
 	endif
 	endif
+
 
 	if(.not.hitR2) then
 		print*,'Cannot hit outer boundary...'
@@ -402,8 +463,8 @@ c-----------------------------------------------------------------------
 		jnext=nTheta
 		trac%edgeNr=4
 	endif
-	if(jnext.eq.0) then
-		jnext=1
+	if(jnext.lt.0) then
+		jnext=0
 		trac%edgeNr=3
 	endif
 	
