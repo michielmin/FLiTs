@@ -45,32 +45,24 @@
 	do while(lam.gt.lam_cont(ilam1+1).and.ilam1.lt.nlam)
 		ilam1=ilam1+1
 	enddo
+	allocate(profile(-nvprofile:nvprofile))
+	allocate(profile_nz(-nvprofile:nvprofile))
 	do i=0,nR
 		do j=0,nTheta
-			allocate(C(i,j)%profile(nmol,-nvprofile:nvprofile))
-			allocate(C(i,j)%profile_nz(nmol,-nvprofile:nvprofile))
 			allocate(C(i,j)%line_abs(maxblend))
 			allocate(C(i,j)%line_emis(maxblend))
 		enddo
 	enddo
 
-	do i=0,nR
-		call tellertje(i+1,nR+1)
-		do j=1,nTheta
-			do imol=1,nmol
-				do k=-nvprofile,nvprofile
-					C(i,j)%profile(imol,k)=((real(k)*vresolution/vres_mult)/C(i,j)%line_width(imol))**2
-					if(abs(C(i,j)%profile(imol,k)).lt.3d0) then
-						C(i,j)%profile_nz(imol,k)=.true.
-					else
-						C(i,j)%profile_nz(imol,k)=.false.
-					endif
-				enddo
-				C(i,j)%profile(imol,:)=clight*exp(-C(i,j)%profile(imol,:))
-     &					/(C(i,j)%line_width(imol)*sqrt(pi))
-			enddo
-		enddo
+	do k=-nvprofile,nvprofile
+		profile(k)=((real(k)*vresolution/vres_mult)/1d5)**2
+		if(abs(profile(k)).lt.3d0) then
+			profile_nz(k)=.true.
+		else
+			profile_nz(k)=.false.
+		endif
 	enddo
+	profile(:)=exp(-profile(:))
 
 	nl=0
 	
@@ -138,7 +130,7 @@
 
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
-					fact=hplanck*C(i,j)%N(LL%imol)/(4d0*pi)
+					fact=clight*hplanck*C(i,j)%N(LL%imol)/(4d0*pi*C(i,j)%line_width(LL%imol)*sqrt(pi))
 					C(i,j)%line_abs(ilines)=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
 					C(i,j)%line_emis(ilines)=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
 				enddo
@@ -364,7 +356,7 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 	use GlobalSetup
 	use Constants
 	integer i,j,k,vmult,iv,ii,nv,nn
-	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d,tau_tot
+	real*8 tau,exptau,flux,fact,prof,S,tau_gas,tau_dust,tau_d,tau_tot
 	type(Path) p0
 	type(Cell),pointer :: CC
 
@@ -408,7 +400,7 @@ c	dust scattering source function
 	use GlobalSetup
 	use Constants
 	integer i,j,k,iv,ii,nv,ilines,imol,vmult,nb,imol_blend(nb)
-	real*8 tau,exptau,flux,fact,profile,S,tau_gas,tau_dust,tau_d,tau_tot,v_blend(nb)
+	real*8 tau,exptau,flux,fact,prof,S,tau_gas,tau_dust,tau_d,tau_tot,v_blend(nb)
 	type(Path) p0
 	type(Cell),pointer :: CC
 	type(Blend) Bl
@@ -431,14 +423,15 @@ c	dust scattering source function
 
 			do ib=1,nb
 				imol=imol_blend(ib)
-				jj=int((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-v*vres_mult)
+				jj=int(((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-v*vres_mult)
+     &					*1d5/CC%line_width(imol))
 				if(jj.lt.-nvprofile) jj=-nvprofile
 				if(jj.gt.nvprofile) jj=nvprofile
-				if(CC%profile_nz(imol,jj)) then
-					profile=CC%profile(imol,jj)
-					tau_gas=profile*CC%line_abs(ib+ib0-1)
+				if(profile_nz(jj)) then
+					prof=profile(jj)
+					tau_gas=prof*CC%line_abs(ib+ib0-1)
 c	gas source function
-					S=S+profile*CC%line_emis(ib+ib0-1)
+					S=S+prof*CC%line_emis(ib+ib0-1)
 					tau=tau+tau_gas
 					gas=.true.
 				endif
@@ -481,7 +474,7 @@ c	gas source function
 	use GlobalSetup
 	use Constants
 	integer i,j,k,iv,ii,nv,ilines,imol,nb,imol_blend(nb)
-	real*8 tau,flux,profile,v_blend(nb)
+	real*8 tau,flux,prof,v_blend(nb)
 	type(Path) p0
 	type(Cell),pointer :: CC
 	type(Blend) Bl
@@ -498,11 +491,11 @@ c	gas source function
 
 			do ib=1,nb
 				imol=imol_blend(ib)
-				jj=int((p0%v(k)+v_blend(ib))*vres_mult/vresolution-real(ii)*vres_mult)
+				jj=int(((p0%v(k)+v_blend(ib))*vres_mult/vresolution-real(ii)*vres_mult)*1d5/CC%line_width(imol))
 				if(jj.lt.-nvprofile) jj=-nvprofile
 				if(jj.gt.nvprofile) jj=nvprofile
-				profile=CC%profile(imol,jj)
-				tau=tau+profile*CC%line_abs(ib)
+				prof=profile(jj)
+				tau=tau+prof*CC%line_abs(ib)
 			enddo
 		endif
 	enddo

@@ -63,6 +63,10 @@ c random number generator
 	external ran2
 	integer idum
 
+c line profile
+	real*8,allocatable :: profile(:)
+	logical,allocatable :: profile_nz(:)
+
 	type Line
 		integer jup,jlow,imol
 		real*8 Aul,Blu,Bul,freq,lam,Eup
@@ -92,8 +96,6 @@ c	Temperature and total gas density
 		real*8 Tdust,Tgas,dens,v
 c	properties of the molecule
 		real*8,allocatable :: line_width(:),abun(:),N(:)  ! dimension nmol
-		real*8,allocatable :: profile(:,:) ! dimension nmol, nvelocity
-		logical,allocatable :: profile_nz(:,:) ! dimension nmol, nvelocity
 		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
 		real*8,allocatable :: line_emis(:),line_abs(:)
 		real*8 kext_l,albedo_l,BB_l,LRF_l

@@ -32,7 +32,7 @@ c	res_inc=5d0
 	
 	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
 	if(nImPhi.lt.30) nImPhi=30
-	if(nImPhi.gt.90) nImPhi=90
+	if(nImPhi.gt.75) nImPhi=75
 	
 	ir=0
 	do i=1,nR,nRreduce
