@@ -87,6 +87,8 @@ c				all arguments are read
 			read(value,*) tau_max
 		case("inc")	! with respect to pole on
 			read(value,*) inc
+		case("accuracy")
+			read(value,*) accuracy
 		case default
 			call output("Unknown keyword: " // trim(key))
 			stop
@@ -147,6 +149,8 @@ c===============================================================================
 	vresolution=1d5	! given in cm/s
 	vres_profile=1d4
 	tau_max=15d0
+	
+	accuracy=1
 		
 	LTE=.false.	! default is non-LTE
 

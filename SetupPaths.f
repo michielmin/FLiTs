@@ -16,16 +16,23 @@
 	enddo
 	
 c increase the resolution in velocity by this factor
-	res_inc=1d0
 
-	nrReduce=2
-	ntheta_reduce=6
-	ninc=3
-
-c	nrReduce=1
-c	ntheta_reduce=2
-c	ninc=5
-c	res_inc=5d0
+	if(accuracy.le.1) then
+		nrReduce=2
+		ntheta_reduce=6
+		ninc=3
+		res_inc=1d0
+	else if(accuracy.eq.2) then
+		nrReduce=1
+		ntheta_reduce=4
+		ninc=4
+		res_inc=4d0
+	else
+		nrReduce=1
+		ntheta_reduce=2
+		ninc=6
+		res_inc=8d0
+	endif		
 		
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")

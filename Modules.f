@@ -28,7 +28,7 @@ c stellar parameters
 	real*8 Mstar,Rstar,distance
 c wavelength grid and resolution
 	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max,vres_profile
-	integer nvprofile
+	integer nvprofile,accuracy	! accuracy can be 1,2,3 (increasing spatial sampling)
 	logical doblend,cylindrical
 	
 c string converting functions
