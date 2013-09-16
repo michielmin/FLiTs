@@ -14,7 +14,7 @@
 	real*8 flux1,flux2,flux3,fc,f
 	character*1000 comment
 	
-	idum=42
+	idum=-42
 	
 	call output("==================================================================")
 	call output("Preparing the profiles")
@@ -410,7 +410,7 @@ c	dust scattering source function
 	flux=0d0
 	tau_tot=0d0
 
-	v=real(ii)+ran2(idum)-0.5d0
+	v=real(ii)+ran1(idum)-0.5d0
 	do k=1,p0%n
 		i=p0%i(k)
 		j=p0%j(k)

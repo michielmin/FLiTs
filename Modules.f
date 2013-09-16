@@ -59,8 +59,8 @@ c store all the blackbodies
 	real*8,allocatable :: BB(:,:)	! dimensions nlam,MAXT
 
 c random number generator
-	real*8 ran2
-	external ran2
+	real*8 ran1
+	external ran1
 	integer idum
 
 c line profile
