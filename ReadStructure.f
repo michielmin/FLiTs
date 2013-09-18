@@ -184,6 +184,7 @@ c in the theta grid we actually store cos(theta) for convenience
 			R_av_sphere(i)=R_av(i)/sin(acos(Theta(1)))
 		enddo
 		R_sphere(nR+1)=R(nR+1)
+		R_av_sphere(nR)=sqrt(R_sphere(nR)*R_sphere(nR+1))
 	else
 		do i=0,nR
 			R_sphere(i)=R(i)

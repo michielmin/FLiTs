@@ -2,11 +2,12 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,ntheta_reduce,ninc
-	real*8 ct,res_inc,x,y
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol
+	real*8 ct,res_inc,x,y,rr
 	real*8,allocatable :: imR(:),imPhi(:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
+	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
 
 	ilam1=1
 	ilam2=nlam
@@ -19,40 +20,37 @@ c increase the resolution in velocity by this factor
 
 	if(accuracy.le.1) then
 		nrReduce=2
-		ntheta_reduce=6
-		ninc=3
 		res_inc=1d0
 	else if(accuracy.eq.2) then
 		nrReduce=1
-		ntheta_reduce=4
-		ninc=4
 		res_inc=4d0
 	else
 		nrReduce=1
-		ntheta_reduce=2
-		ninc=6
 		res_inc=8d0
 	endif		
 		
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
 	
-	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc
+	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0
 	if(nImPhi.lt.30) nImPhi=30
 	if(nImPhi.gt.75) nImPhi=75
 	
 	ir=0
-	do i=1,nR,nRreduce
-		do j=1,ninc
-			x=R_av_sphere(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
-			y=R_av_sphere(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
-			if(j.eq.1.or.sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2)).lt.R_sphere(1)) ir=ir+1
-		enddo
+	do i=nTheta,1,-1
+		call trace2tau1(i,rr)
+		if(rr.gt.R_sphere(1)) then
+			ir=ir+3
+		endif
+	enddo
+	do i=1,nR-1,nRreduce
+		ir=ir+1
+		if(cylindrical) then
+			ir=ir+1
+		endif
 	enddo
 
-	nImR=ir+nTheta*2/ntheta_reduce
-
-	nImR=nImR+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/(nImPhi/3)
+	nImR=ir+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/(nImPhi/3)
 
 	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
 	call output("Number of phi image points:    "//trim(int2string(nImPhi,'(i5)')))
@@ -61,22 +59,24 @@ c increase the resolution in velocity by this factor
 	allocate(imPhi(nImPhi))
 	
 	ir=0
-	do i=1,nR,nRreduce
-		do j=1,ninc
-			x=R_av_sphere(i)*cos(pi*real(j-1)/real(ninc-1)/2d0)
-			y=R_av_sphere(i)*sin(pi*real(j-1)/real(ninc-1)/2d0)
-			x=sqrt(abs(x**2+(y*sin(inc*pi/180d0))**2))
-			if(j.eq.1.or.x.lt.R_sphere(1)) then
-				ir=ir+1
-				imR(ir)=x
-			endif
-		enddo
+	do i=nTheta,1,-1
+		call trace2tau1(i,rr)
+		if(rr.gt.R_sphere(1)) then
+			ir=ir+1
+			imR(ir)=rr
+			ir=ir+1
+			imR(ir)=rr*sin(inc*pi/180d0-(pi/2d0-theta_av(i)))/sin(inc*pi/180d0)
+			ir=ir+1
+			imR(ir)=rr*sin(inc*pi/180d0+(pi/2d0-theta_av(i)))/sin(inc*pi/180d0)
+		endif
 	enddo
-	do i=1,nTheta,ntheta_reduce
+	do i=1,nR,nRreduce
 		ir=ir+1
-		imR(ir)=abs(R_sphere(1)*sin(theta_av(i)+inc*pi/180d0))
-		ir=ir+1
-		imR(ir)=abs(R_sphere(1)*sin(theta_av(i)-inc*pi/180d0))
+		imR(ir)=R_av_sphere(i)
+		if(cylindrical) then
+			ir=ir+1
+			imR(ir)=R_av(i)
+		endif
 	enddo
 
 	j=nImR-ir
@@ -86,7 +86,7 @@ c increase the resolution in velocity by this factor
 	enddo
 
 	call sort(imR,nImR)
-	
+
 	do i=1,nImPhi
 		ImPhi(i)=pi*(real(i)-0.5)/real(nImPhi)
 	enddo
@@ -95,9 +95,11 @@ c increase the resolution in velocity by this factor
 	do i=1,nImR
 		if(i.ne.1) P(i,1)%R1=sqrt(ImR(i-1)*ImR(i))
 		if(i.ne.nImR) P(i,1)%R2=sqrt(ImR(i)*ImR(i+1))
+		if(P(i,1)%R2.gt.R_sphere(nR+1)) P(i,1)%R2=R_sphere(nR+1)
 	enddo
 	P(1,1)%R1=ImR(1)**2/P(1,1)%R2
 	P(nImR,1)%R2=ImR(nImR)**2/P(nImR,1)%R1
+	if(P(nImR,1)%R2.gt.R_sphere(nR+1)) P(nImR,1)%R2=R_sphere(nR+1)
 
 	do i=1,nImR
 		do j=1,nImPhi
@@ -107,17 +109,46 @@ c increase the resolution in velocity by this factor
 			P(i,j)%phi2=pi*real(j)/real(nImPhi)
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
-			P(i,j)%A=pi*(P(i,j)%R2**2-P(i,j)%R1**2)/real(nImPhi)
+		
+			incfact=(sin(inc*pi/180d0)+(1d0-sin(inc*pi/180d0))*(P(i,j)%R-R(1))/(R(nR+1)-R(1)))
+			
+			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
+			y11=P(i,j)%R1*sin(P(i,j)%phi1)
+			x12=P(i,j)%R1*cos(P(i,j)%phi2)*incfact
+			y12=P(i,j)%R1*sin(P(i,j)%phi2)
+			x21=P(i,j)%R2*cos(P(i,j)%phi1)*incfact
+			y21=P(i,j)%R2*sin(P(i,j)%phi1)
+			x22=P(i,j)%R2*cos(P(i,j)%phi2)*incfact
+			y22=P(i,j)%R2*sin(P(i,j)%phi2)
+
+			P(i,j)%x=(x11+x12+x21+x22)/4d0	
+			P(i,j)%y=(y11+y12+y21+y22)/4d0	
+
+			r1=sqrt((x22-x21)**2+(y22-y21)**2)
+			r2=sqrt(x22**2+y22**2)
+			r3=sqrt(x21**2+y21**2)
+			s=(r1+r2+r3)/2d0
+			P(i,j)%A=sqrt(s*(s-r1)*(s-r2)*(s-r3))
+			r1=sqrt((x12-x11)**2+(y12-y11)**2)
+			r2=sqrt(x12**2+y12**2)
+			r3=sqrt(x11**2+y11**2)
+			s=(r1+r2+r3)/2d0
+			P(i,j)%A=P(i,j)%A-sqrt(s*(s-r1)*(s-r2)*(s-r3))
+			P(i,j)%A=P(i,j)%A*2d0
 		enddo
 	enddo
 
 	vmax=0d0
 	do i=1,nImR
+	call tellertje(i,nImR)
 	do j=1,nImPhi
 		PP => P(i,j)
-		trac%x=P(i,j)%R*cos(P(i,j)%Phi)
-		trac%y=P(i,j)%R*sin(P(i,j)%Phi)
-		trac%z=sqrt(R_sphere(nR+1)**2-P(i,j)%R**2)
+		trac%x=P(i,j)%x
+		trac%y=P(i,j)%y
+
+		rr=trac%x**2+trac%y**2
+
+		trac%z=sqrt(R_sphere(nR+1)**2-rr)
 		trac%edgeNr=2
 		trac%onEdge=.true.
 		call rotate(trac%x,trac%y,trac%z,0d0,1d0,0d0,inc*pi/180d0)
@@ -205,9 +236,7 @@ c-----------------------------------------------------------------------
 	type(Path) PP
 
 	PP%n=1
-	PP%x=trac%x
-	PP%y=trac%y
-	PP%z=trac%z
+
 	PP%vx=trac%vx
 	PP%vy=trac%vy
 	PP%vz=trac%vz
@@ -241,6 +270,8 @@ c-----------------------------------------------------------------------
 	x=trac%x+trac%vx*d/2d0
 	y=trac%y+trac%vy*d/2d0
 	z=trac%z+trac%vz*d/2d0
+
+	call checkcell(x,y,z,trac%i,trac%j)
 
 	PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
 
@@ -323,6 +354,7 @@ c-----------------------------------------------------------------------
 		R1s=R_sphere(trac%i)**2
 	else
 		R1=(Rstar*Rsun)**2
+		R1s=(Rstar*Rsun)**2
 	endif
 	R2=R(trac%i+1)**2
 	R2s=R_sphere(trac%i+1)**2
@@ -565,4 +597,93 @@ c-----------------------------------------------------------------------
 
 !c-----------------------------------------------------------------------
 !c-----------------------------------------------------------------------
+
+	subroutine trace2tau1(j,rr)
+	use GlobalSetup
+	IMPLICIT NONE
+	real*8 rr,tau,tau0
+	integer j,i
+	
+	tau=0d0
+	do i=1,nR
+		if(cylindrical.and.j.ne.0) then
+			tau0=maxval(C(i,j)%kext)*(R(i+1)-R(i))/sin(theta_av(j))
+		else
+			tau0=maxval(C(i,j)%kext)*(R_sphere(i+1)-R_sphere(i))
+		endif
+		if(tau+tau0.gt.1d0) then
+			if(cylindrical) then
+				rr=R(i)+(R(i+1)-R(i))*(1d0-tau)/tau0
+				rr=rr/sin(theta_av(j))
+				return
+			else
+				rr=R_sphere(i)+(R_sphere(i+1)-R_sphere(i))*(1d0-tau)/tau0
+				return
+			endif
+		endif
+		tau=tau+tau0
+	enddo
+	rr=0d0
+
+	return
+	end	
+	
+!c-----------------------------------------------------------------------
+!c-----------------------------------------------------------------------
+	
+	
+	subroutine checkcell(x,y,z,i,j)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 rr,rho,thet,x,y,z
+	integer i,j
+	
+	return
+	
+	rr=sqrt(x*x+y*y+z*z)
+	rho=sqrt(x*x+y*y)
+	thet=abs(z/rr)
+
+	if(thet.gt.Theta(j)) then
+		print*,'theta too big',i,j
+		stop
+	endif
+	
+	if(thet.lt.Theta(j+1)) then
+		print*,'theta too small',i,j
+		print*,thet,Theta(j+1)
+		stop
+	endif
+	
+	if(i.eq.0.or.j.eq.0) then
+		if(rr.lt.R_sphere(i)) then
+			print*,'R too small',i,j
+			print*,rr/AU,R_sphere(i+1)/AU
+			stop
+		endif
+	else
+		if(rho.lt.R(i)) then
+			print*,'Rho too small',i,j
+			print*,rho/AU,R(i+1)/AU
+			stop
+		endif
+	endif
+		
+	if(i.eq.nr.or.j.eq.0) then
+		if(rr.gt.R_sphere(i+1)) then
+			print*,'R too big',i,j
+			print*,rr/AU,R_sphere(i+1)/AU
+			stop
+		endif
+	else
+		if(rho.gt.R(i+1)) then
+			print*,'Rho too big',i,j
+			print*,rho/AU,R(i+1)/AU
+			stop
+		endif
+	endif
+		
+	return
+	end
 	

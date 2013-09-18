@@ -114,7 +114,7 @@ c number of elements
 		integer,allocatable :: npopmax(:)
 c surface area of this path in the image and its coordinates
 		real*8 A,R1,R2,phi1,phi2,R,phi
-		real*8 vx,vy,vz,x,y,z
+		real*8 vx,vy,vz,x,y
 
 		real*8,allocatable :: v(:),d(:),v1(:),v2(:)
 		integer,allocatable :: i(:),j(:)

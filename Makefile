@@ -12,7 +12,7 @@ LINKER	      = ifort
 
 # enforce single core compilation with:
 # cl> make multi=false
-ifneq ($(multi),false)
+ifeq ($(multi),true)
   MULTICORE = -openmp -fp-model strict
 endif
 
