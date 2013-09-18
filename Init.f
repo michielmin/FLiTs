@@ -102,6 +102,11 @@ c read another command, so go back
 
 	vres_mult=vresolution/vres_profile
 
+	if(abs(inc).lt.1d0) then
+		call output("Increasing inclination to 1 degrees")
+		inc=1
+	endif
+
 	call output("==================================================================")
 	
 	return
