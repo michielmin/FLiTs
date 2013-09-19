@@ -92,6 +92,9 @@ c increase the resolution in velocity by this factor
 		if(nImPhi(i).lt.15) nImPhi(i)=15
 		if(nImPhi(i).gt.75) nImPhi(i)=75
 		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
+		if(i.ne.1) then
+			if(nImPhi(i).eq.nImPhi(i-1)) nImPhi(i)=nImPhi(i)+1
+		endif
 	enddo
 
 	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
