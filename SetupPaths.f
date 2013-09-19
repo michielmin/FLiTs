@@ -2,9 +2,9 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max
 	real*8 ct,res_inc,x,y,rr
-	real*8,allocatable :: imR(:),imPhi(:)
+	real*8,allocatable :: imR(:),imPhi(:,:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
 	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
@@ -18,7 +18,10 @@
 	
 c increase the resolution in velocity by this factor
 
-	if(accuracy.le.1) then
+	if(accuracy.le.0) then
+		nrReduce=4
+		res_inc=0.5d0
+	else if(accuracy.eq.1) then
 		nrReduce=2
 		res_inc=1d0
 	else if(accuracy.eq.2) then
@@ -31,10 +34,6 @@ c increase the resolution in velocity by this factor
 		
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
-	
-	nImPhi=abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0
-	if(nImPhi.lt.30) nImPhi=30
-	if(nImPhi.gt.75) nImPhi=75
 	
 	ir=0
 	do i=nTheta,1,-1
@@ -50,14 +49,10 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/(nImPhi/3)
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/10d0)
 
-	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
-	call output("Number of phi image points:    "//trim(int2string(nImPhi,'(i5)')))
-	
 	allocate(imR(nImR))
-	allocate(imPhi(nImPhi))
-	
+
 	ir=0
 	do i=nTheta,1,-1
 		call trace2tau1(i,rr)
@@ -78,7 +73,6 @@ c increase the resolution in velocity by this factor
 			imR(ir)=R_av(i)
 		endif
 	enddo
-
 	j=nImR-ir
 	do i=1,j
 		ir=ir+1
@@ -87,11 +81,32 @@ c increase the resolution in velocity by this factor
 
 	call sort(imR,nImR)
 
-	do i=1,nImPhi
-		ImPhi(i)=pi*(real(i)-0.5)/real(nImPhi)
+	allocate(nImPhi(nImR))
+
+	nImPhi_max=1
+	do i=1,nImR
+		do k=1,nR-1
+			if(imR(i).gt.R(k).and.imR(i).lt.R(k+1)) exit
+		enddo
+		nImPhi(i)=abs(sin(inc*pi/180d0))*(C(k,nTheta)%v/vresolution)*res_inc
+		if(nImPhi(i).lt.15) nImPhi(i)=15
+		if(nImPhi(i).gt.75) nImPhi(i)=75
+		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
 	enddo
 
-	allocate(P(nImR,nImPhi))
+	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
+	call output("Number of phi image points:    "//trim(int2string(nImPhi_max,'(i5)')))
+	
+	allocate(imPhi(nImR,nImPhi_max))
+	
+
+	do i=1,nImR
+		do j=1,nImPhi(i)
+			ImPhi(i,j)=pi*(real(j)-0.5)/real(nImPhi(i))
+		enddo
+	enddo
+	
+	allocate(P(nImR,nImPhi_max))
 	do i=1,nImR
 		if(i.ne.1) P(i,1)%R1=sqrt(ImR(i-1)*ImR(i))
 		if(i.ne.nImR) P(i,1)%R2=sqrt(ImR(i)*ImR(i+1))
@@ -102,11 +117,11 @@ c increase the resolution in velocity by this factor
 	if(P(nImR,1)%R2.gt.R_sphere(nR+1)) P(nImR,1)%R2=R_sphere(nR+1)
 
 	do i=1,nImR
-		do j=1,nImPhi
+		do j=1,nImPhi(i)
 			P(i,j)%R=ImR(i)
-			P(i,j)%Phi=ImPhi(j)
-			P(i,j)%phi1=pi*real(j-1)/real(nImPhi)
-			P(i,j)%phi2=pi*real(j)/real(nImPhi)
+			P(i,j)%Phi=ImPhi(i,j)
+			P(i,j)%phi1=pi*real(j-1)/real(nImPhi(i))
+			P(i,j)%phi2=pi*real(j)/real(nImPhi(i))
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
 		
@@ -141,7 +156,7 @@ c increase the resolution in velocity by this factor
 	vmax=0d0
 	do i=1,nImR
 	call tellertje(i,nImR)
-	do j=1,nImPhi
+	do j=1,nImPhi(i)
 		PP => P(i,j)
 		trac%x=P(i,j)%x
 		trac%y=P(i,j)%y

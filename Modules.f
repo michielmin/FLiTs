@@ -50,7 +50,8 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
 c the image grid
-	integer nImR,nImPhi
+	integer nImR
+	integer,allocatable :: nImPhi(:)
 	real*8 vmax
 	
 c store all the blackbodies

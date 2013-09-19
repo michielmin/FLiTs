@@ -20,7 +20,7 @@
 	call output("Preparing the profiles")
 
 	do i=1,nImR
-		do j=1,nImPhi
+		do j=1,nImPhi(i)
 			allocate(P(i,j)%cont_contr(P(i,j)%n))
 			allocate(P(i,j)%exptau_dust(P(i,j)%n))
 			allocate(P(i,j)%S_dust(P(i,j)%n))
@@ -100,7 +100,7 @@
 				if(lam_cont(k).gt.lcmin.and.lam_cont(k).lt.Bl%lmin) then
 					flux0=0d0
 					do i=1,nImR
-						do j=1,nImPhi
+						do j=1,nImPhi(i)
 							PP => P(i,j)
 							flux0=flux0+PP%flux_cont(k)*PP%A
 						enddo
@@ -149,7 +149,7 @@
 !$OMP& SHARED(P,nImPhi,nImR,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam)
 !$OMP DO
 		do i=1,nImR
-			do j=1,nImPhi
+			do j=1,nImPhi(i)
 				PP => P(i,j)
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
 					call ContContrPath(PP)
@@ -232,7 +232,7 @@
 		flux2=0d0
 		flux3=0d0
 		do i=1,nImR
-			do j=1,nImPhi
+			do j=1,nImPhi(i)
 				PP => P(i,j)
 
 				f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
@@ -327,7 +327,7 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 		if(lam_cont(ilam).lt.lmax) then
 			flux0=0d0
 			do i=1,nImR
-				do j=1,nImPhi
+				do j=1,nImPhi(i)
 					PP => P(i,j)
 					flux0=flux0+PP%flux_cont(ilam)*PP%A
 				enddo

@@ -19,7 +19,7 @@
 	enddo
 	
 	do i=1,nImR
-	do j=1,nImPhi
+	do j=1,nImPhi(i)
 		allocate(P(i,j)%flux_cont(nlam))
 	enddo
 	enddo
@@ -38,7 +38,7 @@
 		if(doit) then
 		flux=0d0
 		do i=1,nImR
-			do j=1,nImPhi
+			do j=1,nImPhi(i)
 				call TraceFluxCont(P(i,j),ilam,P(i,j)%flux_cont(ilam))
 				flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A
 			enddo
