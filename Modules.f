@@ -80,6 +80,7 @@ c line profile
 		type(Blend),pointer :: next
 		integer,allocatable :: ib0(:),nb0(:)
 		real*8 lmin,lmax
+		logical computing,done
 	end type Blend
 
 	type Molecule

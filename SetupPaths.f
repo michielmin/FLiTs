@@ -42,7 +42,7 @@ c increase the resolution in velocity by this factor
 			ir=ir+3
 		endif
 	enddo
-	do i=1,nR-1,nRreduce
+	do i=1,nR,nRreduce
 		ir=ir+1
 		if(cylindrical) then
 			ir=ir+1
@@ -81,6 +81,12 @@ c increase the resolution in velocity by this factor
 
 	call sort(imR,nImR)
 
+	open(unit=20,file='imagegrid.out',RECL=1000)
+	do i=1,nImR
+		write(20,*) imR(i)/AU
+	enddo
+	close(unit=20)
+
 	allocate(nImPhi(nImR))
 
 	nImPhi_max=1
@@ -102,7 +108,6 @@ c increase the resolution in velocity by this factor
 	
 	allocate(imPhi(nImR,nImPhi_max))
 	
-
 	do i=1,nImR
 		do j=1,nImPhi(i)
 			ImPhi(i,j)=pi*(real(j)-0.5)/real(nImPhi(i))
