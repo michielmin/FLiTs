@@ -37,10 +37,13 @@ c string converting functions
 	
 c input files
 	character*500 linefile(50)
-	character*500 structfile
-	character*500 popfile
+	character*500 FLiTsfile
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 	integer structtype,LTE
+
+c high resolution stellar spectrum
+	integer nlam_star
+	real*8,allocatable :: FstarHR(:),lam_star(:)
 
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
@@ -68,6 +71,8 @@ c line profile
 	real*8,allocatable :: profile(:)
 	logical,allocatable :: profile_nz(:)
 
+	character*10,allocatable :: mol_name0(:)
+
 	type Line
 		integer jup,jlow,imol
 		real*8 Aul,Blu,Bul,freq,lam,Eup
@@ -92,12 +97,19 @@ c total mass of the molecule
 		character*10 name
 	end type Molecule
 		
+	type poplevels
+		integer npop
+		real*8,allocatable :: N(:)
+	end type poplevels
+
 c cell structure
 	type Cell
 c	Temperature and total gas density
 		real*8 Tdust,Tgas,dens,v
 c	properties of the molecule
 		real*8,allocatable :: line_width(:),abun(:),N(:)  ! dimension nmol
+		real*8,allocatable :: N0(:),line_width0(:)
+		type(poplevels),allocatable :: npop0(:)
 		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
 		real*8,allocatable :: line_emis(:),line_abs(:)
 		real*8 kext_l,albedo_l,BB_l,LRF_l

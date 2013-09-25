@@ -59,12 +59,16 @@ c				all arguments are read
 			call output("value is read from the fits file")
 			stop
 		case("structfile")
-			structfile=value
+			call output("Please use forFLiTs file")
+			stop
 		case("linefile")
 			nmol=nmol+1
 			linefile(nmol)=value
 		case("popfile")
-			popfile=value
+			call output("Please use forFLiTs file")
+			stop
+		case("flitsfile")
+			FLiTsfile=value
 		case("lte")
 			read(value,*) LTE
 		case("blend")
@@ -146,8 +150,7 @@ c===============================================================================
 	
 	Mstar=1d0
 	Rstar=1d0
-	structfile='forProDiMo.fits.gz'
-	popfile=' '
+	FLiTsfile='forFLiTs.fits.gz'
 	lmin=5
 	lmax=50
 	inc=35d0

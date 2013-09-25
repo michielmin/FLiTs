@@ -48,8 +48,8 @@ OBJS	      = Modules.o \
 				InputOutput.o \
 				Subroutines.o \
 				Init.o \
-				ReadStructure.o \
-				ReadLineData.o \
+				ReadLambdaFiles.o \
+				ReadForFLiTs.o \
 				ComputeLTE.o \
 				PrepareStructure.o \
 				SetupPaths.o \
