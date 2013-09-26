@@ -48,7 +48,7 @@ c high resolution stellar spectrum
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
 	real*8,allocatable :: R_sphere(:),R_av_sphere(:)
-	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines,nblends
+	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines,nblends,nspec
 	real*8 Rin,Rout,inc,Fstar_l
 	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
@@ -98,16 +98,16 @@ c total mass of the molecule
 	end type Molecule
 		
 	type poplevels
-		integer npop
 		real*8,allocatable :: N(:)
 	end type poplevels
+	integer,allocatable :: npop0(:)
 
 c cell structure
 	type Cell
 c	Temperature and total gas density
 		real*8 Tdust,Tgas,dens,v
 c	properties of the molecule
-		real*8,allocatable :: line_width(:),abun(:),N(:)  ! dimension nmol
+		real*8,allocatable :: line_width(:),N(:)  ! dimension nmol
 		real*8,allocatable :: N0(:),line_width0(:)
 		type(poplevels),allocatable :: npop0(:)
 		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels

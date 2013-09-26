@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,i_low,i_up,imol,maxlevels
+	integer i,j,i_low,i_up,imol
 	real*8 v1,v2
 	
 	allocate(Mol(nmol))
@@ -40,13 +40,6 @@
 		close(unit=80)
 	enddo
 
-	maxlevels=0
-	do imol=1,nmol
-		if(Mol(imol)%nlevels.gt.maxlevels) maxlevels=Mol(imol)%nlevels
-	enddo
-
-c now the data should be rearranged properly
-	
 	return
 	end
 	

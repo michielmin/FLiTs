@@ -7,7 +7,7 @@ c===============================================================================
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nvars,ivars,i,j,k,imol,l,naxis,nhdu,nspec
+	integer nvars,ivars,i,j,k,imol,l,naxis
 	character*7 vars(10),hdu
 	real,allocatable :: array(:,:,:,:)
 	real*8,allocatable :: array_d(:,:,:,:)
@@ -56,6 +56,7 @@ c===============================================================================
 	call ftgkyd(unit,'Rout',Rout,comment,status)
 
 	call ftgkyd(unit,'Mstar',Mstar,comment,status)
+	call ftgkyd(unit,'Rstar',Rstar,comment,status)
 
 	call ftgkyd(unit,'distance',distance,comment,status)
 
@@ -76,16 +77,16 @@ c===============================================================================
 
 	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
 
-	Rin=array(1,1,1,1)
+	Rin=array(1,1,1,1)/AU
 	call output("Adjusting Rin to:  "//trim(dbl2string(Rin,'(f8.3)')) //" AU")
-	Rout=array(nR-1,1,2,1)
+	Rout=array(nR-1,1,2,1)/AU
 	call output("Adjusting Rout to: "//trim(dbl2string(Rout,'(f8.3)')) //" AU")
 
 	R(0)=Rstar*Rsun
 	do i=1,nR-1
-		R(i)=array(i,1,1,1)*AU
+		R(i)=array(i,1,1,1)
 	enddo
-	R(nR)=array(nR-1,1,2,1)*AU
+	R(nR)=array(nR-1,1,2,1)
 
 	do i=1,nR-1
 		R_av(i)=sqrt(R(i)*R(i+1))
@@ -185,6 +186,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		do j=1,nTheta
 			C(i,j)%Tgas=array_d(i,nTheta+1-j,1,1)
+			if(C(i,j)%Tgas.lt.1d0) C(i,j)%Tgas=1d0
 		enddo
 	enddo
 
@@ -219,6 +221,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		do j=1,nTheta
 			C(i,j)%Tdust=array_d(i,nTheta+1-j,1,1)
+			if(C(i,j)%Tdust.lt.1d0) C(i,j)%Tdust=1d0
 		enddo
 	enddo
 
@@ -292,7 +295,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nlam_star
-		lam_star(i)=array_d(i,1,1,1)
+		lam_star(i)=array_d(i,1,1,1)*1d4
 	enddo
 
 	deallocate(array_d)
@@ -323,9 +326,8 @@ c in the theta grid we actually store cos(theta) for convenience
 
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
-	do i=1,nlam
+	do i=1,nlam_star
 		FstarHR(i)=array_d(i,1,1,1)
-		FstarHR(i)=FstarHR(i)*lam_star(i)*1d3*1d-4/clight
 	enddo
 
 	deallocate(array_d)
@@ -369,7 +371,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nlam
-		lam_cont(i)=array_d(i,1,1,1)
+		lam_cont(i)=array_d(i,1,1,1)*1d4
 	enddo
 
 	deallocate(array_d)
@@ -404,7 +406,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		do j=1,nTheta
 			do l=1,nlam
-				C(i,j)%kabs(l)=array_d(i,nTheta+1-j,1,l)/AU
+				C(i,j)%kabs(l)=0d0	!array_d(l,i,nTheta+1-j,1)
 			enddo
 		enddo
 	enddo
@@ -441,7 +443,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		do j=1,nTheta
 			do l=1,nlam
-				C(i,j)%kext(l)=array_d(i,nTheta+1-j,1,l)/AU
+				C(i,j)%kext(l)=0d0	!array_d(l,i,nTheta+1-j,1)
 				if(C(i,j)%kext(l).gt.1d-150) then
 					C(i,j)%albedo(l)=(C(i,j)%kext(l)-C(i,j)%kabs(l))/C(i,j)%kext(l)
 				else
@@ -453,9 +455,46 @@ c in the theta grid we actually store cos(theta) for convenience
 
 	deallocate(array_d)
 
+	!------------------------------------------------------------------------------
+	! HDU 10 : Internal field
+	!------------------------------------------------------------------------------
+
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)
+	if(status.ne.0) then
+		status=0
+		goto 1
+	endif
+
+	naxis=3
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+
+	do i=naxis+1,4
+		naxes(i)=1
+	enddo
+	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
+
+	! read_image
+	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+
+	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+
+	do i=1,nR-1
+		do j=1,nTheta
+			do l=1,nlam
+				C(i,j)%LRF(l)=array_d(l,i,nTheta+1-j,1)
+c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
+			enddo
+		enddo
+	enddo
+
+	deallocate(array_d)
+
 
 	!------------------------------------------------------------------------------
-	! HDU 10 : Molecular particle densities [1/cm^3]
+	! HDU 11 : Molecular particle densities [1/cm^3]
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -490,45 +529,8 @@ c in the theta grid we actually store cos(theta) for convenience
 
 	deallocate(array_d)
 
-C	!------------------------------------------------------------------------------
-C	! HDU 6 : Champ de radiation en W.m-2 (lambda.F_lambda)  
-C	!------------------------------------------------------------------------------
-C
-C	!  move to next hdu
-C	call ftmrhd(unit,1,hdutype,status)
-C	if(status.ne.0) then
-C		status=0
-C		goto 1
-C	endif
-C
-C	naxis=3
-C
-C	! Check dimensions
-C	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-C
-C	do i=naxis+1,4
-C		naxes(i)=1
-C	enddo
-C	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-C
-C	! read_image
-C	allocate(array(naxes(1),naxes(2),naxes(3),naxes(4)))
-C
-C	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
-C
-C	do i=1,nR-1
-C		do j=1,nTheta
-C			do l=1,nlam
-C				C(i,j)%LRF(l)=array(i,nTheta+1-j,l,1)
-C				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
-C			enddo
-C		enddo
-C	enddo
-C
-C	deallocate(array)
-
 	!------------------------------------------------------------------------------
-	! HDU 11 : Line broadening parameter
+	! HDU 12 : Line broadening parameter
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -556,7 +558,7 @@ C	deallocate(array)
 	do i=1,nR-1
 		do j=1,nTheta
 			do imol=1,nspec
-				C(i,j)%line_width0(imol)=array_d(imol,i,nTheta+1-j,1)*1d5
+				C(i,j)%line_width0(imol)=array_d(imol,i,nTheta+1-j,1)
 			enddo
 		enddo
 	enddo
@@ -564,10 +566,11 @@ C	deallocate(array)
 	deallocate(array_d)
 	
 	!------------------------------------------------------------------------------
-	! HDU 12... : relative level populations
+	! HDU 13... : relative level populations
 	!------------------------------------------------------------------------------
 
 	allocate(mol_name0(nspec))
+	allocate(npop0(nspec))
 	
 	do imol=1,nspec
 
@@ -583,12 +586,12 @@ C	deallocate(array)
 	! Check dimensions
 	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 
-	call ftgkyj(unit,'NLEV',C(i,j)%npop0(imol)%npop,comment,status)
+	call ftgkyj(unit,'NLEV',npop0(imol),comment,status)
 	call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
 
 	do i=0,nR
 		do j=0,nTheta
-			allocate(C(i,j)%npop0(imol)%N(C(i,j)%npop0(imol)%npop))
+			allocate(C(i,j)%npop0(imol)%N(npop0(imol)))
 		enddo
 	enddo
 	
@@ -608,11 +611,11 @@ C	deallocate(array)
 			do k=1,naxes(1)
 				C(i,j)%npop0(imol)%N(k)=array(k,i,nTheta+1-j,1)
 			enddo
-			do k=2,naxes(1)
-				C(i,j)%npop0(imol)%N(k)=C(i,j)%npop0(imol)%N(k-1)*C(i,j)%npop0(imol)%N(k)
-			enddo
-			tot=sum(C(i,j)%npop0(imol)%N(1:naxes(1)))
-			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
+c			do k=2,naxes(1)
+c				C(i,j)%npop0(imol)%N(k)=C(i,j)%npop0(imol)%N(k-1)*C(i,j)%npop0(imol)%N(k)
+c			enddo
+c			tot=sum(C(i,j)%npop0(imol)%N(1:naxes(1)))
+c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 		enddo
 	enddo
 
