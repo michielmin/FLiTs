@@ -95,6 +95,7 @@ c total mass of the molecule
 		real*8 M
 		type(Line),allocatable :: L(:) ! dimension is number of lines
 		character*10 name
+		logical LTE
 	end type Molecule
 		
 	type poplevels

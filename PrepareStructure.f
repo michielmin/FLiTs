@@ -12,6 +12,9 @@
 		if(cylindrical) C(nR,j)%dens=1d-50
 	enddo
 
+	do imol=1,nmol
+		Mol(imol)%LTE=LTE
+	enddo
 
 	maxlevels=0
 c now the data should be rearranged properly
@@ -21,6 +24,9 @@ c now the data should be rearranged properly
 		enddo
 		if(ispec.gt.nspec) then
 			call output("Species " // trim(Mol(imol)%name) // " not found")
+c			if(.not.LTE) call output("Switching to LTE for this species")
+			call output("removing this species")
+			Mol(imol)%LTE=.true.
 		else
 			if(npop0(ispec).gt.maxlevels) maxlevels=npop0(ispec)
 		endif
@@ -83,7 +89,9 @@ c now the data should be rearranged properly
 			if(C(i,j)%iT.gt.MAXT) C(i,j)%iT=MAXT
 		enddo
 	enddo
-	
+
+c compute LTE where needed or requested
+	call ComputeLTE()
 	
 c everything is read in now
 c output the setup to the screen and the log file
