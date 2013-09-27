@@ -406,7 +406,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		do j=1,nTheta
 			do l=1,nlam
-				C(i,j)%kabs(l)=0d0	!array_d(l,i,nTheta+1-j,1)
+				C(i,j)%kabs(l)=array_d(l,i,nTheta+1-j,1)
 			enddo
 		enddo
 	enddo
@@ -443,7 +443,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		do j=1,nTheta
 			do l=1,nlam
-				C(i,j)%kext(l)=0d0	!array_d(l,i,nTheta+1-j,1)
+				C(i,j)%kext(l)=array_d(l,i,nTheta+1-j,1)
 				if(C(i,j)%kext(l).gt.1d-150) then
 					C(i,j)%albedo(l)=(C(i,j)%kext(l)-C(i,j)%kabs(l))/C(i,j)%kext(l)
 				else
