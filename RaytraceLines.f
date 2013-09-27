@@ -6,7 +6,7 @@
 	integer,allocatable :: imol_blend(:),count(:)
 	real*8,allocatable :: v_blend(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
-	real*8,allocatable :: flux(:),fluxHR(:)
+	real*8,allocatable :: flux(:),flux_cont(:)
 	type(Path),pointer :: PP
 	type(Line) :: LL
 	type(Blend),pointer :: Bl
@@ -27,7 +27,7 @@
 		enddo
 	enddo
 
-	open(unit=20,file='out.dat',RECL=1500)
+	open(unit=20,file='specFLiTs.out',RECL=1500)
 
 	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
@@ -35,7 +35,7 @@
 	call DetermineBlends(nv,maxblend)
 
 	allocate(flux(-nv:nv+nv*2*(maxblend)))
-	allocate(fluxHR(-nv:nv+nv*2*(maxblend)))
+	allocate(flux_cont(-nv:nv+nv*2*(maxblend)))
 	allocate(imol_blend(maxblend))
 	allocate(v_blend(maxblend))
 	allocate(count(nmol))
@@ -269,18 +269,8 @@
 		do i=-nv,nvmax
 			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 			flux(i)=flux(i)+fc
+			flux_cont(i)=flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 		enddo
-
-c		fluxHR=flux
-c		flux=0d0
-c		do i=-nv,nvmax
-c			do j=i-4,i+4
-c				k=j
-c				if(j.lt.-nv) k=-nv
-c				if(j.gt.nvmax) k=nvmax
-c				flux(i)=flux(i)+fluxHR(k)/9d0
-c			enddo
-c		enddo
 
 		if(Bl%n.eq.1) then
 			comment = trim(Mol(Bl%L(1)%imol)%name) // "  up: " // trim(int2string(Bl%L(1)%jup,'(i5)'))
@@ -302,6 +292,7 @@ c		enddo
 			write(20,*) lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight)),
      &					flux(i)*1e23/(distance*parsec)**2,
      &					real(i)*vresolution/1d5,
+     &					flux_cont(i)*1e23/(distance*parsec)**2,
      &					trim(comment)
 		enddo
 		

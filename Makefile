@@ -64,7 +64,7 @@ DEST	      = ${HOME}/bin
 
 # make actions 
 all:		version $(PROGRAM)
-version:;	echo "#define gitversion \"$(shell git rev-parse HEAD)\"" > gitversion.h
+version:;	echo "#define gitversion \"$(shell git describe), git build $(shell git rev-parse HEAD)\"" > gitversion.h
 clean:;		rm -f $(OBJS) $(PROGRAM)
 install:	version $(PROGRAM)
 		mv $(PROGRAM) $(DEST)

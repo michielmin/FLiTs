@@ -45,7 +45,6 @@
 		enddo
 		call Trace2StarCont(path2star,ilam,path2star%flux_cont(ilam))
 		flux=flux+path2star%flux_cont(ilam)*path2star%A
-		write(90,*) lam_cont(ilam),flux
 		endif
 	enddo
 	

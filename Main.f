@@ -14,9 +14,16 @@ c===============================================================================
 	IMPLICIT NONE
 	character*500 VersionGIT
 
+c terms of use
+	call output("==================================================================")
+	call output("By using FLiTs you agree to the terms of use that can be found")
+	call output("in the User Guide: http://www.michielmin.nl/FLiTs/UserGuide.pdf")
+	call output("It basically means you offer me co-author rights on any paper")
+	call output("that uses results computed with FLiTs.")
+
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
-	call output("Git submit: "//trim(VersionGIT()))
+	call output("FLiTs "//trim(VersionGIT()))
 	call output("==================================================================")
 
 c initialization
