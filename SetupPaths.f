@@ -20,7 +20,7 @@ c increase the resolution in velocity by this factor
 
 	if(accuracy.le.0) then
 		nrReduce=4
-		res_inc=0.5d0
+		res_inc=1d0
 	else if(accuracy.eq.1) then
 		nrReduce=2
 		res_inc=1d0
