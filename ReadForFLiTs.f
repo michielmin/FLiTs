@@ -374,6 +374,24 @@ c in the theta grid we actually store cos(theta) for convenience
 		lam_cont(i)=array_d(i,1,1,1)*1d4
 	enddo
 
+	if(lam_cont(1).gt.lmin) then
+		if(lam_cont(nlam).gt.lmax) then
+			call output("Wavelength interval not in FLiTs file")
+			stop
+		endif
+		lmin=lam_cont(1)
+		call output("Adjusting lambda_min to " //trim(dbl2string(lmin,'(f10.4)')))
+	endif
+
+	if(lam_cont(nlam).lt.lmax) then
+		if(lam_cont(nlam).lt.lmin) then
+			call output("Wavelength interval not in FLiTs file")
+			stop
+		endif
+		lmax=lam_cont(nlam)
+		call output("Adjusting lambda_max to " //trim(dbl2string(lmax,'(f10.4)')))
+	endif
+
 	deallocate(array_d)
 
 

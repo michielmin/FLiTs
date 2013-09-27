@@ -12,6 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
+	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2
 	character*1000 comment
 	
 	idum=-42
@@ -93,6 +94,7 @@
 		ilam=ilam1
 		do while(lam.gt.lam_cont(ilam+1).and.ilam.lt.nlam)
 			ilam=ilam+1
+			if(ilam.eq.nlam) exit
 		enddo
 
 		if(ilam.gt.ilam1) then
@@ -151,44 +153,44 @@
 							ib0=Bl%ib0(iv)
 							nb0=Bl%nb0(iv)
 							vmult=-1
-							gas=.false.
-							do ib=ib0,ib0+nb0-1
-								imol=Bl%L(ib)%imol
-								if((real(iv*vresolution)-Bl%v(ib)).lt.-PP%vmin(imol)
-     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.-PP%vmax(imol)) then
-	   								gas=.true.
-	   								exit
-	   							endif
-							enddo
-							if(gas) then
+C							gas=.false.
+C							do ib=ib0,ib0+nb0-1
+C								imol=Bl%L(ib)%imol
+C								if((real(iv*vresolution)-Bl%v(ib)).lt.-PP%vmin(imol)
+C     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.-PP%vmax(imol)) then
+C	   								gas=.true.
+C	   								exit
+C	   							endif
+C							enddo
+C							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
-							else
-								flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-							endif
+C							else
+C								flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+C							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
 
 							vmult=1
-							gas=.false.
-							do ib=ib0,ib0+nb0-1
-								imol=Bl%L(ib)%imol
-								if((real(iv*vresolution)-Bl%v(ib)).lt.PP%vmax(imol)
-     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.PP%vmin(imol)) then
-	   								gas=.true.
-	   								exit
-	   							endif
-							enddo
-							if(gas) then
+C							gas=.false.
+C							do ib=ib0,ib0+nb0-1
+C								imol=Bl%L(ib)%imol
+C								if((real(iv*vresolution)-Bl%v(ib)).lt.PP%vmax(imol)
+C     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.PP%vmin(imol)) then
+C	   								gas=.true.
+C	   								exit
+C	   							endif
+C							enddo
+C							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
-							else
-								flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-							endif
+C							else
+C								flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+C							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
-						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
-     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-							do vmult=-1,1,2
-								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
-							enddo
+C						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
+C     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
+C							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+C							do vmult=-1,1,2
+C								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+C							enddo
 						else
 							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,nb,1)
 							do vmult=-1,1,2
@@ -210,10 +212,10 @@
 			if(nb.gt.1) then
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
 				flux(iv)=flux(iv)+flux0*PP%A
-			else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
-     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-				flux(iv)=flux(iv)+flux0*PP%A
+C			else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
+C     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
+C				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+C				flux(iv)=flux(iv)+flux0*PP%A
 			else
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
 				flux(iv)=flux(iv)+flux0*PP%A
@@ -223,51 +225,38 @@
 		flux1=0d0
 		flux2=0d0
 		flux3=0d0
+
+		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
+		wl11=(log10(lam_cont(ilam+1)/(lam*f))/(log10(lam_cont(ilam+1)/lam_cont(ilam))))
+		wl21=1d0-wl11
+		f=1d0
+		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+		wl22=1d0-wl12
+		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
+		wl13=(log10(lam_cont(ilam+1)/(lam*f))/(log10(lam_cont(ilam+1)/lam_cont(ilam))))
+		wl23=1d0-wl13
+
+		flux_l1=0d0
+		flux_l2=0d0
 		do i=1,nImR
 			do j=1,nImPhi(i)
 				PP => P(i,j)
 
-				f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
-				wl1=(lam_cont(ilam+1)-lam*f)/(lam_cont(ilam+1)-lam_cont(ilam))
-				wl2=1d0-wl1
-				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-				flux1=flux1+flux0*PP%A
-		
-				f=1d0
-				wl1=(lam_cont(ilam+1)-lam*f)/(lam_cont(ilam+1)-lam_cont(ilam))
-				wl2=1d0-wl1
-				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-				flux2=flux2+flux0*PP%A
-		
-				f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
-				wl1=(lam_cont(ilam+1)-lam*f)/(lam_cont(ilam+1)-lam_cont(ilam))
-				wl2=1d0-wl1
-				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-				flux3=flux3+flux0*PP%A
+				flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
+				flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
 			enddo
 		enddo		
 		PP => path2star
 
-		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
-		wl1=(lam_cont(ilam+1)-lam*f)/(lam_cont(ilam+1)-lam_cont(ilam))
-		wl2=1d0-wl1
-		flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-		flux1=flux1+flux0*PP%A
-		
-		f=1d0
-		wl1=(lam_cont(ilam+1)-lam*f)/(lam_cont(ilam+1)-lam_cont(ilam))
-		wl2=1d0-wl1
-		flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-		flux2=flux2+flux0*PP%A
-		
-		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
-		wl1=(lam_cont(ilam+1)-lam*f)/(lam_cont(ilam+1)-lam_cont(ilam))
-		wl2=1d0-wl1
-		flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-		flux3=flux3+flux0*PP%A
+		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
+		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
+
+		flux1=10d0**(wl11*log10(flux_l1)+wl21*log10(flux_l2))
+		flux2=wl12*flux_l1+wl22*flux_l2
+		flux3=10d0**(wl13*log10(flux_l1)+wl23*log10(flux_l2))
 
 		do i=-nv,nvmax
-			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
+			fc=-flux2+10d0**(log10(flux1)+log10(flux3/flux1)*real(i+nv)/real(nvmax+nv))
 			flux(i)=flux(i)+fc
 			flux_cont(i)=flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 		enddo
