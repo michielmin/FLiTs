@@ -5,7 +5,11 @@
 	integer i,j,ilines,k,i_low,i_up,imol
 	real*8 UT,T
 	
-	call output("Computing LTE level populations")
+	do imol=1,nmol
+		if(Mol(imol)%LTE) then
+			call output("Computing LTE level populations for " // trim(Mol(imol)%name))
+		endif
+	enddo
 	
 	do i=0,nR
 	call tellertje(i+1,nR+1)
