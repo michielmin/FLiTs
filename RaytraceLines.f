@@ -12,7 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
-	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2
+	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_cont
 	character*1000 comment
 	
 	idum=-42
@@ -146,51 +146,51 @@
 			do j=1,nImPhi(i)
 				PP => P(i,j)
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
-					call ContContrPath(PP)
+					call ContContrPath(PP,flux_cont)
 					do iv=-nv,nvmax
 						vmult=1
 						if(nb.gt.1) then
 							ib0=Bl%ib0(iv)
 							nb0=Bl%nb0(iv)
 							vmult=-1
-C							gas=.false.
-C							do ib=ib0,ib0+nb0-1
-C								imol=Bl%L(ib)%imol
-C								if((real(iv*vresolution)-Bl%v(ib)).lt.-PP%vmin(imol)
-C     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.-PP%vmax(imol)) then
-C	   								gas=.true.
-C	   								exit
-C	   							endif
-C							enddo
-C							if(gas) then
+							gas=.false.
+							do ib=ib0,ib0+nb0-1
+								imol=Bl%L(ib)%imol
+								if((real(iv*vresolution)-Bl%v(ib)).lt.-PP%vmin(imol)
+     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.-PP%vmax(imol)) then
+	   								gas=.true.
+	   								exit
+	   							endif
+							enddo
+							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
-C							else
-C								flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-C							endif
+							else
+								flux0=flux_cont
+							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
 
 							vmult=1
-C							gas=.false.
-C							do ib=ib0,ib0+nb0-1
-C								imol=Bl%L(ib)%imol
-C								if((real(iv*vresolution)-Bl%v(ib)).lt.PP%vmax(imol)
-C     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.PP%vmin(imol)) then
-C	   								gas=.true.
-C	   								exit
-C	   							endif
-C							enddo
-C							if(gas) then
+							gas=.false.
+							do ib=ib0,ib0+nb0-1
+								imol=Bl%L(ib)%imol
+								if((real(iv*vresolution)-Bl%v(ib)).lt.PP%vmax(imol)
+     &								.and.(real(iv*vresolution)-Bl%v(ib)).gt.PP%vmin(imol)) then
+	   								gas=.true.
+	   								exit
+	   							endif
+							enddo
+							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
-C							else
-C								flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-C							endif
+							else
+								flux0=flux_cont
+							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
-C						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
-C     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-C							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-C							do vmult=-1,1,2
-C								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
-C							enddo
+						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
+     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
+							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+							do vmult=-1,1,2
+								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+							enddo
 						else
 							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,nb,1)
 							do vmult=-1,1,2
@@ -199,7 +199,7 @@ C							enddo
 						endif
 					enddo
 				else
-					flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+					flux0=flux_cont
 					flux(-nv:nvmax)=flux(-nv:nvmax)+flux0*PP%A
 				endif
 			enddo
@@ -212,10 +212,6 @@ C							enddo
 			if(nb.gt.1) then
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
 				flux(iv)=flux(iv)+flux0*PP%A
-C			else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
-C     &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-C				flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
-C				flux(iv)=flux(iv)+flux0*PP%A
 			else
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
 				flux(iv)=flux(iv)+flux0*PP%A
@@ -324,7 +320,7 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 	end
 	
 	
-	subroutine ContContrPath(p0)
+	subroutine ContContrPath(p0,flux)
 	use GlobalSetup
 	use Constants
 	integer i,j,k,vmult,iv,ii,nv,nn
@@ -332,6 +328,8 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 	type(Path) p0
 	type(Cell),pointer :: CC
 
+	fact=1d0
+	flux=0d0
 	tau_tot=0d0
 
 	do k=1,p0%n
@@ -357,7 +355,9 @@ c	dust scattering source function
 				p0%exptau_dust(k)=1d0-tau_d
 				p0%cont_contr(k)=S*p0%d(k)
 			endif
+			flux=flux+p0%cont_contr(k)*fact
 
+			fact=fact*exptau
 			tau_tot=tau_tot+tau_d
 			if(tau_tot.gt.tau_max) return
 		endif
