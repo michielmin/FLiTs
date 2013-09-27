@@ -150,10 +150,10 @@ c===============================================================================
 	
 	Mstar=1d0
 	Rstar=1d0
-	FLiTsfile='forFLiTs.fits.gz'
+	FLiTsfile='ProDiMoForFLiTs.fits.gz'
 	lmin=5
 	lmax=50
-	inc=35d0
+	inc=30d0
 	vresolution=1d5	! given in cm/s
 	vres_profile=1d4
 	tau_max=15d0

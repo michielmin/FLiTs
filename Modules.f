@@ -36,7 +36,7 @@ c string converting functions
 	external int2string,dbl2string
 	
 c input files
-	character*500 linefile(50)
+	character*500 linefile(100)
 	character*500 FLiTsfile
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 	integer structtype,LTE
