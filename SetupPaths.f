@@ -63,7 +63,7 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/10d0)
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)
 
 	allocate(imR(nImR))
 
@@ -74,9 +74,9 @@ c increase the resolution in velocity by this factor
 			ir=ir+1
 			imR(ir)=rr
 			ir=ir+1
-			imR(ir)=rr*sin(inc*pi/180d0-(pi/2d0-theta_av(i)))/sin(inc*pi/180d0)
+			imR(ir)=rr*sin(inc*pi/180d0-(pi/2d0-theta_av(i)))
 			ir=ir+1
-			imR(ir)=rr*sin(inc*pi/180d0+(pi/2d0-theta_av(i)))/sin(inc*pi/180d0)
+			imR(ir)=rr*sin(inc*pi/180d0+(pi/2d0-theta_av(i)))
 		endif
 	enddo
 	do i=1,nR,nRreduce
@@ -95,11 +95,11 @@ c increase the resolution in velocity by this factor
 
 	call sort(imR,nImR)
 
-	open(unit=20,file='imagegrid.out',RECL=1000)
-	do i=1,nImR
-		write(20,*) imR(i)/AU
-	enddo
-	close(unit=20)
+c	open(unit=20,file='imagegrid.out',RECL=1000)
+c	do i=1,nImR
+c		write(20,*) imR(i)/AU
+c	enddo
+c	close(unit=20)
 
 	allocate(nImPhi(nImR))
 	allocate(startphi(nImR+1))
@@ -171,7 +171,8 @@ c increase the resolution in velocity by this factor
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
 		
-			incfact=(sin(inc*pi/180d0)+(1d0-sin(inc*pi/180d0))*(P(i,j)%R-R(1))/(R(nR+1)-R(1)))
+			incfact=(sin(inc*pi/180d0)+(1d0-sin(inc*pi/180d0))
+     &				*(P(i,j)%R-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))
 			
 			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
 			y11=P(i,j)%R1*sin(P(i,j)%phi1)
