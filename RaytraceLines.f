@@ -12,7 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
-	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_cont
+	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	
 	idum=-42
@@ -146,7 +146,7 @@
 			do j=1,nImPhi(i)
 				PP => P(i,j)
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
-					call ContContrPath(PP,flux_cont)
+					call ContContrPath(PP,flux_c)
 					do iv=-nv,nvmax
 						vmult=1
 						if(nb.gt.1) then
@@ -165,7 +165,7 @@
 							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
 							else
-								flux0=flux_cont
+								flux0=flux_c
 							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
 
@@ -182,12 +182,12 @@
 							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
 							else
-								flux0=flux_cont
+								flux0=flux_c
 							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
 						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
      &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+							flux0=flux_c
 							do vmult=-1,1,2
 								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
 							enddo
@@ -199,7 +199,7 @@
 						endif
 					enddo
 				else
-					flux0=flux_cont
+					flux0=flux_c
 					flux(-nv:nvmax)=flux(-nv:nvmax)+flux0*PP%A
 				endif
 			enddo
@@ -357,7 +357,7 @@ c	dust scattering source function
 			endif
 			flux=flux+p0%cont_contr(k)*fact
 
-			fact=fact*exptau
+			fact=fact*p0%exptau_dust(k)
 			tau_tot=tau_tot+tau_d
 			if(tau_tot.gt.tau_max) return
 		endif
