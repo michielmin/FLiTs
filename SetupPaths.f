@@ -2,7 +2,8 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax
+	integer,allocatable :: startphi(:)
 	real*8 ct,res_inc,x,y,rr
 	real*8,allocatable :: imR(:),imPhi(:,:)
 	type(Tracer) trac
@@ -21,15 +22,28 @@ c increase the resolution in velocity by this factor
 	if(accuracy.le.0) then
 		nrReduce=4
 		res_inc=1d0
+		nPhiMin=15
+		nPhiMax=60
 	else if(accuracy.eq.1) then
 		nrReduce=2
 		res_inc=1d0
+		nPhiMin=20
+		nPhiMax=75
 	else if(accuracy.eq.2) then
 		nrReduce=1
+		res_inc=2d0
+		nPhiMin=30
+		nPhiMax=90
+	else if(accuracy.eq.3) then
+		nrReduce=1
 		res_inc=4d0
+		nPhiMin=45
+		nPhiMax=90
 	else
 		nrReduce=1
 		res_inc=8d0
+		nPhiMin=45
+		nPhiMax=180
 	endif		
 		
 	call output("==================================================================")
@@ -88,17 +102,22 @@ c increase the resolution in velocity by this factor
 	close(unit=20)
 
 	allocate(nImPhi(nImR))
+	allocate(startphi(nImR+1))
 
 	nImPhi_max=1
+	startphi(1)=1
 	do i=1,nImR
 		do k=1,nR-1
 			if(imR(i).gt.R(k).and.imR(i).lt.R(k+1)) exit
 		enddo
 		nImPhi(i)=abs(sin(inc*pi/180d0))*(C(k,nTheta)%v/vresolution)*res_inc
-		if(nImPhi(i).lt.15) nImPhi(i)=15
-		if(nImPhi(i).gt.75) nImPhi(i)=75
-		if(i.ne.1) then
-			if(nImPhi(i).eq.nImPhi(i-1)) nImPhi(i)=nImPhi(i)+1
+		if(nImPhi(i).lt.nPhiMin) nImPhi(i)=nPhiMin
+		if(nImPhi(i).gt.nPhiMax) nImPhi(i)=nPhiMax
+		if(startphi(i).eq.1) then
+			nImPhi(i)=nImPhi(i)+1
+			startphi(i+1)=0
+		else
+			startphi(i+1)=1
 		endif
 		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
 	enddo
@@ -109,9 +128,15 @@ c increase the resolution in velocity by this factor
 	allocate(imPhi(nImR,nImPhi_max))
 	
 	do i=1,nImR
-		do j=1,nImPhi(i)
-			ImPhi(i,j)=pi*(real(j)-0.5)/real(nImPhi(i))
-		enddo
+		if(startphi(i).eq.1) then
+			do j=1,nImPhi(i)
+				ImPhi(i,j)=pi*(real(j)-0.5)/real(nImPhi(i))
+			enddo
+		else
+			do j=1,nImPhi(i)
+				ImPhi(i,j)=pi*real(j-1)/real(nImPhi(i)-1)
+			enddo
+		endif
 	enddo
 	
 	allocate(P(nImR,nImPhi_max))
@@ -128,8 +153,21 @@ c increase the resolution in velocity by this factor
 		do j=1,nImPhi(i)
 			P(i,j)%R=ImR(i)
 			P(i,j)%Phi=ImPhi(i,j)
-			P(i,j)%phi1=pi*real(j-1)/real(nImPhi(i))
-			P(i,j)%phi2=pi*real(j)/real(nImPhi(i))
+			if(startphi(i).eq.1) then
+				P(i,j)%phi1=pi*real(j-1)/real(nImPhi(i))
+				P(i,j)%phi2=pi*real(j)/real(nImPhi(i))
+			else
+				if(j.eq.1) then
+					P(i,j)%phi1=0d0
+				else
+					P(i,j)%phi1=pi*(real(j)-0.5)/real(nImPhi(i))
+				endif
+				if(j.eq.nImPhi(i)) then
+					P(i,j)%phi2=pi
+				else
+					P(i,j)%phi2=pi*(real(j)+0.5)/real(nImPhi(i))
+				endif
+			endif
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
 		
@@ -241,6 +279,8 @@ c increase the resolution in velocity by this factor
 	path2star%npopmax(1:nmol)=0
 	PP => path2star
 	call tracepath(trac,PP)
+
+	deallocate(startphi)
 
 	return
 	end

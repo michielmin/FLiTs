@@ -158,7 +158,7 @@ c===============================================================================
 	vres_profile=1d4
 	tau_max=15d0
 	
-	accuracy=0
+	accuracy=1
 		
 	LTE=.false.	! default is non-LTE
 
