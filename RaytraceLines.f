@@ -145,8 +145,8 @@
 		do i=1,nImR
 			do j=1,nImPhi(i)
 				PP => P(i,j)
+				call ContContrPath(PP,flux_c)
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
-					call ContContrPath(PP,flux_c)
 					do iv=-nv,nvmax
 						vmult=1
 						if(nb.gt.1) then
@@ -223,13 +223,13 @@
 		flux3=0d0
 
 		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
-		wl11=(log10(lam_cont(ilam+1)/(lam*f))/(log10(lam_cont(ilam+1)/lam_cont(ilam))))
+		wl11=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl21=1d0-wl11
 		f=1d0
 		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl22=1d0-wl12
 		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
-		wl13=(log10(lam_cont(ilam+1)/(lam*f))/(log10(lam_cont(ilam+1)/lam_cont(ilam))))
+		wl13=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl23=1d0-wl13
 
 		flux_l1=0d0
@@ -247,12 +247,12 @@
 		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
 		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
 
-		flux1=10d0**(wl11*log10(flux_l1)+wl21*log10(flux_l2))
+		flux1=wl11*flux_l1+wl21*flux_l2
 		flux2=wl12*flux_l1+wl22*flux_l2
-		flux3=10d0**(wl13*log10(flux_l1)+wl23*log10(flux_l2))
+		flux3=wl13*flux_l1+wl23*flux_l2
 
 		do i=-nv,nvmax
-			fc=-flux2+10d0**(log10(flux1)+log10(flux3/flux1)*real(i+nv)/real(nvmax+nv))
+			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 			flux(i)=flux(i)+fc
 			flux_cont(i)=flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 		enddo
@@ -335,7 +335,7 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 	do k=1,p0%n
 		i=p0%i(k)
 		j=p0%j(k)
-		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
+		if(i.gt.0.and.i.lt.nR.and.j.gt.0) then
 			CC => C(i,j)
 			tau_dust=CC%kext_l
 c	dust thermal source function
@@ -386,7 +386,7 @@ c	dust scattering source function
 	do k=1,p0%n
 		i=p0%i(k)
 		j=p0%j(k)
-		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
+		if(i.gt.0.and.i.lt.nR.and.j.gt.0) then
 			CC => C(i,j)
 
 			tau=0d0
