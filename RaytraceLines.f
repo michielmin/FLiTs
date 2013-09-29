@@ -115,15 +115,17 @@
 		endif
 		lcmin=Bl%lmax
 
-		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl2=1d0-wl1
+		wl1=log10(lam_cont(ilam+1)/lam)/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl2=1d0-wl1
 
 		do i=0,nR
 			do j=1,nTheta
-				C(i,j)%kext_l=wl1*C(i,j)%kext(ilam)+wl2*C(i,j)%kext(ilam+1)
-				C(i,j)%albedo_l=wl1*C(i,j)%albedo(ilam)+wl2*C(i,j)%albedo(ilam+1)
-				C(i,j)%BB_l=wl1*BB(ilam,C(i,j)%iT)+wl2*BB(ilam+1,C(i,j)%iT)
-				C(i,j)%LRF_l=wl1*C(i,j)%LRF(ilam)+wl2*C(i,j)%LRF(ilam+1)
+				C(i,j)%kext_l=10d0**(wl1*log10(C(i,j)%kext(ilam))+wl2*log10(C(i,j)%kext(ilam+1)))
+				C(i,j)%albedo_l=10d0**(wl1*log10(C(i,j)%albedo(ilam))+wl2*log10(C(i,j)%albedo(ilam+1)))
+				C(i,j)%BB_l=10d0**(wl1*log10(BB(ilam,C(i,j)%iT))+wl2*log10(BB(ilam+1,C(i,j)%iT)))
+				C(i,j)%LRF_l=10d0**(wl1*log10(C(i,j)%LRF(ilam))+wl2*log10(C(i,j)%LRF(ilam+1)))
 
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
@@ -133,7 +135,7 @@
 				enddo
 			enddo
 		enddo
-		Fstar_l=wl1*Fstar(ilam)+wl2*Fstar(ilam+1)
+		Fstar_l=10d0**(wl1*log10(Fstar(ilam))+wl2*log10(Fstar(ilam+1)))
 
 		nvmax=nv+int(v_blend(nb)/vresolution)
 
@@ -222,14 +224,24 @@
 		flux2=0d0
 		flux3=0d0
 
+c		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
+c		wl11=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl21=1d0-wl11
+c		f=1d0
+c		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl22=1d0-wl12
+c		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
+c		wl13=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl23=1d0-wl13
+
 		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
-		wl11=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+		wl11=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl21=1d0-wl11
 		f=1d0
-		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+		wl12=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl22=1d0-wl12
 		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
-		wl13=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+		wl13=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl23=1d0-wl13
 
 		flux_l1=0d0
@@ -247,9 +259,9 @@
 		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
 		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
 
-		flux1=wl11*flux_l1+wl21*flux_l2
-		flux2=wl12*flux_l1+wl22*flux_l2
-		flux3=wl13*flux_l1+wl23*flux_l2
+		flux1=10d0**(wl11*log10(flux_l1)+wl21*log10(flux_l2))
+		flux2=10d0**(wl12*log10(flux_l1)+wl22*log10(flux_l2))
+		flux3=10d0**(wl13*log10(flux_l1)+wl23*log10(flux_l2))
 
 		do i=-nv,nvmax
 			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
