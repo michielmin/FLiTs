@@ -113,7 +113,7 @@ c	properties of the molecule
 		type(poplevels),allocatable :: npop0(:)
 		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
 		real*8,allocatable :: line_emis(:),line_abs(:)
-		real*8 kext_l,albedo_l,BB_l,LRF_l
+		real*8 kext_l,therm_l,scat_l
 		integer iT
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),albedo(:),kext(:),LRF(:) ! dimension is wavelength

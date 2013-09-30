@@ -12,7 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
-	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_cont
+	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c,x1,x2
 	character*1000 comment
 	
 	idum=-42
@@ -118,13 +118,23 @@
 		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl2=1d0-wl1
 
+		wl11=log10(lam_cont(ilam+1)/lam)/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		wl21=1d0-wl11
 		do i=0,nR
 			do j=1,nTheta
-				C(i,j)%kext_l=wl1*C(i,j)%kext(ilam)+wl2*C(i,j)%kext(ilam+1)
-				C(i,j)%albedo_l=wl1*C(i,j)%albedo(ilam)+wl2*C(i,j)%albedo(ilam+1)
-				C(i,j)%BB_l=wl1*BB(ilam,C(i,j)%iT)+wl2*BB(ilam+1,C(i,j)%iT)
-				C(i,j)%LRF_l=wl1*C(i,j)%LRF(ilam)+wl2*C(i,j)%LRF(ilam+1)
-
+				x1=C(i,j)%kext(ilam)
+				x2=C(i,j)%kext(ilam+1)
+				C(i,j)%kext_l=(x1**wl11)*(x2**wl21)
+				x1=C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)*C(i,j)%kext(ilam)
+				x2=C(i,j)%LRF(ilam+1)*C(i,j)%albedo(ilam+1)*C(i,j)%kext(ilam+1)
+				C(i,j)%scat_l=(x1**wl11)*(x2**wl21)/C(i,j)%kext_l
+				x1=BB(ilam,C(i,j)%iT)
+				x2=BB(ilam+1,C(i,j)%iT)
+				C(i,j)%therm_l=wl1*x1+wl2*x2
+				x1=(1d0-C(i,j)%albedo(ilam))*C(i,j)%kext(ilam)
+				x2=(1d0-C(i,j)%albedo(ilam+1))*C(i,j)%kext(ilam+1)
+				C(i,j)%therm_l=C(i,j)%therm_l*(wl1*x1+wl2*x2)/C(i,j)%kext_l
+				
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
 					fact=clight*hplanck*C(i,j)%N(LL%imol)/(4d0*pi*C(i,j)%line_width(LL%imol)*sqrt(pi))
@@ -133,7 +143,8 @@
 				enddo
 			enddo
 		enddo
-		Fstar_l=wl1*Fstar(ilam)+wl2*Fstar(ilam+1)
+
+		Fstar_l=(Fstar(ilam)**wl11)*(Fstar(ilam+1)**wl21)
 
 		nvmax=nv+int(v_blend(nb)/vresolution)
 
@@ -145,8 +156,8 @@
 		do i=1,nImR
 			do j=1,nImPhi(i)
 				PP => P(i,j)
+				call ContContrPath(PP,flux_c)
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
-					call ContContrPath(PP,flux_cont)
 					do iv=-nv,nvmax
 						vmult=1
 						if(nb.gt.1) then
@@ -165,7 +176,7 @@
 							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
 							else
-								flux0=flux_cont
+								flux0=flux_c
 							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
 
@@ -182,12 +193,12 @@
 							if(gas) then
 								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),nb0,ib0)
 							else
-								flux0=flux_cont
+								flux0=flux_c
 							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
 						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
      &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
-							flux0=wl1*PP%flux_cont(ilam)+wl2*PP%flux_cont(ilam+1)
+							flux0=flux_c
 							do vmult=-1,1,2
 								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
 							enddo
@@ -199,7 +210,7 @@
 						endif
 					enddo
 				else
-					flux0=flux_cont
+					flux0=flux_c
 					flux(-nv:nvmax)=flux(-nv:nvmax)+flux0*PP%A
 				endif
 			enddo
@@ -222,14 +233,24 @@
 		flux2=0d0
 		flux3=0d0
 
+c		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
+c		wl11=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl21=1d0-wl11
+c		f=1d0
+c		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl22=1d0-wl12
+c		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
+c		wl13=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+c		wl23=1d0-wl13
+
 		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
-		wl11=(log10(lam_cont(ilam+1)/(lam*f))/(log10(lam_cont(ilam+1)/lam_cont(ilam))))
+		wl11=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl21=1d0-wl11
 		f=1d0
-		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
+		wl12=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl22=1d0-wl12
 		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
-		wl13=(log10(lam_cont(ilam+1)/(lam*f))/(log10(lam_cont(ilam+1)/lam_cont(ilam))))
+		wl13=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl23=1d0-wl13
 
 		flux_l1=0d0
@@ -248,11 +269,11 @@
 		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
 
 		flux1=10d0**(wl11*log10(flux_l1)+wl21*log10(flux_l2))
-		flux2=wl12*flux_l1+wl22*flux_l2
+		flux2=10d0**(wl12*log10(flux_l1)+wl22*log10(flux_l2))
 		flux3=10d0**(wl13*log10(flux_l1)+wl23*log10(flux_l2))
 
 		do i=-nv,nvmax
-			fc=-flux2+10d0**(log10(flux1)+log10(flux3/flux1)*real(i+nv)/real(nvmax+nv))
+			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 			flux(i)=flux(i)+fc
 			flux_cont(i)=flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
 		enddo
@@ -335,13 +356,13 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 	do k=1,p0%n
 		i=p0%i(k)
 		j=p0%j(k)
-		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
+		if(i.gt.0.and.i.lt.nR.and.j.gt.0) then
 			CC => C(i,j)
 			tau_dust=CC%kext_l
 c	dust thermal source function
-			S=CC%BB_l*(1d0-CC%albedo_l)*tau_dust
+			S=CC%therm_l*tau_dust
 c	dust scattering source function
-			S=S+CC%LRF_l*CC%albedo_l*tau_dust
+			S=S+CC%scat_l*tau_dust
 
 			p0%S_dust(k)=S
 
@@ -357,7 +378,7 @@ c	dust scattering source function
 			endif
 			flux=flux+p0%cont_contr(k)*fact
 
-			fact=fact*exptau
+			fact=fact*p0%exptau_dust(k)
 			tau_tot=tau_tot+tau_d
 			if(tau_tot.gt.tau_max) return
 		endif
@@ -386,7 +407,7 @@ c	dust scattering source function
 	do k=1,p0%n
 		i=p0%i(k)
 		j=p0%j(k)
-		if(i.ne.0.and.i.ne.nR.and.j.ne.0) then
+		if(i.gt.0.and.i.lt.nR.and.j.gt.0) then
 			CC => C(i,j)
 
 			tau=0d0
