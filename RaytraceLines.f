@@ -12,7 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
-	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
+	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c,x1,x2
 	character*1000 comment
 	
 	idum=-42
@@ -115,18 +115,26 @@
 		endif
 		lcmin=Bl%lmax
 
-c		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
-c		wl2=1d0-wl1
-		wl1=log10(lam_cont(ilam+1)/lam)/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
 		wl2=1d0-wl1
 
+		wl11=log10(lam_cont(ilam+1)/lam)/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		wl21=1d0-wl11
 		do i=0,nR
 			do j=1,nTheta
-				C(i,j)%kext_l=10d0**(wl1*log10(C(i,j)%kext(ilam))+wl2*log10(C(i,j)%kext(ilam+1)))
-				C(i,j)%albedo_l=10d0**(wl1*log10(C(i,j)%albedo(ilam))+wl2*log10(C(i,j)%albedo(ilam+1)))
-				C(i,j)%BB_l=10d0**(wl1*log10(BB(ilam,C(i,j)%iT))+wl2*log10(BB(ilam+1,C(i,j)%iT)))
-				C(i,j)%LRF_l=10d0**(wl1*log10(C(i,j)%LRF(ilam))+wl2*log10(C(i,j)%LRF(ilam+1)))
-
+				x1=C(i,j)%kext(ilam)
+				x2=C(i,j)%kext(ilam+1)
+				C(i,j)%kext_l=(x1**wl11)*(x2**wl21)
+				x1=C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)*C(i,j)%kext(ilam)
+				x2=C(i,j)%LRF(ilam+1)*C(i,j)%albedo(ilam+1)*C(i,j)%kext(ilam+1)
+				C(i,j)%scat_l=(x1**wl11)*(x2**wl21)/C(i,j)%kext_l
+				x1=BB(ilam,C(i,j)%iT)
+				x2=BB(ilam+1,C(i,j)%iT)
+				C(i,j)%therm_l=wl1*x1+wl2*x2
+				x1=(1d0-C(i,j)%albedo(ilam))*C(i,j)%kext(ilam)
+				x2=(1d0-C(i,j)%albedo(ilam+1))*C(i,j)%kext(ilam+1)
+				C(i,j)%therm_l=C(i,j)%therm_l*(wl1*x1+wl2*x2)/C(i,j)%kext_l
+				
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
 					fact=clight*hplanck*C(i,j)%N(LL%imol)/(4d0*pi*C(i,j)%line_width(LL%imol)*sqrt(pi))
@@ -135,7 +143,8 @@ c		wl2=1d0-wl1
 				enddo
 			enddo
 		enddo
-		Fstar_l=10d0**(wl1*log10(Fstar(ilam))+wl2*log10(Fstar(ilam+1)))
+
+		Fstar_l=(Fstar(ilam)**wl11)*(Fstar(ilam+1)**wl21)
 
 		nvmax=nv+int(v_blend(nb)/vresolution)
 
@@ -351,9 +360,9 @@ c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/
 			CC => C(i,j)
 			tau_dust=CC%kext_l
 c	dust thermal source function
-			S=CC%BB_l*(1d0-CC%albedo_l)*tau_dust
+			S=CC%therm_l*tau_dust
 c	dust scattering source function
-			S=S+CC%LRF_l*CC%albedo_l*tau_dust
+			S=S+CC%scat_l*tau_dust
 
 			p0%S_dust(k)=S
 

@@ -295,7 +295,7 @@ c-----------------------------------------------------------------------
 	IMPLICIT NONE
 	type(Tracer) trac
 	real*8 x,y,z,phi,d,vtot,taumin
-	integer inext,jnext,ntrace,i,j,k,ipop,imol
+	integer inext,jnext,ntrace,i,j,k,ipop,imol,kk,nk
 	logical hitstar
 	type(Path) PP
 
@@ -319,11 +319,6 @@ c-----------------------------------------------------------------------
 	call Trace2edge(trac,d,inext,jnext)
 
 	k=PP%n
-
-	PP%d(k)=d
-
-	PP%i(k)=trac%i
-	PP%j(k)=trac%j
 	
 	x=trac%x
 	y=trac%y
@@ -331,40 +326,60 @@ c-----------------------------------------------------------------------
 
 	PP%v1(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
 
-	x=trac%x+trac%vx*d/2d0
-	y=trac%y+trac%vy*d/2d0
-	z=trac%z+trac%vz*d/2d0
+	x=trac%x+trac%vx*d
+	y=trac%y+trac%vy*d
+	z=trac%z+trac%vz*d
 
-	call checkcell(x,y,z,trac%i,trac%j)
+	PP%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
 
-	PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
-
-c here I still have to add the turbulent velocity widening of the line
-c add this for all species to get the absolute max and min velocity contributing.
+	nk=1
 	do imol=1,nmol
-		if(C(trac%i,trac%j)%N(imol).gt.1d-50
-     &		.and.trac%j.gt.0.and.trac%i.lt.nR.and.trac%i.gt.0) then
-			vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
-			if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
-			vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
-			if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
-			do ipop=Mol(imol)%nlevels,1,-1
-				if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
-			enddo
-			if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
-		endif
+		i=abs(PP%v1(k)-PP%v2(k))*5d0/C(trac%i,trac%j)%line_width(imol)
+		if(i.gt.nk) nk=i
 	enddo
-
-
-	trac%x=trac%x+trac%vx*d
-	trac%y=trac%y+trac%vy*d
-	trac%z=trac%z+trac%vz*d
 
 	x=trac%x
 	y=trac%y
 	z=trac%z
 
-	PP%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	do kk=1,nk
+		k=PP%n
+		PP%d(k)=d/real(nk)
+
+		PP%i(k)=trac%i
+		PP%j(k)=trac%j
+
+		x=trac%x+(real(kk)-0.5)*trac%vx*d/real(nk)
+		y=trac%y+(real(kk)-0.5)*trac%vy*d/real(nk)
+		z=trac%z+(real(kk)-0.5)*trac%vz*d/real(nk)
+
+		call checkcell(x,y,z,trac%i,trac%j)
+
+		PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+
+		do imol=1,nmol
+			if(C(trac%i,trac%j)%N(imol).gt.1d-50
+     &		.and.trac%j.gt.0.and.trac%i.lt.nR.and.trac%i.gt.0) then
+				vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
+				if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
+				vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
+				if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
+				do ipop=Mol(imol)%nlevels,1,-1
+					if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
+				enddo
+				if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
+			endif
+		enddo
+
+		if(C(PP%i(k),PP%j(k))%dens.gt.1d-50
+     &		.and.PP%i(k).gt.0.and.PP%i(k).lt.nR.and.PP%j(k).gt.0) then
+			PP%n=PP%n+1
+		endif
+	enddo
+
+	trac%x=trac%x+trac%vx*d
+	trac%y=trac%y+trac%vy*d
+	trac%z=trac%z+trac%vz*d
 
 	if(trac%i.gt.0) taumin=taumin+minval(C(trac%i,trac%j)%kext(ilam1:ilam2))*d
 
@@ -372,17 +387,11 @@ c add this for all species to get the absolute max and min velocity contributing
 		return
 	endif
 	if(inext.lt.0) then
-c		p%hitstar=.true.
 		return
 	endif
 
 	trac%i=inext
 	trac%j=jnext
-
-	if(C(PP%i(k),PP%j(k))%dens.gt.1d-50
-     &		.and.PP%i(k).gt.0.and.PP%i(k).lt.nR.and.PP%j(k).gt.0) then
-		PP%n=PP%n+1
-	endif
 
 	goto 1
 
