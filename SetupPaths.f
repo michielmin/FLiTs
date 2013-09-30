@@ -39,11 +39,16 @@ c increase the resolution in velocity by this factor
 		res_inc=4d0
 		nPhiMin=45
 		nPhiMax=90
-	else
+	else if(accuracy.eq.4) then
 		nrReduce=1
 		res_inc=8d0
 		nPhiMin=45
 		nPhiMax=180
+	else
+		nrReduce=1
+		res_inc=20d0
+		nPhiMin=90
+		nPhiMax=270
 	endif		
 		
 	call output("==================================================================")

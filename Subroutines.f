@@ -138,7 +138,7 @@ c-----------------------------------------------------------------------
 	if(i.eq.1) then
 		call cpu_time(stoptime)
 		xx=100d0*real(ii)/real(nn)
-		call output(trim(dbl2string((stoptime-starttime)/real(ii),'(f8.2)'))
+		call output(trim(dbl2string((stoptime-starttime)/real(ii),'(f8.3)'))
      &			//" s per line. Approx " // 
      &			trim(dbl2string((stoptime-starttime)*(nn-ii)/real(ii),'(f8.2)'))
      &			//" s left. (" //
@@ -151,7 +151,7 @@ c-----------------------------------------------------------------------
      &   .and.20d0*real(i+1)/real(n).gt.real(f)) then
 		call cpu_time(stoptime)
 		xx=100d0*real(ii)/real(nn)
-		call output(trim(dbl2string((stoptime-starttime)/real(ii),'(f8.2)'))
+		call output(trim(dbl2string((stoptime-starttime)/real(ii),'(f8.3)'))
      &			//" s per line. Approx " // 
      &			trim(dbl2string((stoptime-starttime)*(nn-ii)/real(ii),'(f8.2)'))
      &			//" s left. (" //
