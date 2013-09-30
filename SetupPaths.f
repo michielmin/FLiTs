@@ -92,19 +92,28 @@ c increase the resolution in velocity by this factor
 			imR(ir)=R_av(i)
 		endif
 	enddo
+
+	call sort(imR,ir)
+	do while(imR(ir).gt.R_sphere(nr+1))
+		ir=ir-1
+		print*,imR(ir)
+	enddo
+
 	j=nImR-ir
 	do i=1,j
 		ir=ir+1
 		imR(ir)=10d0**(log10(Rstar*Rsun)+log10(R_sphere(nR+1)/(Rstar*Rsun))*(real(i)-0.1)/real(j))
 	enddo
 
+	imR=abs(imR)
+
 	call sort(imR,nImR)
 
-c	open(unit=20,file='imagegrid.out',RECL=1000)
-c	do i=1,nImR
-c		write(20,*) imR(i)/AU
-c	enddo
-c	close(unit=20)
+	open(unit=20,file='imagegrid.out',RECL=1000)
+	do i=1,nImR
+		write(20,*) imR(i)/AU,R_sphere(nR+1)/AU
+	enddo
+	close(unit=20)
 
 	allocate(nImPhi(nImR))
 	allocate(startphi(nImR+1))
