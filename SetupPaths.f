@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,nstar
 	integer,allocatable :: startphi(:)
 	real*8 ct,res_inc,x,y,rr
 	real*8,allocatable :: imR(:),imPhi(:,:)
@@ -27,7 +27,7 @@ c increase the resolution in velocity by this factor
 	else if(accuracy.eq.1) then
 		nrReduce=2
 		res_inc=1d0
-		nPhiMin=20
+		nPhiMin=30
 		nPhiMax=75
 	else if(accuracy.eq.2) then
 		nrReduce=1
@@ -53,6 +53,10 @@ c increase the resolution in velocity by this factor
 		
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
+
+	do while(nR/nRreduce.lt.40.and.nRreduce.gt.1)
+		nRreduce=nRreduce-1
+	enddo
 	
 	ir=0
 	do i=nTheta,1,-1
@@ -68,7 +72,7 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+50
 
 	allocate(imR(nImR))
 
@@ -98,6 +102,11 @@ c increase the resolution in velocity by this factor
 		ir=ir-1
 	enddo
 
+	nstar=50
+	do i=1,nstar
+		ir=ir+1
+		imR(ir)=10d0**(log10(R_sphere(1))+log10((Rstar*Rsun)/R_sphere(1))*(real(i)-0.1)/real(nstar))
+	enddo
 	j=nImR-ir
 	do i=1,j
 		ir=ir+1
@@ -184,8 +193,9 @@ c	close(unit=20)
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
 		
-			incfact=(sin(inc*pi/180d0)+(1d0-sin(inc*pi/180d0))
-     &				*(P(i,j)%R-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))
+			incfact=(cos(inc*pi/180d0)+(1d0-cos(inc*pi/180d0))
+     &				*((P(i,j)%R-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))**2)
+			if(incfact.lt.cos(inc*pi/180d0)) incfact=cos(inc*pi/180d0)
 			
 			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
 			y11=P(i,j)%R1*sin(P(i,j)%phi1)

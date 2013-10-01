@@ -12,7 +12,7 @@
 	type(Blend),pointer :: Bl
 	logical gas
 	real*8 flux1,flux2,flux3,fc,f
-	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c,x1,x2
+	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	
 	idum=-42
@@ -115,26 +115,9 @@
 		endif
 		lcmin=Bl%lmax
 
-		wl1=(lam_cont(ilam+1)-lam)/(lam_cont(ilam+1)-lam_cont(ilam))
-		wl2=1d0-wl1
-
-		wl11=log10(lam_cont(ilam+1)/lam)/log10(lam_cont(ilam+1)/lam_cont(ilam))
-		wl21=1d0-wl11
+		call InterpolateLam(lam,ilam)				
 		do i=0,nR
 			do j=1,nTheta
-				x1=C(i,j)%kext(ilam)
-				x2=C(i,j)%kext(ilam+1)
-				C(i,j)%kext_l=(x1**wl11)*(x2**wl21)
-				x1=C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)*C(i,j)%kext(ilam)
-				x2=C(i,j)%LRF(ilam+1)*C(i,j)%albedo(ilam+1)*C(i,j)%kext(ilam+1)
-				C(i,j)%scat_l=(x1**wl11)*(x2**wl21)/C(i,j)%kext_l
-				x1=BB(ilam,C(i,j)%iT)
-				x2=BB(ilam+1,C(i,j)%iT)
-				C(i,j)%therm_l=wl1*x1+wl2*x2
-				x1=(1d0-C(i,j)%albedo(ilam))*C(i,j)%kext(ilam)
-				x2=(1d0-C(i,j)%albedo(ilam+1))*C(i,j)%kext(ilam+1)
-				C(i,j)%therm_l=C(i,j)%therm_l*(wl1*x1+wl2*x2)/C(i,j)%kext_l
-				
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
 					fact=clight*hplanck*C(i,j)%N(LL%imol)/(4d0*pi*C(i,j)%line_width(LL%imol)*sqrt(pi))
@@ -144,7 +127,7 @@
 			enddo
 		enddo
 
-		Fstar_l=(Fstar(ilam)**wl11)*(Fstar(ilam+1)**wl21)
+		flux2=0d0
 
 		nvmax=nv+int(v_blend(nb)/vresolution)
 
@@ -157,6 +140,7 @@
 			do j=1,nImPhi(i)
 				PP => P(i,j)
 				call ContContrPath(PP,flux_c)
+				flux2=flux2+flux_c*PP%A
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
 					do iv=-nv,nvmax
 						vmult=1
@@ -228,27 +212,15 @@
 				flux(iv)=flux(iv)+flux0*PP%A
 			endif
 		enddo
+		flux2=flux2+flux0*PP%A
 
 		flux1=0d0
-		flux2=0d0
 		flux3=0d0
-
-c		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
-c		wl11=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
-c		wl21=1d0-wl11
-c		f=1d0
-c		wl12=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
-c		wl22=1d0-wl12
-c		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
-c		wl13=(lam_cont(ilam+1)-(lam*f))/(lam_cont(ilam+1)-lam_cont(ilam))
-c		wl23=1d0-wl13
 
 		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
 		wl11=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl21=1d0-wl11
-		f=1d0
-		wl12=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
-		wl22=1d0-wl12
+
 		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
 		wl13=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl23=1d0-wl13
@@ -268,9 +240,8 @@ c		wl23=1d0-wl13
 		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
 		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
 
-		flux1=10d0**(wl11*log10(flux_l1)+wl21*log10(flux_l2))
-		flux2=10d0**(wl12*log10(flux_l1)+wl22*log10(flux_l2))
-		flux3=10d0**(wl13*log10(flux_l1)+wl23*log10(flux_l2))
+		flux1=flux_l1**wl11*flux_l2**wl21
+		flux3=flux_l1**wl13*flux_l2**wl23
 
 		do i=-nv,nvmax
 			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
@@ -306,8 +277,6 @@ c		wl23=1d0-wl13
 
 		if(iblends.lt.nblends) Bl => Bl%next
 				
-c		call cpu_time(stoptime)
-c		call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))//" s")
 		call tellertje_time(iblends,nblends,nl,nlines,starttime)
 	enddo
 
@@ -566,9 +535,38 @@ c	gas source function
 	end
 		
 	
-	
-	
-	
+	subroutine InterpolateLam(lam0,ilam)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 wl1,wl2,w1,w2,lam0,x1,x2
+	integer ilam,i,j
+
+	w1=(lam_cont(ilam+1)-lam0)/(lam_cont(ilam+1)-lam_cont(ilam))
+	w2=1d0-w1
+	wl1=log10(lam_cont(ilam+1)/lam0)/log10(lam_cont(ilam+1)/lam_cont(ilam))
+	wl2=1d0-wl1
+	do i=0,nR
+		do j=1,nTheta
+			x1=C(i,j)%kext(ilam)
+			x2=C(i,j)%kext(ilam+1)
+			C(i,j)%kext_l=(x1*w1)+(x2*w2)
+			x1=C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)*C(i,j)%kext(ilam)
+			x2=C(i,j)%LRF(ilam+1)*C(i,j)%albedo(ilam+1)*C(i,j)%kext(ilam+1)
+			C(i,j)%scat_l=(x1*w1+x2*w2)/C(i,j)%kext_l
+			x1=BB(ilam,C(i,j)%iT)
+			x2=BB(ilam+1,C(i,j)%iT)
+			C(i,j)%therm_l=w1*x1+w2*x2
+			x1=(1d0-C(i,j)%albedo(ilam))*C(i,j)%kext(ilam)
+			x2=(1d0-C(i,j)%albedo(ilam+1))*C(i,j)%kext(ilam+1)
+			C(i,j)%therm_l=C(i,j)%therm_l*(w1*x1+w2*x2)/C(i,j)%kext_l
+		enddo
+	enddo
+	Fstar_l=(Fstar(ilam)**wl1)*(Fstar(ilam+1)**wl2)
+
+	return
+	end
+
 	
 	
 	
