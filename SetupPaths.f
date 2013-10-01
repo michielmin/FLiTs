@@ -2,13 +2,14 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,nstar
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax
 	integer,allocatable :: startphi(:)
 	real*8 ct,res_inc,x,y,rr
 	real*8,allocatable :: imR(:),imPhi(:,:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
-	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s,ComputeIncFact
+	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
+	real*8 ComputeIncFact,maxRjump
 
 	ilam1=1
 	ilam2=nlam
@@ -24,37 +25,31 @@ c increase the resolution in velocity by this factor
 		res_inc=1d0
 		nPhiMin=15
 		nPhiMax=60
-		nstar=250
 	else if(accuracy.eq.1) then
 		nrReduce=2
 		res_inc=1d0
 		nPhiMin=30
 		nPhiMax=75
-		nstar=250
 	else if(accuracy.eq.2) then
 		nrReduce=1
 		res_inc=2d0
 		nPhiMin=30
 		nPhiMax=90
-		nstar=500
 	else if(accuracy.eq.3) then
 		nrReduce=1
 		res_inc=4d0
 		nPhiMin=45
 		nPhiMax=90
-		nstar=500
 	else if(accuracy.eq.4) then
 		nrReduce=1
 		res_inc=8d0
 		nPhiMin=45
 		nPhiMax=180
-		nstar=500
 	else
 		nrReduce=1
-		res_inc=20d0
+		res_inc=10d0
 		nPhiMin=120
 		nPhiMax=270
-		nstar=500
 	endif		
 		
 	call output("==================================================================")
@@ -124,7 +119,7 @@ c increase the resolution in velocity by this factor
 		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
 	enddo
 
-	j=nImR-ir
+	j=(nImR-ir)
 	do i=1,j
 		ir=ir+1
 		imR(ir)=10d0**(log10(Rstar*Rsun)+log10(R_sphere(nR+1)/(Rstar*Rsun))*(real(i)-0.1)/real(j))
