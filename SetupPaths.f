@@ -8,7 +8,7 @@
 	real*8,allocatable :: imR(:),imPhi(:,:)
 	type(Tracer) trac
 	type(Path),pointer :: PP
-	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
+	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s,ComputeIncFact
 
 	ilam1=1
 	ilam2=nlam
@@ -24,31 +24,37 @@ c increase the resolution in velocity by this factor
 		res_inc=1d0
 		nPhiMin=15
 		nPhiMax=60
+		nstar=250
 	else if(accuracy.eq.1) then
 		nrReduce=2
 		res_inc=1d0
 		nPhiMin=30
 		nPhiMax=75
+		nstar=250
 	else if(accuracy.eq.2) then
 		nrReduce=1
 		res_inc=2d0
 		nPhiMin=30
 		nPhiMax=90
+		nstar=500
 	else if(accuracy.eq.3) then
 		nrReduce=1
 		res_inc=4d0
 		nPhiMin=45
 		nPhiMax=90
+		nstar=500
 	else if(accuracy.eq.4) then
 		nrReduce=1
 		res_inc=8d0
 		nPhiMin=45
 		nPhiMax=180
+		nstar=500
 	else
 		nrReduce=1
 		res_inc=20d0
-		nPhiMin=90
+		nPhiMin=120
 		nPhiMax=270
+		nstar=500
 	endif		
 		
 	call output("==================================================================")
@@ -72,7 +78,7 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+50
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*2
 
 	allocate(imR(nImR))
 
@@ -83,9 +89,9 @@ c increase the resolution in velocity by this factor
 			ir=ir+1
 			imR(ir)=rr
 			ir=ir+1
-			imR(ir)=rr*sin(inc*pi/180d0-(pi/2d0-theta_av(i)))
+			imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))
 			ir=ir+1
-			imR(ir)=rr*sin(inc*pi/180d0+(pi/2d0-theta_av(i)))
+			imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))
 		endif
 	enddo
 	do i=1,nR,nRreduce
@@ -102,11 +108,22 @@ c increase the resolution in velocity by this factor
 		ir=ir-1
 	enddo
 
-	nstar=50
-	do i=1,nstar
+	do i=2,nTheta
+		if(cylindrical) then
+			rr=R(1)/sin(theta_av(i))
+		else
+			rr=R_sphere(1)
+		endif
 		ir=ir+1
-		imR(ir)=10d0**(log10(R_sphere(1))+log10((Rstar*Rsun)/R_sphere(1))*(real(i)-0.1)/real(nstar))
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))/ComputeIncFact(rr)
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
+		ir=ir+1
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(rr)
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
 	enddo
+
 	j=nImR-ir
 	do i=1,j
 		ir=ir+1
@@ -117,11 +134,11 @@ c increase the resolution in velocity by this factor
 
 	call sort(imR,nImR)
 
-c	open(unit=20,file='imagegrid.out',RECL=1000)
-c	do i=1,nImR
-c		write(20,*) imR(i)/AU,R_sphere(nR+1)/AU
-c	enddo
-c	close(unit=20)
+	open(unit=20,file='imagegrid.out',RECL=1000)
+	do i=1,nImR
+		write(20,*) imR(i)/AU,R_sphere(nR+1)/AU
+	enddo
+	close(unit=20)
 
 	allocate(nImPhi(nImR))
 	allocate(startphi(nImR+1))
@@ -193,9 +210,7 @@ c	close(unit=20)
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
 		
-			incfact=(cos(inc*pi/180d0)+(1d0-cos(inc*pi/180d0))
-     &				*((P(i,j)%R-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))**2)
-			if(incfact.lt.cos(inc*pi/180d0)) incfact=cos(inc*pi/180d0)
+			incfact=ComputeIncFact(P(i,j)%R)
 			
 			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
 			y11=P(i,j)%R1*sin(P(i,j)%phi1)
@@ -367,6 +382,10 @@ c-----------------------------------------------------------------------
 
 	do kk=1,nk
 		k=PP%n
+		if(k.gt.1000) then
+			call output("Need to increase the maximum pathlength!")
+			stop
+		endif
 		PP%d(k)=d/real(nk)
 
 		PP%i(k)=trac%i
@@ -726,6 +745,19 @@ c-----------------------------------------------------------------------
 	
 !c-----------------------------------------------------------------------
 !c-----------------------------------------------------------------------
+
+	real*8 function ComputeIncFact(R0)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 R0
+
+	ComputeIncFact=(cos(inc*pi/180d0)+(1d0-cos(inc*pi/180d0))
+     &		*((R0-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))**2)
+	if(ComputeIncFact.lt.cos(inc*pi/180d0)) ComputeIncFact=cos(inc*pi/180d0)
+	
+	return
+	end
 	
 	
 	subroutine checkcell(x,y,z,i,j)
