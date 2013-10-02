@@ -68,20 +68,6 @@ c			if(.not.LTE) call output("Switching to LTE for this species")
 		endif
 	enddo
 
-	do i=1,nlam
-		if(lam_cont(i).lt.lam_star(1)) then
-			Fstar(i)=FstarHR(1)
-		else if(lam_cont(i).gt.lam_star(nlam_star)) then
-			Fstar(i)=FstarHR(nlam_star)
-		else
-			do j=1,nlam_star-1
-				if(lam_cont(i).gt.lam_star(j).and.lam_cont(i).le.lam_star(j+1)) then
-					Fstar(i)=FstarHR(j)+(FstarHR(j+1)-FstarHR(j))*(lam_cont(i)-lam_star(j))/(lam_star(j+1)-lam_star(j))
-				endif
-			enddo
-		endif
-	enddo
-
 	do i=0,nR
 		do j=0,nTheta
 			C(i,j)%iT=C(i,j)%Tdust+0.5d0

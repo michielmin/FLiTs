@@ -280,74 +280,6 @@ c in the theta grid we actually store cos(theta) for convenience
 	! Check dimensions
 	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 
-	nlam_star=naxes(1)
- 	allocate(lam_star(nlam_star))
- 	allocate(FstarHR(nlam_star))
- 
-	do i=naxis+1,4
-		naxes(i)=1
-	enddo
-	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-
-	! read_image
-	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-
-	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
-
-	do i=1,nlam_star
-		lam_star(i)=array_d(i,1,1,1)*1d4
-	enddo
-
-	deallocate(array_d)
-
-	!------------------------------------------------------------------------------
-	! HDU 6 : Star spectrum
-	!------------------------------------------------------------------------------
-
-	!  move to next hdu
-	call ftmrhd(unit,1,hdutype,status)
-	if(status.ne.0) then
-		status=0
-		goto 1
-	endif
-
-	naxis=1
-
-	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-
-	do i=naxis+1,4
-		naxes(i)=1
-	enddo
-	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-
-	! read_image
-	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-
-	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
-
-	do i=1,nlam_star
-		FstarHR(i)=array_d(i,1,1,1)
-	enddo
-
-	deallocate(array_d)
-
-	!------------------------------------------------------------------------------
-	! HDU 7 : Lambda
-	!------------------------------------------------------------------------------
-
-	!  move to next hdu
-	call ftmrhd(unit,1,hdutype,status)
-	if(status.ne.0) then
-		status=0
-		goto 1
-	endif
-
-	naxis=1
-
-	! Check dimensions
-	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-
 	nlam=naxes(1)
 	do i=0,nR
 		do j=0,nTheta
@@ -393,6 +325,50 @@ c in the theta grid we actually store cos(theta) for convenience
 	endif
 
 	deallocate(array_d)
+
+
+	!------------------------------------------------------------------------------
+	! HDU 6 : Star spectrum
+	!------------------------------------------------------------------------------
+
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)
+	if(status.ne.0) then
+		status=0
+		goto 1
+	endif
+
+	naxis=1
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+
+	do i=naxis+1,4
+		naxes(i)=1
+	enddo
+	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
+
+	! read_image
+	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+
+	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+
+	do i=1,nlam
+		Fstar(i)=array_d(i,1,1,1)
+	enddo
+
+	deallocate(array_d)
+
+	!------------------------------------------------------------------------------
+	! HDU 7 : ISM
+	!------------------------------------------------------------------------------
+
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)
+	if(status.ne.0) then
+		status=0
+		goto 1
+	endif
 
 
 	!------------------------------------------------------------------------------
@@ -510,9 +486,20 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 
 	deallocate(array_d)
 
+	!------------------------------------------------------------------------------
+	! HDU 11 : Source function
+	!------------------------------------------------------------------------------
+
+	!  move to next hdu
+	call ftmrhd(unit,1,hdutype,status)
+	if(status.ne.0) then
+		status=0
+		goto 1
+	endif
+
 
 	!------------------------------------------------------------------------------
-	! HDU 11 : Molecular particle densities [1/cm^3]
+	! HDU 12 : Molecular particle densities [1/cm^3]
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu

@@ -41,10 +41,6 @@ c input files
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 	integer structtype,LTE
 
-c high resolution stellar spectrum
-	integer nlam_star
-	real*8,allocatable :: FstarHR(:),lam_star(:)
-
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:),R_av(:),theta_av(:)
 	real*8,allocatable :: R_sphere(:),R_av_sphere(:)
