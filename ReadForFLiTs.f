@@ -307,7 +307,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	enddo
 
 	if(lam_cont(1).gt.lmin) then
-		if(lam_cont(nlam).gt.lmax) then
+		if(lam_cont(1).gt.lmax) then
 			call output("Wavelength interval not in FLiTs file")
 			stop
 		endif
