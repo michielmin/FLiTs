@@ -2,7 +2,8 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nb,ib0,nb0,ib
+	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nvmin
+	integer nb,ib0,nb0,ib
 	integer,allocatable :: imol_blend(:),count(:)
 	real*8,allocatable :: v_blend(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
@@ -34,10 +35,10 @@
 	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
 
-	call DetermineBlends(nv,maxblend)
+	call DetermineBlends(nv,maxblend,nvmin,nvmax)
 
-	allocate(flux(-nv:nv+nv*2*(maxblend)))
-	allocate(flux_cont(-nv:nv+nv*2*(maxblend)))
+	allocate(flux(nvmin:nvmax))
+	allocate(flux_cont(nvmin:nvmax))
 	allocate(imol_blend(maxblend))
 	allocate(v_blend(maxblend))
 	allocate(count(nmol))
@@ -133,8 +134,6 @@
 
 		flux2=0d0
 
-		nvmax=nv+int(v_blend(nb)/vresolution)
-
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(i,j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0)
@@ -147,7 +146,7 @@
 				call ContContrPath(PP,flux_c)
 				flux2=flux2+flux_c*PP%A
 				if(nb.gt.1.or.PP%npopmax(LL%imol).gt.LL%jlow) then
-					do iv=-nv,nvmax
+					do iv=Bl%nvmin,Bl%nvmax
 					lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
 					if(lam_velo.gt.lmin_next) then
 						vmult=1
@@ -203,7 +202,7 @@
 					enddo
 				else
 					flux0=flux_c
-					flux(-nv:nvmax)=flux(-nv:nvmax)+flux0*PP%A
+					flux(Bl%nvmin:Bl%nvmax)=flux(Bl%nvmin:Bl%nvmax)+flux0*PP%A
 				endif
 			enddo
 		enddo
@@ -211,7 +210,7 @@
 !$OMP FLUSH
 !$OMP END PARALLEL
 		PP => path2star
-		do iv=-nv,nvmax
+		do iv=Bl%nvmin,Bl%nvmax
 			if(nb.gt.1) then
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
 				flux(iv)=flux(iv)+flux0*PP%A
@@ -225,11 +224,11 @@
 		flux1=0d0
 		flux3=0d0
 
-		f=sqrt((1d0+real(-nv)*vresolution/clight)/(1d0-real(-nv)*vresolution/clight))
+		f=sqrt((1d0+real(Bl%nvmin)*vresolution/clight)/(1d0-real(Bl%nvmin)*vresolution/clight))
 		wl11=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl21=1d0-wl11
 
-		f=sqrt((1d0+real(nvmax)*vresolution/clight)/(1d0-real(nvmax)*vresolution/clight))
+		f=sqrt((1d0+real(Bl%nvmax)*vresolution/clight)/(1d0-real(Bl%nvmax)*vresolution/clight))
 		wl13=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
 		wl23=1d0-wl13
 
@@ -251,10 +250,10 @@
 		flux1=flux_l1**wl11*flux_l2**wl21
 		flux3=flux_l1**wl13*flux_l2**wl23
 
-		do i=-nv,nvmax
-			fc=-flux2+flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
+		do i=Bl%nvmin,Bl%nvmax
+			fc=-flux2+flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
 			flux(i)=flux(i)+fc
-			flux_cont(i)=flux1+(flux3-flux1)*real(i+nv)/real(nvmax+nv)
+			flux_cont(i)=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
 		enddo
 
 		if(Bl%n.eq.1) then
@@ -273,7 +272,7 @@
 			enddo
 		endif
 
-		do i=-nv,nvmax
+		do i=Bl%nvmin,Bl%nvmax
 			lam_velo=lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight))
 			if(lam_velo.gt.lmin_next) then
 				write(20,*) lam_velo,
@@ -480,10 +479,10 @@ c	gas source function
 	end
 	
 
-	subroutine DetermineBlends(nv,maxblend)
+	subroutine DetermineBlends(nv,maxblend,nvmin0,nvmax0)
 	use GlobalSetup
 	use Constants
-	integer ilines,ilines0,i,maxblend,nv,nvmax,iv,j
+	integer ilines,ilines0,i,maxblend,nv,nvmin0,nvmax0,iv,j
 	real*8 maxvshift,maxmult,v
 	type(Blend),pointer :: Bl
 
@@ -494,9 +493,14 @@ c	gas source function
 
 	nblends=0
 	maxblend=0
+	nvmin0=-nv
+	nvmax0=nv
 
 	do i=1,nlines
 		Bl%n=0
+		Bl%nvmin=-nv
+		Bl%nvmax=nv
+		Bl%lam=Lines(i)%lam
 		do j=1,nlines
 			if((j.gt.i.and.(Lines(j)%lam/Lines(i)%lam).lt.maxmult).or.(j.lt.i.and.(Lines(i)%lam/Lines(j)%lam).lt.maxmult).or.j.eq.i) then
 				Bl%n=Bl%n+1
@@ -518,10 +522,9 @@ c	gas source function
 				endif
 			endif
 		enddo
-		nvmax=nv
-		allocate(Bl%ib0(-nv:nvmax))
-		allocate(Bl%nb0(-nv:nvmax))
-		do iv=-nv,nvmax
+		allocate(Bl%ib0(-nv:nv))
+		allocate(Bl%nb0(-nv:nv))
+		do iv=-nv,nv
 			do j=1,Bl%n
 				if(real(iv-nv)*vresolution.le.Bl%v(j)) exit
 			enddo
@@ -534,7 +537,7 @@ c	gas source function
 
 		v=-real(nv)*vresolution
 		Bl%lmin=Bl%L(1)%lam*sqrt((1d0+v/clight)/(1d0-v/clight))
-		v=real(nvmax)*vresolution
+		v=real(nv)*vresolution
 		Bl%lmax=Bl%L(1)%lam*sqrt((1d0+v/clight)/(1d0-v/clight))
 
 		allocate(Bl%next)
@@ -547,10 +550,10 @@ c	gas source function
 		
 
 
-	subroutine DetermineBlendsOld(nv,maxblend)
+	subroutine DetermineBlendsOld(nv,maxblend,nvmin0,nvmax0)
 	use GlobalSetup
 	use Constants
-	integer ilines,ilines0,i,maxblend,nv,nvmax,iv
+	integer ilines,ilines0,i,maxblend,nv,nvmax,iv,nvmin0,nvmax0
 	real*8 maxvshift,maxmult,v
 	type(Blend),pointer :: Bl
 
@@ -563,6 +566,8 @@ c	gas source function
 	ilines0=1
 	nblends=0
 	maxblend=0
+	nvmin0=-nv
+	nvmax0=0
 	do while(ilines0.le.nlines)
 		Bl%n=1
 		if(doblend) then
@@ -585,6 +590,9 @@ c	gas source function
 			endif
 		enddo
 		nvmax=nv+int(Bl%v(Bl%n)/vresolution)
+		if(nvmax.gt.nvmax0) nvmax0=nvmax
+		Bl%nvmin=-nv
+		Bl%nvmax=nvmax
 		allocate(Bl%ib0(-nv:nvmax))
 		allocate(Bl%nb0(-nv:nvmax))
 		do iv=-nv,nvmax
@@ -602,6 +610,8 @@ c	gas source function
 		Bl%lmin=Bl%L(1)%lam*sqrt((1d0+v/clight)/(1d0-v/clight))
 		v=real(nvmax)*vresolution
 		Bl%lmax=Bl%L(1)%lam*sqrt((1d0+v/clight)/(1d0-v/clight))
+
+		Bl%lam=Bl%L(1)%lam
 
 		ilines0=ilines
 		ilines=ilines+1

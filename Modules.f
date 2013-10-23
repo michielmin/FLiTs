@@ -77,10 +77,10 @@ c line profile
 	type Blend
 		type(Line),pointer :: L(:)
 		real*8,allocatable :: v(:)
-		integer n
+		integer n,nvmin,nvmax
 		type(Blend),pointer :: next
 		integer,allocatable :: ib0(:),nb0(:)
-		real*8 lmin,lmax
+		real*8 lmin,lmax,lam
 		logical computing,done
 	end type Blend
 
