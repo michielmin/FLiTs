@@ -91,7 +91,7 @@
 		enddo
 
 		LL = Bl%L(1)
-		lam=LL%lam
+		lam=Bl%lam
 
 		if(lam.gt.lmin.and.lam.lt.lmax) then
 		nl=nl+nb
