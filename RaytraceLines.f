@@ -287,8 +287,9 @@
 		endif
 
 		if(iblends.lt.nblends) Bl => Bl%next
-				
-		call tellertje_time(iblends,nblends,nl,nlines,starttime)
+
+c		call tellertje_time(iblends,nblends,nl,nlines,starttime)
+		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
 	enddo
 
 	ilam=ilam+1
