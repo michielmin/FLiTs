@@ -113,6 +113,7 @@ c	properties of the molecule
 		integer iT
 c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 		real*8,allocatable :: kabs(:),albedo(:),kext(:),LRF(:) ! dimension is wavelength
+		real*8,allocatable :: S(:) ! dimension is wavelength
 	end type Cell
 
 	type(Cell),allocatable,target :: C(:,:)	! dimension nR,nTheta

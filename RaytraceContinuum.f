@@ -65,8 +65,10 @@
 		i=p0%i(k)
 		j=p0%j(k)
 		tau=C(i,j)%kext(ilam)*p0%d(k)
-		S=BB(ilam,C(i,j)%iT)*(1d0-C(i,j)%albedo(ilam))
-		S=S+C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)
+c		S=BB(ilam,C(i,j)%iT)*(1d0-C(i,j)%albedo(ilam))
+c		S=S+C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)
+c Using the source function for now.
+		S=C(i,j)%S(ilam)
 		if(tau.gt.1d-6) then
 			exptau=exp(-tau)
 		else

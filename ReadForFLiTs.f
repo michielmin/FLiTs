@@ -158,7 +158,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	enddo
 
 	!------------------------------------------------------------------------------
-	! HDU 2: Gas Temperature 
+	! HDU 1 : Gas Temperature 
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -193,7 +193,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	deallocate(array_d)
 
 	!------------------------------------------------------------------------------
-	! HDU 3: Dust Temperature 
+	! HDU 2 : Dust Temperature 
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -229,7 +229,7 @@ c in the theta grid we actually store cos(theta) for convenience
 
 
 	!------------------------------------------------------------------------------
-	! HDU 4 : Gas density [1/cm^3]
+	! HDU 3 : Gas density [1/cm^3]
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -265,7 +265,7 @@ c in the theta grid we actually store cos(theta) for convenience
 
 
 	!------------------------------------------------------------------------------
-	! HDU 5 : Lambda
+	! HDU 4 : Lambda
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -287,6 +287,7 @@ c in the theta grid we actually store cos(theta) for convenience
 			allocate(C(i,j)%albedo(nlam))
 			allocate(C(i,j)%kext(nlam))
 			allocate(C(i,j)%LRF(nlam))
+			allocate(C(i,j)%S(nlam))
 		enddo
 	enddo
  	allocate(lam_cont(nlam))
@@ -328,7 +329,7 @@ c in the theta grid we actually store cos(theta) for convenience
 
 
 	!------------------------------------------------------------------------------
-	! HDU 6 : Star spectrum
+	! HDU 5 : Star spectrum
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -360,7 +361,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	deallocate(array_d)
 
 	!------------------------------------------------------------------------------
-	! HDU 7 : ISM
+	! HDU 6 : ISM
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -372,7 +373,7 @@ c in the theta grid we actually store cos(theta) for convenience
 
 
 	!------------------------------------------------------------------------------
-	! HDU 8 : Opacites (abs)
+	! HDU 7 : Opacites (abs)
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -409,7 +410,7 @@ c in the theta grid we actually store cos(theta) for convenience
 
 
 	!------------------------------------------------------------------------------
-	! HDU 9 : Opacites (ext)
+	! HDU 8 : Opacites (ext)
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -450,7 +451,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	deallocate(array_d)
 
 	!------------------------------------------------------------------------------
-	! HDU 10 : Internal field
+	! HDU 9 : Internal field
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -487,7 +488,7 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	deallocate(array_d)
 
 	!------------------------------------------------------------------------------
-	! HDU 11 : Source function
+	! HDU 10 : Source function
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu
@@ -497,9 +498,34 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 		goto 1
 	endif
 
+	naxis=3
+
+	! Check dimensions
+	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+
+	do i=naxis+1,4
+		naxes(i)=1
+	enddo
+	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
+
+	! read_image
+	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+
+	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+
+	do i=1,nR-1
+		do j=1,nTheta
+			do l=1,nlam
+				C(i,j)%S(l)=exp(array_d(l,i,nTheta+1-j,1))
+			enddo
+		enddo
+	enddo
+
+	deallocate(array_d)
+
 
 	!------------------------------------------------------------------------------
-	! HDU 12 : Molecular particle densities [1/cm^3]
+	! HDU 11 : Molecular particle densities [1/cm^3]
 	!------------------------------------------------------------------------------
 
 	!  move to next hdu

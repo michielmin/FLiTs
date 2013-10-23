@@ -137,6 +137,7 @@
 !$OMP& SHARED(P,nImPhi,nImR,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam)
 !$OMP DO
 		do i=1,nImR
+			if(iblends.eq.1) call tellertje(i,nImR)
 			do j=1,nImPhi(i)
 				PP => P(i,j)
 				call ContContrPath(PP,flux_c)
@@ -551,15 +552,21 @@ c	gas source function
 			x1=C(i,j)%kext(ilam)
 			x2=C(i,j)%kext(ilam+1)
 			C(i,j)%kext_l=(x1*w1)+(x2*w2)
-			x1=C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)*C(i,j)%kext(ilam)
-			x2=C(i,j)%LRF(ilam+1)*C(i,j)%albedo(ilam+1)*C(i,j)%kext(ilam+1)
-			C(i,j)%scat_l=(x1*w1+x2*w2)/C(i,j)%kext_l
-			x1=BB(ilam,C(i,j)%iT)
-			x2=BB(ilam+1,C(i,j)%iT)
-			C(i,j)%therm_l=w1*x1+w2*x2
-			x1=(1d0-C(i,j)%albedo(ilam))*C(i,j)%kext(ilam)
-			x2=(1d0-C(i,j)%albedo(ilam+1))*C(i,j)%kext(ilam+1)
-			C(i,j)%therm_l=C(i,j)%therm_l*(w1*x1+w2*x2)/C(i,j)%kext_l
+c			x1=C(i,j)%LRF(ilam)*C(i,j)%albedo(ilam)*C(i,j)%kext(ilam)
+c			x2=C(i,j)%LRF(ilam+1)*C(i,j)%albedo(ilam+1)*C(i,j)%kext(ilam+1)
+c			C(i,j)%scat_l=(x1*w1+x2*w2)/C(i,j)%kext_l
+c			x1=BB(ilam,C(i,j)%iT)
+c			x2=BB(ilam+1,C(i,j)%iT)
+c			C(i,j)%therm_l=w1*x1+w2*x2
+c			x1=(1d0-C(i,j)%albedo(ilam))*C(i,j)%kext(ilam)
+c			x2=(1d0-C(i,j)%albedo(ilam+1))*C(i,j)%kext(ilam+1)
+c			C(i,j)%therm_l=C(i,j)%therm_l*(w1*x1+w2*x2)/C(i,j)%kext_l
+
+c Using the source function for now.
+			x1=C(i,j)%S(ilam)
+			x2=C(i,j)%S(ilam+1)
+			C(i,j)%therm_l=(w1*x1+w2*x2)/2d0
+			C(i,j)%scat_l=(w1*x1+w2*x2)/2d0
 		enddo
 	enddo
 	Fstar_l=(Fstar(ilam)**wl1)*(Fstar(ilam+1)**wl2)
