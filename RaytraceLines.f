@@ -314,7 +314,9 @@ c		call tellertje_time(iblends,nblends,nl,nlines,starttime)
 
 	call output("Time used for the lines:"//trim(dbl2string(stoptime-starttime,'(f8.2)'))
      &			//" s")
-	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))
+c	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))
+c     &			//" s")
+	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nblends),'(f8.2)'))
      &			//" s")
 
 
