@@ -1,4 +1,4 @@
-This is pdfeTeX, Version 3.141592-1.21a-2.2 (Web2C 7.5.4) (format=pdflatex 2009.4.22)  30 SEP 2013 12:12
+This is pdfeTeX, Version 3.141592-1.21a-2.2 (Web2C 7.5.4) (format=pdflatex 2009.4.22)  24 OCT 2013 11:10
 entering extended mode
 \write18 enabled.
 **UserGuide.tex
@@ -425,10 +425,10 @@ LaTeX Info: Redefining \pageref on input line 34.
 (./UserGuide.out)
 \openout3 = `UserGuide.out'.
 
- <FLiTs_logo.png, id=39, 853.7496pt x 853.7496pt>
-File: FLiTs_logo.png Graphic file (type png)
+ <Logo_FLiTs.png, id=39, 853.7496pt x 853.7496pt>
+File: Logo_FLiTs.png Graphic file (type png)
 
-<use FLiTs_logo.png>
+<use Logo_FLiTs.png>
 LaTeX Font Info:    Try loading font information for U+txsya on input line 40.
  (/sw/share/texmf-dist/tex/latex/txfonts/utxsya.fd
 File: utxsya.fd 2000/12/15 v3.1
@@ -449,7 +449,7 @@ LaTeX Font Info:    Try loading font information for U+txsyc on input line 40.
 File: utxsyc.fd 2000/12/15 v3.1
 ) [1
 
-{/sw/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map} <./FLiTs_logo.png>]
+{/sw/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map} <./Logo_FLiTs.png>]
 LaTeX Font Info:    Try loading font information for OMS+txr on input line 49.
 
 (/sw/share/texmf-dist/tex/latex/txfonts/omstxr.fd
@@ -542,4 +542,4 @@ ic/txfonts/rtxr.pfb></sw/share/texmf-dist/fonts/type1/public/txfonts/txsy.pfb>{
 /sw/share/texmf-dist/fonts/enc/dvips/psnfss/8r.enc}</sw/share/texmf-dist/fonts/
 type1/urw/times/utmb8a.pfb></sw/share/texmf-dist/fonts/type1/urw/times/utmr8a.p
 fb>
-Output written on UserGuide.pdf (7 pages, 1549337 bytes).
+Output written on UserGuide.pdf (7 pages, 1549076 bytes).
