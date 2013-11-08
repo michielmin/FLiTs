@@ -40,7 +40,7 @@ keywordstyle=[10]{\color{magenta}},
 
 \section{Introduction}
 
-FLiTs is the Fast Line Tracing system. It computes the line shapes of a structure provided by the user. It is mainly tuned for speed, i.e. compute large numbers of lines, but it can be used to compute detailed line shapes with higher accuracy as well.
+FLiTs is the Fast Line Tracing system. It computes the line shapes of a structure provided by the user. It is mainly tuned for speed, i.e. compute large numbers of lines, but it can be used to compute detailed line shapes with higher accuracy as well. FLiTs is developed in the framework of the DIANA FP7 project for Disk Analysis with the main purpose to compute infrared line spectra in a reasonable time.
 
 \subsection{Terms of use}
 
@@ -52,7 +52,11 @@ By using FLiTs you agree to the following:
 
 \section{Basic assumptions}
 
-The main purpose of FLiTs is to quickly compute line fluxes and shapes of many lines. For example, it is ideally suited to compute infrared water line spectra. Also, since it self-consistently computes line blends of overlapping lines, it can compute for example CO overtone spectra. It uses an input density and temperature structure, outlined below, and computes the dust and gas emission. It also includes the scattering of radiation by dust grains under the assumption of isotropic scattering. The scattering of gas emission by lines is ignored.
+The main purpose of FLiTs is to quickly compute line fluxes and shapes of many lines. For example, it is ideally suited to compute infrared water line spectra. Also, since it self-consistently computes line blends of overlapping lines, it can compute for example CO overtone spectra. It uses an input density and temperature structure, outlined below, and computes the dust and gas emission. It also includes the scattering of radiation by dust grains under the assumption of isotropic scattering. The scattering of gas emission lines is ignored.
+
+FLiTs traces the dust and gas emission using the formal solution of radiative transfer. This means that an image of the disk is created by tracing the radiation along different lines of sight. The contributions from each line of sight are added to obtain the total flux from the disk at every wavelength. At each line of sight, an integral is solved to get the flux contribution. This integral is solved using a volume discretization of the disk. In each discretized volume element density, temperature and composition are assumed constant.
+
+The raytracing is done on an elliptical grid, to best represent the shape of the disk surface. This allows us to increase the resolution in the inner disk, where all gradients are steep, and have a more course resolution in the outer disk for speed purpose. It is important also to have a fine enough grid to trace the velocity differences throughout the disk. This is all taken care of in an automated way.
 
 \section{Using FLiTs}
 
@@ -115,7 +119,7 @@ With this keyword you can set the level of accuracy. The default is set for spee
 \item[\texttt{4} -] Increased sampling of radial and azimuthal rays (time $\sim 1.48\,$s per line)
 \item[\texttt{5} -] Maximum sampling of radial and azimuthal rays (time very long)
 \end{itemize}
-The times here are very rough indications (on a particular model on my computer) and depend a lot on the model setup, the number of species, and the amount of line-blending in the model. What accuracy is needed depends on the application. Often \texttt{1} or \texttt{2} might be the best options.
+The times here are very rough indications for one particular model and depend a lot on the model setup, the number of species, and the amount of line-blending in the model. What accuracy is needed depends on the application. Often \texttt{1} or \texttt{2} are the best options.
 
 \section{Optional keywords}
 
@@ -123,19 +127,19 @@ While all keywords are in principle optional (there are always defaults). The ke
 
 \subsection*{\texttt{blend}}
 
-Default \texttt{blend=.true.}, i.e. compute line blends consistently. With this keyword you can switch off the computation of line blends. This means all lines are treated separately, and in the \texttt{specFLiTs.out} file you may find some wavelengths multiple times, since they were computed for different lines. This does increase speed a bit (up to a factor of 2 maybe, if you're lucky).
+Default \texttt{blend=.true.}, i.e. compute line blends consistently. With this keyword you can switch off the computation of line blends. This means all lines are treated separately, and in the \texttt{specFLiTs.out} file you may find some wavelengths multiple times, since they were computed for different lines. This does increase speed a bit (up to a factor of 2 for very specific cases).
 
 \subsection*{\texttt{cylindrical}}
 
-By default FLiTs uses a cylindrical grid setup (\texttt{cylindrical=.true.}). However, when you create a FLiTs file using another program (one that has a spherical grid setup for example. you can switch it to \texttt{.false.}. For general use, please don't touch this keyword. 
+By default FLiTs uses a cylindrical grid setup (\texttt{cylindrical=.true.}). However, when you create a FLiTs file using another program (one that has a spherical grid setup for example. you can switch it to \texttt{.false.}, in which case the grid will be spherical.
 
 \subsection*{\texttt{vres\_profile}}
 
-This keyword can set the velocity resolution of the sampling of the profiles intrinsically. It has no influence on the output resolution. By default it is set to \texttt{vres\_profile=1e4}, i.e. 0.1\,km/s. The only reason to increase this is when you have very narrow lines. However, in this case FLiTs might have issues altogether since it is not made to improve the grid to catch these narrow lines (yet).
+This keyword can set the velocity resolution of the sampling of the profiles intrinsically. It has no influence on the output resolution. By default it is set to \texttt{vres\_profile=1e4}, i.e. 0.1\,km/s. The only reason to increase this is when you have very narrow lines.
 
 \subsection*{\texttt{tau\_max}}
 
-This keyword sets the maximum optical depth to which FLiTs raytraces. Default is \texttt{tau\_max=15}, so it stops a ray when an optical depth of 15 is encountered. This is quite generous, in principle regions shielded behind 15 optical depths don't contribute to the output flux. Decreasing this threshold might improve speed (a bit), but in general I would recommend not to touch it.
+This keyword sets the maximum optical depth to which FLiTs raytraces. Default is \texttt{tau\_max=15}, so it stops a ray when an optical depth of 15 is encountered. This is quite generous, in principle regions shielded behind 15 optical depths don't contribute to the output flux. Decreasing this threshold might improve speed only a bit, but in general it is recommended not to change this value.
 
 \section{Output file}
 
@@ -143,27 +147,18 @@ FLiTs creates one single output file \texttt{specFLiTs.out}. This file contains 
 \begin{description}
 \item[column 1] wavelength in micron
 \item[column 2] flux in Jy
-\item[column 3] velocity with respect to the center of the first line in the blend
+\item[column 3] velocity with respect to the center of the closest line in the blend
 \item[column 4] flux of the continuum
 \item[column 5] comment which species contributed to this blend
 \end{description}
 
+\section{Examples}
+
+As an example we run the standard TTauri disk setup provided with ProDiMo. We first run ProDiMo to get the radiative transfer and chemistry. Afterwards we run FLiTs using all standard lines and the entire spectral range.
+
 \section{Download location of the binaries}
 
-Binaries are available for download.
-
-For the Mac
-%
-\shellcmd{wget michielmin.nl/FLiTs/Mac/FLiTs}
-%
-and for Linux
-%
-\shellcmd{wget michielmin.nl/FLiTs/Linux/FLiTs}
-%
-The binary might not be executable, in which case you have to use the command
-%
-\shellcmd{chmod a+x FLiTs}
-%
-to make it executable.
+Binaries are available for download from http://www.michielmin.nl/FLiTs
 
 \end{document}
+
