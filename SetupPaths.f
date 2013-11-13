@@ -6,7 +6,7 @@
 	integer,allocatable :: startphi(:)
 	real*8 ct,res_inc,x,y,rr
 	real*8,allocatable :: imR(:),imPhi(:,:)
-	type(Tracer) trac
+	type(Tracer) trac,trac_count
 	type(Path),pointer :: PP
 	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
 	real*8 ComputeIncFact,maxRjump
@@ -267,7 +267,10 @@ c increase the resolution in velocity by this factor
 		P(i,j)%vmax(1:nmol)=-1d30
 		P(i,j)%npopmax(1:nmol)=0
 
-		call tracepath(trac,PP)
+		trac_count=trac
+		call tracepath(trac_count,PP,.true.)
+		call tracepath(trac,PP,.false.)
+
 		do imol=1,nmol
 			if((P(i,j)%vmax(imol)).gt.vmax) vmax=abs(P(i,j)%vmax(imol))
 			if((-P(i,j)%vmin(imol)).gt.vmax) vmax=abs(P(i,j)%vmin(imol))
@@ -312,7 +315,10 @@ c increase the resolution in velocity by this factor
 	path2star%vmax(1:nmol)=-1d30
 	path2star%npopmax(1:nmol)=0
 	PP => path2star
-	call tracepath(trac,PP)
+
+	trac_count=trac
+	call tracepath(trac_count,PP,.true.)
+	call tracepath(trac,PP,.false.)
 
 	deallocate(startphi)
 
@@ -323,27 +329,28 @@ c increase the resolution in velocity by this factor
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
-	subroutine tracepath(trac,PP)
+	subroutine tracepath(trac,PP,onlycount)
 	use GlobalSetup
 	IMPLICIT NONE
 	type(Tracer) trac
-	real*8 x,y,z,phi,d,vtot,taumin
+	real*8 x,y,z,phi,d,vtot,taumin,v1,v2
 	integer inext,jnext,ntrace,i,j,k,ipop,imol,kk,nk
-	logical hitstar
+	logical hitstar,onlycount
 	type(Path) PP
-
-	PP%n=1
 
 	PP%vx=trac%vx
 	PP%vy=trac%vy
 	PP%vz=trac%vz
 
-	allocate(PP%v(1000))
-	allocate(PP%v1(1000))
-	allocate(PP%v2(1000))
-	allocate(PP%d(1000))
-	allocate(PP%i(1000))
-	allocate(PP%j(1000))
+	if(.not.onlycount) then
+		allocate(PP%v(PP%n))
+		allocate(PP%v1(PP%n))
+		allocate(PP%v2(PP%n))
+		allocate(PP%d(PP%n))
+		allocate(PP%i(PP%n))
+		allocate(PP%j(PP%n))
+	endif
+	PP%n=1
 
 	taumin=0d0
 
@@ -357,19 +364,27 @@ c-----------------------------------------------------------------------
 	y=trac%y
 	z=trac%z
 
-	PP%v1(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	v1=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	if(.not.onlycount) then
+		PP%v1(k)=v1
+	endif
 
 	x=trac%x+trac%vx*d
 	y=trac%y+trac%vy*d
 	z=trac%z+trac%vz*d
 
-	PP%v2(k)=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
-
+	v2=C(trac%i,trac%j)%v*(trac%vx*y-trac%vy*x)/sqrt(x**2+y**2)
+	if(.not.onlycount) then
+		PP%v2(k)=v2
+	endif
+	
 	nk=1
 	do imol=1,nmol
-		i=abs(PP%v1(k)-PP%v2(k))*5d0/C(trac%i,trac%j)%line_width(imol)
+		i=abs(v1-v2)*5d0/C(trac%i,trac%j)%line_width(imol)
 		if(i.gt.nk) nk=i
 	enddo
+	i=abs(v1-v2)*3d0/(5d0*vres_profile)+1
+	if(nk.gt.i) nk=i
 
 	x=trac%x
 	y=trac%y
@@ -377,14 +392,12 @@ c-----------------------------------------------------------------------
 
 	do kk=1,nk
 		k=PP%n
-		if(k.gt.1000) then
-			call output("Need to increase the maximum pathlength!")
-			stop
-		endif
-		PP%d(k)=d/real(nk)
 
-		PP%i(k)=trac%i
-		PP%j(k)=trac%j
+		if(.not.onlycount) then
+			PP%d(k)=d/real(nk)
+			PP%i(k)=trac%i
+			PP%j(k)=trac%j
+		endif
 
 		x=trac%x+(real(kk)-0.5)*trac%vx*d/real(nk)
 		y=trac%y+(real(kk)-0.5)*trac%vy*d/real(nk)
@@ -392,24 +405,26 @@ c-----------------------------------------------------------------------
 
 		call checkcell(x,y,z,trac%i,trac%j)
 
-		PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+		if(.not.onlycount) then
+			PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
 
-		do imol=1,nmol
-			if(C(trac%i,trac%j)%N(imol).gt.1d-50
+			do imol=1,nmol
+				if(C(trac%i,trac%j)%N(imol).gt.1d-50
      &		.and.trac%j.gt.0.and.trac%i.lt.nR.and.trac%i.gt.0) then
-				vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
-				if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
-				vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
-				if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
-				do ipop=Mol(imol)%nlevels,1,-1
-					if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
-				enddo
-				if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
-			endif
-		enddo
+					vtot=abs(PP%v(k))+3d0*C(trac%i,trac%j)%line_width(imol)
+					if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
+					vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
+					if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
+					do ipop=Mol(imol)%nlevels,1,-1
+						if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
+					enddo
+					if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
+				endif
+			enddo
+		endif
 
-		if(C(PP%i(k),PP%j(k))%dens.gt.1d-50
-     &		.and.PP%i(k).gt.0.and.PP%i(k).lt.nR.and.PP%j(k).gt.0) then
+		if(C(trac%i,trac%j)%dens.gt.1d-50
+     &		.and.trac%i.gt.0.and.trac%i.lt.nR.and.trac%j.gt.0) then
 			PP%n=PP%n+1
 		endif
 	enddo

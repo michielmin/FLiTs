@@ -60,6 +60,7 @@ c			if(.not.LTE) call output("Switching to LTE for this species")
 				do j=0,nTheta
 					C(i,j)%N(imol)=C(i,j)%N0(ispec)
 					C(i,j)%line_width(imol)=C(i,j)%line_width0(ispec)
+					if(C(i,j)%line_width(imol).lt.vres_profile*3d0) C(i,j)%line_width(imol)=3d0*vres_profile
 					do k=1,npop0(ispec)
 						C(i,j)%npop(imol,k)=C(i,j)%npop0(ispec)%N(k)
 					enddo
