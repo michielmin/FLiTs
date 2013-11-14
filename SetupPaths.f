@@ -84,9 +84,9 @@ c increase the resolution in velocity by this factor
 			ir=ir+1
 			imR(ir)=rr
 			ir=ir+1
-			imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))
+			imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))
 			ir=ir+1
-			imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))
+			imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))
 		endif
 	enddo
 	do i=1,nR,nRreduce
@@ -105,18 +105,18 @@ c increase the resolution in velocity by this factor
 
 	do i=2,nTheta
 		if(cylindrical) then
-			rr=R(1)/sin(theta_av(i))
+			rr=R(1)/sin(theta_av(nR-1,i))
 		else
 			rr=R_sphere(1)
 		endif
 		ir=ir+1
-		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))/ComputeIncFact(rr)
-		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
-		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
 		ir=ir+1
-		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(rr)
-		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
-		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
 	enddo
 
 	j=(nImR-ir)
@@ -250,7 +250,7 @@ c increase the resolution in velocity by this factor
 		ct=abs(trac%z)/R_sphere(nR+1)
 		trac%i=nR
 		do k=0,nTheta
-			if(ct.lt.Theta(k).and.ct.ge.Theta(k+1)) then
+			if(ct.lt.Theta(trac%i,k).and.ct.ge.Theta(trac%i,k+1)) then
 				trac%j=k
 			endif
 		enddo
@@ -298,7 +298,7 @@ c increase the resolution in velocity by this factor
 	ct=abs(trac%z)/R_sphere(nR+1)
 	trac%i=nR
 	do k=0,nTheta
-		if(ct.lt.Theta(k).and.ct.ge.Theta(k+1)) then
+		if(ct.lt.Theta(trac%i,k).and.ct.ge.Theta(trac%i,k+1)) then
 			trac%j=k
 		endif
 	enddo
@@ -467,8 +467,8 @@ c-----------------------------------------------------------------------
 	use Constants
 	IMPLICIT NONE
 	type(Tracer) trac
-	real*8 b,v,rr,R1,R2,T1,T2,vR1,vR2,vT1,vT2,rcyl,bcyl,R1s,R2s
-	integer inext,jnext
+	real*8 b,v,rr,R1,R2,T1,T2,vR1,vR2,vT1,vT2,rcyl,bcyl,R1s,R2s,ct
+	integer inext,jnext,k
 	logical hitR1,hitR2,hitR,hitT1,hitT2,hitT,hitTsame
 
 	rr=trac%x**2+trac%y**2+trac%z**2
@@ -483,8 +483,8 @@ c-----------------------------------------------------------------------
 	endif
 	R2=R(trac%i+1)**2
 	R2s=R_sphere(trac%i+1)**2
-	T1=Theta(trac%j)**2
-	T2=Theta(trac%j+1)**2
+	T1=Theta(trac%i,trac%j)**2
+	T2=Theta(trac%i,trac%j+1)**2
 
 	b=2d0*(trac%x*trac%vx+trac%y*trac%vy+trac%z*trac%vz)
 	bcyl=2d0*(trac%x*trac%vx+trac%y*trac%vy)/sqrt(trac%vx**2+trac%vy**2)
@@ -601,12 +601,28 @@ c-----------------------------------------------------------------------
 		v=vR1
 		inext=trac%i-1
 		jnext=trac%j
+		if(inext.ge.0) then
+			ct=abs(trac%z+v*trac%vz)/sqrt((trac%x+v*trac%vx)**2+(trac%y+v*trac%vy)**2+(trac%z+v*trac%vz)**2)
+			do k=0,nTheta
+				if(ct.lt.Theta(inext,k).and.ct.ge.Theta(inext,k+1)) then
+					jnext=k
+				endif
+			enddo
+		endif
 		trac%edgeNr=2
 	endif
 	if(hitR2.and.vR2.lt.v) then
 		v=vR2
 		inext=trac%i+1
 		jnext=trac%j
+		if(inext.le.nR) then
+			ct=abs(trac%z+v*trac%vz)/sqrt((trac%x+v*trac%vx)**2+(trac%y+v*trac%vy)**2+(trac%z+v*trac%vz)**2)
+			do k=0,nTheta
+				if(ct.lt.Theta(inext,k).and.ct.ge.Theta(inext,k+1)) then
+					jnext=k
+				endif
+			enddo
+		endif
 		trac%edgeNr=1
 	endif
 	if(hitT1.and.vT1.lt.v) then
@@ -625,13 +641,13 @@ c-----------------------------------------------------------------------
 
 	if(jnext.eq.nTheta+1) then
 		jnext=nTheta
-		trac%edgeNr=4
+		if(trac%edgeNr.eq.3) trac%edgeNr=4
 	endif
 	if(jnext.lt.0) then
 		jnext=0
-		trac%edgeNr=3
+		if(trac%edgeNr.eq.4) trac%edgeNr=3
 	endif
-	
+
 	trac%onEdge=.true.
 
 	return
@@ -732,14 +748,14 @@ c-----------------------------------------------------------------------
 	tau=0d0
 	do i=1,nR
 		if(cylindrical.and.j.ne.0) then
-			tau0=maxval(C(i,j)%kext)*(R(i+1)-R(i))/sin(theta_av(j))
+			tau0=maxval(C(i,j)%kext)*(R(i+1)-R(i))/sin(theta_av(i,j))
 		else
 			tau0=maxval(C(i,j)%kext)*(R_sphere(i+1)-R_sphere(i))
 		endif
 		if(tau+tau0.gt.1d0) then
 			if(cylindrical) then
 				rr=R(i)+(R(i+1)-R(i))*(1d0-tau)/tau0
-				rr=rr/sin(theta_av(j))
+				rr=rr/sin(theta_av(i,j))
 				return
 			else
 				rr=R_sphere(i)+(R_sphere(i+1)-R_sphere(i))*(1d0-tau)/tau0
@@ -783,14 +799,14 @@ c-----------------------------------------------------------------------
 	rho=sqrt(x*x+y*y)
 	thet=abs(z/rr)
 
-	if(thet.gt.Theta(j)) then
+	if(thet.gt.Theta(i,j)) then
 		print*,'theta too big',i,j
 		stop
 	endif
 	
-	if(thet.lt.Theta(j+1)) then
+	if(thet.lt.Theta(i,j+1)) then
 		print*,'theta too small',i,j
-		print*,thet,Theta(j+1)
+		print*,thet,Theta(i,j+1)
 		stop
 	endif
 	
