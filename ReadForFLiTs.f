@@ -95,7 +95,7 @@ c===============================================================================
 c in the theta grid we actually store cos(theta) for convenience
 	Theta(0)=1d0
 	do j=1,nTheta
-		Theta(j)=array(1,nTheta+1-j,4,1)/sqrt(R_av(1)**2+array(1,nTheta+1-j,4,1)**2)
+		Theta(j)=array(nR-1,nTheta+1-j,4,1)/sqrt(R(nR-1)**2+array(nR-1,nTheta+1-j,4,1)**2)
 	enddo
 	Theta(nTheta+1)=0d0
 
