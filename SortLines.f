@@ -27,7 +27,7 @@
 		lam_min=lmax
 		do imol=1,nmol
 			do i=1,Mol(imol)%nlines
-				if(Mol(imol)%L(i)%lam.lt.lam_min.and.
+				if(Mol(imol)%L(i)%lam.le.lam_min.and.
      &				Mol(imol)%L(i)%lam.gt.lmin.and..not.used(imol,i)) then
 					lam_min=Mol(imol)%L(i)%lam
 					imin=i
