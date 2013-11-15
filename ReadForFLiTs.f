@@ -15,7 +15,7 @@ c===============================================================================
 	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam
 	integer*4 :: istat,stat4,tmp_int,stat5,stat6
 	real  :: nullval
-	real*8  :: nullval_d,xx,zz,rr,tot
+	real*8  :: nullval_d,xx,zz,rr,tot,thetamax
 	logical*4 :: anynull
 	integer*4, dimension(4) :: naxes
 	character*80 comment,errmessage
@@ -63,17 +63,18 @@ c===============================================================================
 	call ftgkyj(unit,'NXX',nR,comment,status)
 	nR=nR+1
 	call ftgkyj(unit,'NZZ',nTheta,comment,status)
+	nTheta=nTheta+1
 
 	call ftgkyj(unit,'NSPEC',nspec,comment,status)
 	
 	allocate(C(0:nR,0:nTheta))
 	allocate(R(0:nR+1))
-	allocate(Theta(0:nTheta+1))
+	allocate(Theta(0:nR,0:nTheta+1))
 
 	! read_image
-	allocate(array(nR-1,nTheta,4,1))
+	allocate(array(nR-1,nTheta-1,4,1))
 	allocate(R_av(0:nR))
-	allocate(theta_av(0:nTheta))
+	allocate(theta_av(0:nR,0:nTheta))
 
 	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
 
@@ -93,32 +94,38 @@ c===============================================================================
 	enddo
 
 c in the theta grid we actually store cos(theta) for convenience
-	Theta(0)=1d0
-	do j=1,nTheta
-		Theta(j)=array(1,nTheta+1-j,4,1)/sqrt(R_av(1)**2+array(1,nTheta+1-j,4,1)**2)
-	enddo
-	Theta(nTheta+1)=0d0
+	thetamax=0d0
+	do i=1,nR-1
+		Theta(i,0)=1d0
+		do j=2,nTheta
+			Theta(i,j)=array(i,nTheta+1-j,4,1)/sqrt(R_av(i)**2+array(i,nTheta+1-j,4,1)**2)
+		enddo
+		Theta(i,nTheta+1)=0d0
+		Theta(i,1)=(Theta(i,0)+Theta(i,2))/2d0
 
-	if(cylindrical) then
-		theta_av(0)=acos(Theta(1))/2d0
-	else
-		Theta(1)=1d0
-		theta_av(0)=0d0
-	endif
-
-	do j=1,nTheta
-		theta_av(j)=acos((Theta(j)+Theta(j+1))/2d0)
-	enddo
-
-	if(cylindrical) then
-		if(Theta(1).lt.1d0) then
-			Rout=Rout*1.0001/sin(acos(Theta(1)))
+		if(cylindrical) then
+			theta_av(i,0)=acos(Theta(i,1))/2d0
 		else
-			call output("Grid seems to be spherical")
-			call output("SWITCHING TO SPHERICAL GRID")
-			cylindrical=.false.
-			Rout=Rout*1.0001
+			Theta(i,1)=1d0
+			theta_av(i,0)=0d0
 		endif
+
+		do j=1,nTheta
+			theta_av(i,j)=acos((Theta(i,j)+Theta(i,j+1))/2d0)
+		enddo
+		if(Theta(i,2).gt.thetamax) thetamax=Theta(i,2)
+	enddo
+	Theta(1:nR-1,1)=(0.9*thetamax+0.1*Theta(1:nR-1,0))
+	theta_av(i:nR-1,1)=acos((Theta(1:nR-1,1)+Theta(1:nR-1,2))/2d0)
+
+	Theta(0,0:nTheta+1)=Theta(1,0:nTheta+1)
+	theta_av(0,0:nTheta)=theta_av(1,0:nTheta)
+
+	Theta(nR,0:nTheta+1)=Theta(nR-1,0:nTheta+1)
+	theta_av(nR,0:nTheta)=theta_av(nR-1,0:nTheta)
+
+	if(cylindrical) then
+		Rout=Rout*1.0001/sin(acos(Theta(nR,1)))
 	else
 		Rout=Rout*1.0001
 	endif
@@ -134,8 +141,8 @@ c in the theta grid we actually store cos(theta) for convenience
 	allocate(R_av_sphere(0:nR+1))
 	if(cylindrical) then
 		do i=0,nR
-			R_sphere(i)=R(i)/sin(acos(Theta(1)))
-			R_av_sphere(i)=R_av(i)/sin(acos(Theta(1)))
+			R_sphere(i)=R(i)/sin(acos(Theta(i,1)))
+			R_av_sphere(i)=R_av(i)/sin(acos(Theta(i,1)))
 		enddo
 		R_sphere(nR+1)=R(nR+1)
 		R_av_sphere(nR)=sqrt(R_sphere(nR)*R_sphere(nR+1))
@@ -184,10 +191,11 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			C(i,j)%Tgas=array_d(i,nTheta+1-j,1,1)
 			if(C(i,j)%Tgas.lt.1d0) C(i,j)%Tgas=1d0
 		enddo
+		C(i,1)%Tgas=C(i,2)%Tgas
 	enddo
 
 	deallocate(array_d)
@@ -219,10 +227,11 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			C(i,j)%Tdust=array_d(i,nTheta+1-j,1,1)
 			if(C(i,j)%Tdust.lt.1d0) C(i,j)%Tdust=1d0
 		enddo
+		C(i,1)%Tdust=C(i,2)%Tdust
 	enddo
 
 	deallocate(array_d)
@@ -255,10 +264,11 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			C(i,j)%dens=array_d(i,nTheta+1-j,1,1)*mp
 			if(C(i,j)%dens.lt.1d-50) C(i,j)%dens=1d-60
 		enddo
+		C(i,1)%dens=1d-60
 	enddo
 
 	deallocate(array_d)
@@ -399,11 +409,12 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			do l=1,nlam
 				C(i,j)%kabs(l)=array_d(l,i,nTheta+1-j,1)
 			enddo
 		enddo
+		C(i,1)%kabs(1:nlam)=C(i,2)%kabs(1:nlam)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -436,16 +447,18 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			do l=1,nlam
 				C(i,j)%kext(l)=array_d(l,i,nTheta+1-j,1)
 				if(C(i,j)%kext(l).gt.1d-150) then
 					C(i,j)%albedo(l)=(C(i,j)%kext(l)-C(i,j)%kabs(l))/C(i,j)%kext(l)
 				else
-					C(i,j)%albedo=0.5d0
+					C(i,j)%albedo(l)=0.5d0
 				endif
 			enddo
 		enddo
+		C(i,1)%kext(1:nlam)=C(i,2)%kext(1:nlam)/1d20
+		C(i,1)%albedo(1:nlam)=C(i,2)%albedo(1:nlam)
 	enddo
 
 	deallocate(array_d)
@@ -477,12 +490,13 @@ c in the theta grid we actually store cos(theta) for convenience
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			do l=1,nlam
 				C(i,j)%LRF(l)=array_d(l,i,nTheta+1-j,1)
 c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			enddo
 		enddo
+		C(i,1)%LRF(1:nlam)=C(i,2)%LRF(1:nlam)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -514,11 +528,12 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			do l=1,nlam
 				C(i,j)%S(l)=exp(array_d(l,i,nTheta+1-j,1))
 			enddo
 		enddo
+		C(i,1)%S(1:nlam)=C(i,2)%S(1:nlam)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -551,11 +566,12 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			do imol=1,nspec
 				C(i,j)%N0(imol)=array_d(imol,i,nTheta+1-j,1)
 			enddo
 		enddo
+		C(i,1)%N0(1:nspec)=C(i,2)%N0(1:nspec)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -587,11 +603,12 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			do imol=1,nspec
 				C(i,j)%line_width0(imol)=array_d(imol,i,nTheta+1-j,1)
 			enddo
 		enddo
+		C(i,1)%line_width0(1:nspec)=C(i,2)%line_width0(1:nspec)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -638,16 +655,14 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
 
 	do i=1,nR-1
-		do j=1,nTheta
+		do j=2,nTheta
 			C(i,j)%npop0(imol)%N=0d0
 			do k=1,naxes(1)
 				C(i,j)%npop0(imol)%N(k)=array(k,i,nTheta+1-j,1)
 			enddo
-c			do k=2,naxes(1)
-c				C(i,j)%npop0(imol)%N(k)=C(i,j)%npop0(imol)%N(k-1)*C(i,j)%npop0(imol)%N(k)
-c			enddo
-c			tot=sum(C(i,j)%npop0(imol)%N(1:naxes(1)))
-c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
+		enddo
+		do k=1,naxes(1)
+			C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
 		enddo
 	enddo
 
@@ -679,10 +694,8 @@ c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 	
 	do i=1,nR-1
 		do j=1,nTheta
-c			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))/R_av(i))
-c			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/R_av(i))
 			xx=R_av(i)
-			zz=xx/tan(theta_av(j))
+			zz=xx/tan(theta_av(i,j))
 			rr=sqrt(xx*xx+zz*zz)
 			C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		enddo
@@ -691,10 +704,8 @@ c			C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/R_av(i))
 	do j=0,nTheta
 		C(i,j)%kext(1:nlam)=1d-70
 		C(i,j)%kabs(1:nlam)=1d-70
-c		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
-c		C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/(sqrt(R_av(1)*Rstar*Rsun)))
 		xx=R_av(1)
-		zz=xx/tan(theta_av(j))
+		zz=xx/tan(theta_av(i,j))
 		rr=sqrt(xx*xx+zz*zz)
 		C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		C(i,j)%dens=1d-60
@@ -703,10 +714,8 @@ c		C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/(sqrt(R_av(1)*Rstar*Rsun)))
 	do j=0,nTheta
 		C(i,j)%kext(1:nlam)=1d-70
 		C(i,j)%kabs(1:nlam)=1d-70
-c		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
-c		C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/(sqrt(R_av(1)*Rstar*Rsun)))
 		xx=R_av(i)
-		zz=xx/tan(theta_av(j))
+		zz=xx/tan(theta_av(i,j))
 		rr=sqrt(xx*xx+zz*zz)
 		C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		C(i,j)%dens=1d-60
@@ -716,10 +725,8 @@ c		C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/(sqrt(R_av(1)*Rstar*Rsun)))
 	do i=1,nR
 		C(i,j)%kext(1:nlam)=1d-70
 		C(i,j)%kabs(1:nlam)=1d-70
-c		C(i,j)%v=sqrt(G*(Mstar*Msun)*sin(theta_av(j))/(sqrt(R_av(1)*Rstar*Rsun)))
-c		C(i,j)%v=sqrt(G*Mstar*Msun*sin(theta_av(j))**2/(sqrt(R_av(1)*Rstar*Rsun)))
 		xx=R_av(i)
-		zz=xx/tan(theta_av(j))
+		zz=xx/tan(theta_av(i,j))
 		rr=sqrt(xx*xx+zz*zz)
 		C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		C(i,j)%dens=1d-60
