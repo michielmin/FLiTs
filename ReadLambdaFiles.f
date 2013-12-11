@@ -20,6 +20,7 @@
 		allocate(Mol(imol)%g(Mol(imol)%nlevels))
 		do i=1,Mol(imol)%nlevels
 			read(80,*) j,Mol(imol)%E(i),Mol(imol)%g(i)
+			Mol(imol)%E(i)=Mol(imol)%E(i)*11600d0/8065.54d0
 		enddo
 		read(80,*)
 		read(80,*) Mol(imol)%nlines
@@ -27,7 +28,9 @@
 		allocate(Mol(imol)%L(Mol(imol)%nlines))
 		do i=1,Mol(imol)%nlines
 			read(80,*) j,Mol(imol)%L(i)%jup,Mol(imol)%L(i)%jlow,Mol(imol)%L(i)%Aul,
-     &				Mol(imol)%L(i)%freq,Mol(imol)%E(Mol(imol)%L(i)%jup)	!Mol%L(i)%Eup
+     &				Mol(imol)%L(i)%freq,!Mol(imol)%E(Mol(imol)%L(i)%jup)
+     &				Mol(imol)%L(i)%Eup
+
 			Mol(imol)%L(i)%freq=Mol(imol)%L(i)%freq*1d9
 			Mol(imol)%L(i)%lam=clight*1d4/(Mol(imol)%L(i)%freq)
 			Mol(imol)%L(i)%imol=imol
