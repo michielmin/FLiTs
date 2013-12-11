@@ -46,3 +46,22 @@
 	return
 	end
 
+	subroutine LineList()
+	use GlobalSetup
+	IMPLICIT NONE
+	integer i
+	
+	call output("Writing line list")
+	
+	open(unit=20,file='LineList.txt',RECL=1000)
+	do i=1,nlines
+		write(20,'(f16.8,"  ",a8,"  ",i5,i5)') Lines(i)%lam,trim(Mol(Lines(i)%imol)%name),Lines(i)%jup,Lines(i)%jlow
+	enddo
+	close(unit=20)
+	
+	return
+	end
+	
+
+
+

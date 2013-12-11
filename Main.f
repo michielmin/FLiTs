@@ -48,6 +48,8 @@ c first setup the paths
 	call SetupPaths()
 c sort the lines by wavelength
 	call SortLines()
+c output linelist file
+	call LineList()
 c now do the continuum raytracing at the reduced spectral resolution
 	call RaytraceContinuum()
 
