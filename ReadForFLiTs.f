@@ -662,7 +662,7 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 				C(i,j)%npop0(imol)%N(k)=array(k,i,nTheta+1-j,1)
 				tot=tot+C(i,j)%npop0(imol)%N(k)
 			enddo
-			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
+c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 		enddo
 		do k=1,naxes(1)
 			C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
