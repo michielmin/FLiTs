@@ -638,8 +638,6 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
 	call output("Found " // trim(mol_name0(imol)) // " in FLiTs file")
 
-	print*,trim(mol_name0(imol)),npop0(imol)
-
 	do i=0,nR
 		do j=0,nTheta
 			allocate(C(i,j)%npop0(imol)%N(npop0(imol)))
