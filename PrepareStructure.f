@@ -19,10 +19,10 @@
 	maxlevels=0
 c now the data should be rearranged properly
 	do imol=1,nmol
-		do ispec=1,nspec
+		do ispec=nspec,1,-1
 			if(trim(Mol(imol)%name).eq.trim(mol_name0(ispec))) exit
 		enddo
-		if(ispec.gt.nspec) then
+		if(ispec.lt.1.or.ispec.gt.nspec) then
 			call output("Species " // trim(Mol(imol)%name) // " not found")
 c			if(.not.LTE) call output("Switching to LTE for this species")
 			call output("removing this species")
@@ -42,10 +42,10 @@ c			if(.not.LTE) call output("Switching to LTE for this species")
 	enddo
 
 	do imol=1,nmol
-		do ispec=1,nspec
+		do ispec=nspec,1,-1
 			if(trim(Mol(imol)%name).eq.trim(mol_name0(ispec))) exit
 		enddo
-		if(ispec.gt.nspec) then
+		if(ispec.lt.1.or.ispec.gt.nspec) then
 			do i=0,nR
 				do j=0,nTheta
 					C(i,j)%N(imol)=1d-70
