@@ -636,7 +636,7 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 
 	call ftgkyj(unit,'NLEV',npop0(imol),comment,status)
 	call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
-	call output("Found " // trim(mol_name0(imol)) // " in FLiTs file")
+	call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")
 
 	do i=0,nR
 		do j=0,nTheta
