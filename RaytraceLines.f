@@ -237,7 +237,6 @@
 		do i=1,nImR
 			do j=1,nImPhi(i)
 				PP => P(i,j)
-
 				flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
 				flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
 			enddo
@@ -251,9 +250,9 @@
 		flux3=flux_l1**wl13*flux_l2**wl23
 
 		do i=Bl%nvmin,Bl%nvmax
-			fc=-flux2+flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
-			flux(i)=flux(i)+fc
-			flux_cont(i)=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
+			fc=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
+			flux(i)=flux(i)-flux2+fc
+			flux_cont(i)=fc
 		enddo
 
 		if(Bl%n.eq.1) then
