@@ -80,7 +80,7 @@ c line profile
 		integer n,nvmin,nvmax
 		type(Blend),pointer :: next
 		integer,allocatable :: ib0(:),nb0(:)
-		real*8 lmin,lmax,lam
+		real*8 lmin,lmax,lam,F
 		logical computing,done
 	end type Blend
 

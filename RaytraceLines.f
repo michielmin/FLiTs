@@ -13,7 +13,7 @@
 	type(Line) :: LL
 	type(Blend),pointer :: Bl
 	logical gas
-	real*8 flux1,flux2,flux3,fc,f
+	real*8 flux1,flux2,flux3,fc,f,dnu,lam_w,lam_w_min,lam_w_max
 	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	
@@ -31,6 +31,8 @@
 	enddo
 
 	open(unit=20,file='specFLiTs.out',RECL=1500)
+	open(unit=21,file='lineFlux_FLiTs.out',RECL=1500)
+	write(21,'("# lam[mu]   Fline[W/m^2]    lmin[mu]    lmax[mu]    comment")')
 
 	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
@@ -271,6 +273,12 @@
 			enddo
 		endif
 
+		Bl%F=0d0
+		lam_velo=lam*sqrt((1d0+vresolution/clight)/(1d0-vresolution/clight))
+		dnu=dabs(clight*1d4*(1d0/lam_velo-1d0/lam))
+		lam_w=0d0
+		lam_w_min=1d200
+		lam_w_max=0d0
 		do i=Bl%nvmin,Bl%nvmax
 			lam_velo=lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight))
 			if(lam_velo.gt.lmin_next) then
@@ -279,8 +287,15 @@
      &					real(i)*vresolution/1d5,
      &					flux_cont(i)*1e23/(distance*parsec)**2,
      &					trim(comment)
+				Bl%F=Bl%F+dnu*(flux(i)-flux_cont(i))
+				lam_w=lam_w+lam_velo*dnu*(flux(i)-flux_cont(i))
+				if(lam_velo.lt.lam_w_min) lam_w_min=lam_velo
+				if(lam_velo.gt.lam_w_max) lam_w_max=lam_velo
 			endif
 		enddo
+		lam_w=lam_w/Bl%F
+		Bl%F=Bl%F*1d-3/(distance*parsec)**2
+		write(21,*) lam_w,Bl%F,lam_w_min,lam_w_max,trim(comment)
 		lmin_next=max(lmin_next,lam_velo)
 		
 		endif
@@ -308,6 +323,7 @@ c		call tellertje_time(iblends,nblends,nl,nlines,starttime)
 	enddo
 
 	close(unit=20)
+	close(unit=21)
 	
 	call cpu_time(stoptime)
 
