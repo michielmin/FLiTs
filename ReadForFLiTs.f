@@ -13,7 +13,7 @@ c===============================================================================
 	real*8,allocatable :: array_d(:,:,:,:)
 	integer*4 :: status,stat2,stat3,readwrite,unit,blocksize,nfound,group
 	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam
-	integer*4 :: istat,stat4,tmp_int,stat5,stat6
+	integer*4 :: istat,stat4,tmp_int,stat5,stat6,bitpix
 	real  :: nullval
 	real*8  :: nullval_d,xx,zz,rr,tot,thetamax
 	logical*4 :: anynull
@@ -651,15 +651,25 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 
 	! read_image
 	allocate(array(naxes(1),naxes(2),naxes(3),naxes(4)))
+	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
 
-	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
+	call ftgidt(unit,bitpix,status)
+	if(bitpix.eq.-32) then
+		call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
+		array_d=array
+	else if(bitpix.eq.-64) then
+		call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+	else
+		write(*,'("Error in bitpix")')
+		stop
+	endif
 
 	do i=1,nR-1
 		do j=2,nTheta
 			C(i,j)%npop0(imol)%N=0d0
 			tot=0d0
 			do k=1,naxes(1)
-				C(i,j)%npop0(imol)%N(k)=array(k,i,nTheta+1-j,1)
+				C(i,j)%npop0(imol)%N(k)=array_d(k,i,nTheta+1-j,1)
 				tot=tot+C(i,j)%npop0(imol)%N(k)
 			enddo
 c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
@@ -670,6 +680,7 @@ c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 	enddo
 
 	deallocate(array)
+	deallocate(array_d)
 
 	enddo
 
