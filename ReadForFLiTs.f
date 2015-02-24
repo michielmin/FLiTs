@@ -81,22 +81,33 @@ c===============================================================================
 	allocate(Theta(0:nR,0:nTheta+1))
 
 	! read_image
-	allocate(array(nR-1,nTheta-1,4,1))
+	allocate(array_d(nR-1,nTheta-1,4,1))
 	allocate(R_av(0:nR))
 	allocate(theta_av(0:nR,0:nTheta))
 
-	call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
+	call ftgidt(unit,bitpix,status)
+	if(bitpix.eq.-32) then
+		allocate(array(nR-1,nTheta-1,4,1))
+		call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
+		array_d=array
+		deallocate(array)
+	else if(bitpix.eq.-64) then
+		call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+	else
+		write(*,'("Error in bitpix")')
+		stop
+	endif
 
-	Rin=array(1,1,1,1)/AU
+	Rin=array_d(1,1,1,1)/AU
 	call output("Adjusting Rin to:  "//trim(dbl2string(Rin,'(f8.3)')) //" AU")
-	Rout=array(nR-1,1,2,1)/AU
+	Rout=array_d(nR-1,1,2,1)/AU
 	call output("Adjusting Rout to: "//trim(dbl2string(Rout,'(f8.3)')) //" AU")
 
 	R(0)=Rstar*Rsun
 	do i=1,nR-1
-		R(i)=array(i,1,1,1)
+		R(i)=array_d(i,1,1,1)
 	enddo
-	R(nR)=array(nR-1,1,2,1)
+	R(nR)=array_d(nR-1,1,2,1)
 
 	do i=1,nR-1
 		R_av(i)=sqrt(R(i)*R(i+1))
@@ -107,7 +118,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	do i=1,nR-1
 		Theta(i,0)=1d0
 		do j=2,nTheta
-			Theta(i,j)=array(i,nTheta+1-j,4,1)/sqrt(R_av(i)**2+array(i,nTheta+1-j,4,1)**2)
+			Theta(i,j)=array_d(i,nTheta+1-j,4,1)/sqrt(R_av(i)**2+array_d(i,nTheta+1-j,4,1)**2)
 		enddo
 		Theta(i,nTheta+1)=0d0
 		Theta(i,1)=(Theta(i,0)+Theta(i,2))/2d0
@@ -163,7 +174,7 @@ c in the theta grid we actually store cos(theta) for convenience
 		R_sphere(nR+1)=R(nR+1)
 	endif
 
-	deallocate(array)
+	deallocate(array_d)
 
 	do i=0,nR
 		do j=0,nTheta
@@ -659,13 +670,14 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
 
 	! read_image
-	allocate(array(naxes(1),naxes(2),naxes(3),naxes(4)))
 	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
 
 	call ftgidt(unit,bitpix,status)
 	if(bitpix.eq.-32) then
+		allocate(array(naxes(1),naxes(2),naxes(3),naxes(4)))
 		call ftgpve(unit,group,firstpix,npixels,nullval,array,anynull,status)
 		array_d=array
+		deallocate(array)
 	else if(bitpix.eq.-64) then
 		call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 	else
@@ -688,7 +700,6 @@ c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 		enddo
 	enddo
 
-	deallocate(array)
 	deallocate(array_d)
 
 	enddo
