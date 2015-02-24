@@ -28,9 +28,18 @@ c===============================================================================
 	! Open file
 	readwrite=0
 	call ftopen(unit,FLiTsfile,readwrite,blocksize,status)
-	if (status /= 0) then
+	if (status.eq.103) then
 		write(*,'("forFLiTs file not found")')
 		write(9,'("forFLiTs file not found")')
+		print*,trim(FLiTsfile)
+		write(*,'("--------------------------------------------------------")')
+		write(9,'("--------------------------------------------------------")')
+		stop
+	else if(status.ne.0) then
+		write(*,'("Error opening forFLiTs file. Not fits standard format.")')
+		write(9,'("Error opening forFLiTs file. Not fits standard format.")')
+		write(*,'("Status value:",i)') status
+		write(9,'("Status value:",i)') status
 		print*,trim(FLiTsfile)
 		write(*,'("--------------------------------------------------------")')
 		write(9,'("--------------------------------------------------------")')
