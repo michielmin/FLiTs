@@ -129,7 +129,6 @@
 					LL = Bl%L(ilines)
 					fact=clight*hplanck*C(i,j)%N(LL%imol)/(4d0*pi*C(i,j)%line_width(LL%imol)*sqrt(pi))
 					C(i,j)%line_abs(ilines)=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
-					if(C(i,j)%line_abs(ilines).lt.0d0) C(i,j)%line_abs(ilines)=0d0
 					C(i,j)%line_emis(ilines)=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
 				enddo
 			enddo
@@ -272,6 +271,15 @@
 					comment=trim(comment) // trim(int2string(count(i),'(i3)')) // " " // trim(Mol(i)%name)
 				endif
 			enddo
+
+c			comment=' '
+c			comment = trim(comment) // " " // trim(int2string(iblends,'(i5)'))
+c			do i=1,Bl%n
+c				if(i.gt.1) comment = trim(comment) // " & "
+c				comment = trim(comment) // " " // trim(Mol(Bl%L(i)%imol)%name) // "  up: " // trim(int2string(Bl%L(i)%jup,'(i5)'))
+c     &											  // "  low: " // trim(int2string(Bl%L(i)%jlow,'(i5)'))
+c			enddo
+
 		endif
 
 		Bl%F=0d0
@@ -563,6 +571,8 @@ c	gas source function
 		Bl => Bl%next
 		nblends=nblends+1
 	enddo
+	
+	print*,nlines,nblends
 	
 	return
 	end

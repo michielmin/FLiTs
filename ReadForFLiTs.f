@@ -628,7 +628,7 @@ c				C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 				C(i,j)%line_width0(imol)=array_d(imol,i,nTheta+1-j,1)
 			enddo
 		enddo
-		C(i,1)%line_width0(1:nspec)=C(i,2)%line_width0(1:nspec)/1d20
+		C(i,1)%line_width0(1:nspec)=C(i,2)%line_width0(1:nspec)
 	enddo
 
 	deallocate(array_d)
@@ -743,6 +743,10 @@ c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 		rr=sqrt(xx*xx+zz*zz)
 		C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		C(i,j)%dens=1d-60
+		C(i,j)%N0=0d0
+		do imol=1,nspec
+			C(i,j)%npop0(imol)%N=0d0
+		enddo
 	enddo
 	i=nR
 	do j=0,nTheta
@@ -753,6 +757,10 @@ c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 		rr=sqrt(xx*xx+zz*zz)
 		C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		C(i,j)%dens=1d-60
+		C(i,j)%N0=0d0
+		do imol=1,nspec
+			C(i,j)%npop0(imol)%N=0d0
+		enddo
 	enddo
 
 	j=0
@@ -764,6 +772,10 @@ c			C(i,j)%npop0(imol)%N(1:naxes(1))=C(i,j)%npop0(imol)%N(1:naxes(1))/tot
 		rr=sqrt(xx*xx+zz*zz)
 		C(i,j)%v=sqrt(G*Mstar*Msun*xx*xx/(rr*rr*rr))
 		C(i,j)%dens=1d-60
+		C(i,j)%N0=0d0
+		do imol=1,nspec
+			C(i,j)%npop0(imol)%N=0d0
+		enddo
 	enddo
 	
 	return
