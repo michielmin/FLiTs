@@ -73,7 +73,7 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*4
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*2+100
 
 	allocate(imR(nImR))
 
@@ -108,19 +108,6 @@ c increase the resolution in velocity by this factor
 			rr=R(1)/sin(theta_av(nR-1,i))
 		else
 			rr=R_sphere(1)
-		endif
-		ir=ir+1
-		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
-		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
-		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
-		ir=ir+1
-		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
-		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
-		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
-		if(cylindrical) then
-			rr=R(nR)/sin(theta_av(nR-1,i))
-		else
-			rr=R_sphere(nR)
 		endif
 		ir=ir+1
 		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
