@@ -267,13 +267,9 @@
 		flux3=flux_l1**wl13*flux_l2**wl23
 
 		do i=Bl%nvmin,Bl%nvmax
-c			fc=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
-c			flux(i)=flux(i)-flux2+fc
-c			flux_cont(i)=fc
-
-			fc=-flux2+flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
-			flux(i)=flux(i)+fc
-			flux_cont(i)=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
+			fc=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
+			flux(i)=flux(i)-flux2+fc
+			flux_cont(i)=fc
 		enddo
 
 		if(Bl%n.eq.1) then
