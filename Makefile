@@ -56,7 +56,8 @@ OBJS	      = Modules.o \
 				SetupPaths.o \
 				SortLines.o \
 				RaytraceContinuum.o \
-				RaytraceLines.o
+				RaytraceLines.o \
+				writeFITS.o
 		
 
 # program name and install location

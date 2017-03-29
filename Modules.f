@@ -53,6 +53,12 @@ c the image grid
 	integer,allocatable :: nImPhi(:)
 	real*8 vmax
 	
+c the image cube
+	real*8,allocatable :: x_im(:,:,:),y_im(:,:,:)
+	real*8,allocatable :: imcube(:,:,:)
+	integer nint,npix,nvim
+	logical imagecube
+	
 c store all the blackbodies
 	integer MAXT
 	parameter(MAXT=5000)

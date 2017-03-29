@@ -16,6 +16,7 @@
 	real*8 flux1,flux2,flux3,fc,f,dnu,lam_w,lam_w_min,lam_w_max
 	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
+	character*500 imcubename
 	
 	idum=-42
 	
@@ -44,6 +45,10 @@
 	allocate(imol_blend(maxblend))
 	allocate(v_blend(maxblend))
 	allocate(count(nmol))
+
+	if(imagecube) then
+		allocate(imcube(npix,npix,nvmin:nvmax))
+	endif
 
 	lam=lmin
 	ilam1=1
@@ -82,6 +87,7 @@
 
 	Bl => Blends
 	do iblends=1,nblends
+		imcube=0d0
 		flux=0d0
 		
 		nb=Bl%n
@@ -171,6 +177,7 @@
 								flux0=flux_c
 							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
 
 							vmult=1
 							gas=.false.
@@ -188,16 +195,19 @@
 								flux0=flux_c
 							endif
 							flux(iv)=flux(iv)+flux0*PP%A/2d0
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
 						else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
      &					.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
 							flux0=flux_c
 							do vmult=-1,1,2
 								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
 							enddo
 						else
 							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,nb,1)
 							do vmult=-1,1,2
 								flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
+								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
 							enddo
 						endif
 					endif
@@ -205,6 +215,11 @@
 				else
 					flux0=flux_c
 					flux(Bl%nvmin:Bl%nvmax)=flux(Bl%nvmin:Bl%nvmax)+flux0*PP%A
+					if(imagecube) then
+						do iv=Bl%nvmin,Bl%nvmax
+							call AddImage(iv,i,j,flux0*PP%A)
+						enddo
+					endif
 				endif
 			enddo
 		enddo
@@ -307,6 +322,11 @@ c			enddo
 		write(21,*) lam_w,Bl%F,lam_w_min,lam_w_max,trim(comment)
 		lmin_next=max(lmin_next,lam_velo)
 		
+		endif
+
+		if(imagecube) then
+			imcubename="imcube" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
+			call writefitsfile(imcubename,imcube,nvmax-nvmin+1,npix)
 		endif
 
 		if(iblends.lt.nblends) Bl => Bl%next
@@ -694,8 +714,26 @@ c Using the source function for now.
 
 	
 	
-	
-	
+	subroutine AddImage(iv,i,j,flux0)
+	use GlobalSetup
+	use Constants
+	IMPLICIT NONE
+	real*8 flux0,x,y
+	integer i,j,iint,ix,iy,iv
+
+	do iint=1,nint
+		x=(real(npix)*(x_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
+		ix=x
+		y=(real(npix)*(y_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
+		iy=y
+		if(ix.gt.0.and.ix.le.npix.and.iy.gt.0.and.iy.le.npix) then
+			imcube(ix,iy,iv)=imcube(ix,iy,iv)+flux0/real(nint)
+		endif
+	enddo
+
+	return
+	end
+		
 	
 	
 	

@@ -93,6 +93,8 @@ c				all arguments are read
 			read(value,*) inc
 		case("accuracy")
 			read(value,*) accuracy
+		case("imagecube","imcube")
+			read(value,*) imagecube
 		case default
 			call output("Unknown keyword: " // trim(key))
 			stop
@@ -165,6 +167,8 @@ c===============================================================================
 	cylindrical=.true.
 	
 	doblend=.true.
+	
+	imagecube=.false.
 	
 	return
 	end

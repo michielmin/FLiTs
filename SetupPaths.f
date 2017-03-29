@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,iint
 	integer,allocatable :: startphi(:)
 	real*8 ct,res_inc,x,y,rr
 	real*8,allocatable :: imR(:),imPhi(:,:)
@@ -73,7 +73,7 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*2
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*4
 
 	allocate(imR(nImR))
 
@@ -108,6 +108,19 @@ c increase the resolution in velocity by this factor
 			rr=R(1)/sin(theta_av(nR-1,i))
 		else
 			rr=R_sphere(1)
+		endif
+		ir=ir+1
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
+		ir=ir+1
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
+		imR(ir)=rr*cos(inc*pi/180d0+(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(imR(ir))
+		if(cylindrical) then
+			rr=R(nR)/sin(theta_av(nR-1,i))
+		else
+			rr=R_sphere(nR)
 		endif
 		ir=ir+1
 		imR(ir)=rr*cos(inc*pi/180d0-(pi/2d0-theta_av(nR-1,i)))/ComputeIncFact(rr)
@@ -174,6 +187,13 @@ c increase the resolution in velocity by this factor
 	enddo
 	
 	allocate(P(nImR,nImPhi_max))
+
+	if(imagecube) then
+		nint=1000
+		allocate(x_im(nImR,nImPhi_max,nint))
+		allocate(y_im(nImR,nImPhi_max,nint))
+	endif
+
 	do i=1,nImR
 		if(i.ne.1) P(i,1)%R1=sqrt(ImR(i-1)*ImR(i))
 		if(i.ne.nImR) P(i,1)%R2=sqrt(ImR(i)*ImR(i+1))
@@ -230,7 +250,17 @@ c increase the resolution in velocity by this factor
 			s=(r1+r2+r3)/2d0
 			P(i,j)%A=P(i,j)%A-sqrt(s*(s-r1)*(s-r2)*(s-r3))
 			P(i,j)%A=P(i,j)%A*2d0
+			
+			if(imagecube) then
+				do iint=1,nint
+					r1=sqrt(P(i,j)%R1**2+ran1(idum)*(P(i,j)%R2**2-P(i,j)%R1**2))
+					s=P(i,j)%phi1+ran1(idum)*(P(i,j)%phi2-P(i,j)%phi1)
+					x_im(i,j,iint)=r1*cos(s)*incfact
+					y_im(i,j,iint)=r1*sin(s)
+				enddo
+			endif
 		enddo
+		
 	enddo
 
 	vmax=0d0
