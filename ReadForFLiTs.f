@@ -145,8 +145,7 @@ c in the theta grid we actually store cos(theta) for convenience
 	theta_av(nR,0:nTheta)=theta_av(nR-1,0:nTheta)
 
 	if(cylindrical) then
-c		Rout=Rout*1.0001/sin(acos(Theta(nR,1)))
-		Rout=Rout*1.20001/sin(acos(Theta(nR,1)))
+		Rout=Rout*1.0001/sin(acos(Theta(nR,1)))
 	else
 		Rout=Rout*1.0001
 	endif

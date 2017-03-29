@@ -73,7 +73,7 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 
-	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*2+100
+	nImR=ir+int(abs(sin(inc*pi/180d0))*(C(1,nTheta)%v/vresolution)*res_inc/2d0)+(nTheta-1)*2
 
 	allocate(imR(nImR))
 
