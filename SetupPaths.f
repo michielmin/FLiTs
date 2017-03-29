@@ -123,7 +123,7 @@ c increase the resolution in velocity by this factor
 	do i=1,j
 		ir=ir+1
 		imR(ir)=10d0**(log10(Rstar*Rsun)+log10(R_sphere(nR+1)/(Rstar*Rsun))*(real(i)-0.1)/real(j))
-		imR(ir)=10d0**(log10(R(nR))+log10(R_sphere(nR+1)/(R(nR))*(real(i)-0.1)/real(j))
+		imR(ir)=10d0**(log10(R(nR))+log10(R_sphere(nR+1)/R(nR))*(real(i)-0.1)/real(j))
 	enddo
 
 	imR=abs(imR)
