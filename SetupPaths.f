@@ -213,19 +213,23 @@ c increase the resolution in velocity by this factor
 			P(i,j)%R1=P(i,1)%R1
 			P(i,j)%R2=P(i,1)%R2
 		
-			incfact=ComputeIncFact(P(i,j)%R)
+			incfact=ComputeIncFact(P(i,j)%R1)
 			
 			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
 			y11=P(i,j)%R1*sin(P(i,j)%phi1)
 			x12=P(i,j)%R1*cos(P(i,j)%phi2)*incfact
 			y12=P(i,j)%R1*sin(P(i,j)%phi2)
+
+			incfact=ComputeIncFact(P(i,j)%R2)
+
 			x21=P(i,j)%R2*cos(P(i,j)%phi1)*incfact
 			y21=P(i,j)%R2*sin(P(i,j)%phi1)
 			x22=P(i,j)%R2*cos(P(i,j)%phi2)*incfact
 			y22=P(i,j)%R2*sin(P(i,j)%phi2)
 
-			P(i,j)%x=(x11+x12+x21+x22)/4d0	
-			P(i,j)%y=(y11+y12+y21+y22)/4d0	
+			incfact=ComputeIncFact(P(i,j)%R)
+			P(i,j)%x=P(i,j)%R*cos(P(i,j)%Phi)*incfact
+			P(i,j)%y=P(i,j)%R*sin(P(i,j)%Phi)
 
 			r1=sqrt((x22-x21)**2+(y22-y21)**2)
 			r2=sqrt(x22**2+y22**2)
@@ -799,7 +803,7 @@ c-----------------------------------------------------------------------
 	ComputeIncFact=(cos(inc*pi/180d0)+(1d0-cos(inc*pi/180d0))
      &		*((R0-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))**2)
 	if(ComputeIncFact.lt.cos(inc*pi/180d0)) ComputeIncFact=cos(inc*pi/180d0)
-	
+		
 	return
 	end
 	
