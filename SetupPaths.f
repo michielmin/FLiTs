@@ -12,7 +12,7 @@
 	real*8 ComputeIncFact,maxRjump
 	real*8 imx,imy,imz
 	integer,allocatable :: t_node(:,:),t_neighbor(:,:)
-	integer matri
+	integer matri,icount,ncount
 	real*8,allocatable :: xy(:,:)
 	real*8 matrix(2,2)
 
@@ -164,7 +164,7 @@ c increase the resolution in velocity by this factor
 		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
 		npoints_temp=npoints_temp+nImPhi(i)
 	enddo
-	ngrids=1
+	ngrids=5
 
 	allocate(imPhi(nImR,nImPhi_max))
 	
@@ -186,6 +186,7 @@ c increase the resolution in velocity by this factor
 	allocate(P(ngrids,matri))
 	allocate(t_node(3,matri))
 	allocate(t_neighbor(3,matri))
+	k=0
 	do i=1,ngrids
 		do j=1,npoints_temp
 			ir=ran1(idum)*real(nR)
@@ -195,7 +196,7 @@ c increase the resolution in velocity by this factor
 			tt=ran1(idum)
 			tt=Theta(ir,it)*tt+Theta(ir,it+1)*(1d0-tt)
 			tt=acos(tt)
-			ph=ran1(idum)*pi
+			ph=ran1(idum)*pi*2d0
 			imx=rr*cos(ph)*sin(tt)
 			imy=rr*sin(ph)*sin(tt)
 			imz=rr*cos(tt)
@@ -211,23 +212,26 @@ c increase the resolution in velocity by this factor
 		do j=1,npoints(i)
 			P(i,j)%x=(xy(1,t_node(1,j))+xy(1,t_node(2,j))+xy(1,t_node(3,j)))/3d0
 			P(i,j)%y=(xy(2,t_node(1,j))+xy(2,t_node(2,j))+xy(2,t_node(3,j)))/3d0
+			P(i,j)%y=abs(P(i,j)%y)
 			r1=sqrt((xy(1,t_node(1,j))-xy(1,t_node(2,j)))**2+(xy(2,t_node(1,j))-xy(2,t_node(2,j)))**2)
 			r2=sqrt((xy(1,t_node(1,j))-xy(1,t_node(3,j)))**2+(xy(2,t_node(1,j))-xy(2,t_node(3,j)))**2)
 			r3=sqrt((xy(1,t_node(3,j))-xy(1,t_node(2,j)))**2+(xy(2,t_node(3,j))-xy(2,t_node(2,j)))**2)
 			s=(r1+r2+r3)/2d0
-			P(i,j)%A=2d0*sqrt(s*(s-r1)*(s-r2)*(s-r3))
+			P(i,j)%A=sqrt(s*(s-r1)*(s-r2)*(s-r3))
 		enddo
 		k=k+npoints(i)
 	enddo
+	ncount=k
 	k=k/ngrids
 
-	call output("Number of image gridpoints: "//trim(int2string(k,'(i5)')))	
+	call output("Number of image gridpoints: "//trim(int2string(k,'(i7)')))	
 
 	vmax=0d0
+	icount=0
 	do i=1,ngrids
-	print*,npoints(i)
 	do j=1,npoints(i)
-		call tellertje(j,npoints(i))
+		icount=icount+1
+		call tellertje(icount,ncount)
 		PP => P(i,j)
 		trac%x=P(i,j)%x
 		trac%y=P(i,j)%y
@@ -322,9 +326,10 @@ c-----------------------------------------------------------------------
 
 	subroutine tracepath(trac,PP,onlycount)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	type(Tracer) trac
-	real*8 x,y,z,phi,d,vtot,taumin,v1,v2
+	real*8 x,y,z,phi,d,vtot,taumin,v1,v2,v
 	integer inext,jnext,ntrace,i,j,k,ipop,imol,kk,nk
 	logical hitstar,onlycount
 	type(Path) PP
@@ -374,7 +379,7 @@ c-----------------------------------------------------------------------
 		i=abs(v1-v2)*5d0/C(trac%i,trac%j)%line_width(imol)
 		if(i.gt.nk) nk=i
 	enddo
-	i=abs(v1-v2)*3d0/(5d0*vres_profile)+1
+	i=abs(v1-v2)/(vres_profile)+1
 	if(nk.gt.i) nk=i
 
 	x=trac%x
@@ -397,7 +402,9 @@ c-----------------------------------------------------------------------
 		call checkcell(x,y,z,trac%i,trac%j)
 
 		if(.not.onlycount) then
-			PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+			v=sqrt(G*Mstar*Msun*(x*x+y*y)/((x**2+y**2+z**2)**(3d0/2d0)))
+c			PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+			PP%v(k)=v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
 
 			do imol=1,nmol
 				if(C(trac%i,trac%j)%N(imol).gt.1d-50
@@ -406,9 +413,7 @@ c-----------------------------------------------------------------------
 					if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
 					vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
 					if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
-					do ipop=Mol(imol)%nlevels,1,-1
-						if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
-					enddo
+					ipop=C(trac%i,trac%j)%npopmax(imol)
 					if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
 				endif
 			enddo

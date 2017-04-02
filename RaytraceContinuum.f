@@ -8,7 +8,6 @@
 
 	call output("==================================================================")
 	call output("Raytracing the continuum")
-	idum=-43
 
 	
 	allocate(BB(nlam,MAXT))
@@ -38,10 +37,11 @@
 		endif
 		if(doit) then
 		flux=0d0
-		i=ran1(idum)*real(ngrids)+1
+		do i=1,ngrids
 		do j=1,npoints(i)
 			call TraceFluxCont(P(i,j),ilam,P(i,j)%flux_cont(ilam))
-			flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A
+			flux=flux+P(i,j)%flux_cont(ilam)*P(i,j)%A/real(ngrids)
+		enddo
 		enddo
 		call Trace2StarCont(path2star,ilam,path2star%flux_cont(ilam))
 		flux=flux+path2star%flux_cont(ilam)*path2star%A
