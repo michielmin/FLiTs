@@ -2,14 +2,19 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,iint
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,iint,it
 	integer,allocatable :: startphi(:)
-	real*8 ct,res_inc,x,y,rr
+	real*8 ct,res_inc,x,y,rr,tt,ph
 	real*8,allocatable :: imR(:),imPhi(:,:)
 	type(Tracer) trac,trac_count
 	type(Path),pointer :: PP
 	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
 	real*8 ComputeIncFact,maxRjump
+	real*8 imx,imy,imz
+	integer,allocatable :: t_node(:,:),t_neighbor(:,:)
+	integer matri
+	real*8,allocatable :: xy(:,:)
+	real*8 matrix(2,2)
 
 	ilam1=1
 	ilam2=nlam
@@ -141,6 +146,8 @@ c increase the resolution in velocity by this factor
 
 	nImPhi_max=1
 	startphi(1)=1
+
+	npoints_temp=0
 	do i=1,nImR
 		do k=1,nR-1
 			if(imR(i).gt.R(k).and.imR(i).lt.R(k+1)) exit
@@ -155,11 +162,10 @@ c increase the resolution in velocity by this factor
 			startphi(i+1)=1
 		endif
 		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
+		npoints_temp=npoints_temp+nImPhi(i)
 	enddo
+	ngrids=1
 
-	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
-	call output("Number of phi image points:    "//trim(int2string(nImPhi_max,'(i5)')))
-	
 	allocate(imPhi(nImR,nImPhi_max))
 	
 	do i=1,nImR
@@ -174,91 +180,54 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 	
-	allocate(P(nImR,nImPhi_max))
-
-	if(imagecube) then
-		nint=1000
-		allocate(x_im(nImR,nImPhi_max,nint))
-		allocate(y_im(nImR,nImPhi_max,nint))
-	endif
-
-	do i=1,nImR
-		if(i.ne.1) P(i,1)%R1=sqrt(ImR(i-1)*ImR(i))
-		if(i.ne.nImR) P(i,1)%R2=sqrt(ImR(i)*ImR(i+1))
-		if(P(i,1)%R2.gt.R_sphere(nR+1)) P(i,1)%R2=R_sphere(nR+1)
-	enddo
-	P(1,1)%R1=ImR(1)**2/P(1,1)%R2
-	P(nImR,1)%R2=ImR(nImR)**2/P(nImR,1)%R1
-	if(P(nImR,1)%R2.gt.R_sphere(nR+1)) P(nImR,1)%R2=R_sphere(nR+1)
-
-	do i=1,nImR
-		do j=1,nImPhi(i)
-			P(i,j)%R=ImR(i)
-			P(i,j)%Phi=ImPhi(i,j)
-			if(startphi(i).eq.1) then
-				P(i,j)%phi1=pi*real(j-1)/real(nImPhi(i))
-				P(i,j)%phi2=pi*real(j)/real(nImPhi(i))
-			else
-				if(j.eq.1) then
-					P(i,j)%phi1=0d0
-				else
-					P(i,j)%phi1=pi*(real(j)-0.5)/real(nImPhi(i))
-				endif
-				if(j.eq.nImPhi(i)) then
-					P(i,j)%phi2=pi
-				else
-					P(i,j)%phi2=pi*(real(j)+0.5)/real(nImPhi(i))
-				endif
-			endif
-			P(i,j)%R1=P(i,1)%R1
-			P(i,j)%R2=P(i,1)%R2
-		
-			incfact=ComputeIncFact(P(i,j)%R1)
-			
-			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
-			y11=P(i,j)%R1*sin(P(i,j)%phi1)
-			x12=P(i,j)%R1*cos(P(i,j)%phi2)*incfact
-			y12=P(i,j)%R1*sin(P(i,j)%phi2)
-
-			incfact=ComputeIncFact(P(i,j)%R2)
-
-			x21=P(i,j)%R2*cos(P(i,j)%phi1)*incfact
-			y21=P(i,j)%R2*sin(P(i,j)%phi1)
-			x22=P(i,j)%R2*cos(P(i,j)%phi2)*incfact
-			y22=P(i,j)%R2*sin(P(i,j)%phi2)
-
-			incfact=ComputeIncFact(P(i,j)%R)
-			P(i,j)%x=P(i,j)%R*cos(P(i,j)%Phi)*incfact
-			P(i,j)%y=P(i,j)%R*sin(P(i,j)%Phi)
-
-			r1=sqrt((x22-x21)**2+(y22-y21)**2)
-			r2=sqrt(x22**2+y22**2)
-			r3=sqrt(x21**2+y21**2)
-			s=(r1+r2+r3)/2d0
-			P(i,j)%A=sqrt(s*(s-r1)*(s-r2)*(s-r3))
-			r1=sqrt((x12-x11)**2+(y12-y11)**2)
-			r2=sqrt(x12**2+y12**2)
-			r3=sqrt(x11**2+y11**2)
-			s=(r1+r2+r3)/2d0
-			P(i,j)%A=P(i,j)%A-sqrt(s*(s-r1)*(s-r2)*(s-r3))
-			P(i,j)%A=P(i,j)%A*2d0
-			
-			if(imagecube) then
-				do iint=1,nint
-					r1=sqrt(P(i,j)%R1**2+ran1(idum)*(P(i,j)%R2**2-P(i,j)%R1**2))
-					s=P(i,j)%phi1+ran1(idum)*(P(i,j)%phi2-P(i,j)%phi1)
-					x_im(i,j,iint)=r1*cos(s)*incfact
-					y_im(i,j,iint)=r1*sin(s)
-				enddo
-			endif
+	allocate(xy(2,npoints_temp))
+	allocate(npoints(ngrids))
+	matri=2*npoints_temp-3
+	allocate(P(ngrids,matri))
+	allocate(t_node(3,matri))
+	allocate(t_neighbor(3,matri))
+	do i=1,ngrids
+		do j=1,npoints_temp
+			ir=ran1(idum)*real(nR)
+			it=ran1(idum)*real(nTheta)
+			rr=ran1(idum)
+			rr=sqrt(R(ir)**2*rr+R(ir+1)**2*(1d0-rr))
+			tt=ran1(idum)
+			tt=Theta(ir,it)*tt+Theta(ir,it+1)*(1d0-tt)
+			tt=acos(tt)
+			ph=ran1(idum)*pi
+			imx=rr*cos(ph)*sin(tt)
+			imy=rr*sin(ph)*sin(tt)
+			imz=rr*cos(tt)
+			call rotate(imx,imy,imz,0d0,1d0,0d0,-inc*pi/180d0)
+			xy(1,j)=imx
+			xy(2,j)=imy
 		enddo
-		
+		matrix(1,1)=1d0
+		matrix(1,2)=0d0
+		matrix(2,1)=0d0
+		matrix(2,2)=1d0
+		call dtris2_lmap (npoints_temp, xy, matrix, npoints(i), t_node, t_neighbor )
+		do j=1,npoints(i)
+			P(i,j)%x=(xy(1,t_node(1,j))+xy(1,t_node(2,j))+xy(1,t_node(3,j)))/3d0
+			P(i,j)%y=(xy(2,t_node(1,j))+xy(2,t_node(2,j))+xy(2,t_node(3,j)))/3d0
+			r1=sqrt((xy(1,t_node(1,j))-xy(1,t_node(2,j)))**2+(xy(2,t_node(1,j))-xy(2,t_node(2,j)))**2)
+			r2=sqrt((xy(1,t_node(1,j))-xy(1,t_node(3,j)))**2+(xy(2,t_node(1,j))-xy(2,t_node(3,j)))**2)
+			r3=sqrt((xy(1,t_node(3,j))-xy(1,t_node(2,j)))**2+(xy(2,t_node(3,j))-xy(2,t_node(2,j)))**2)
+			s=(r1+r2+r3)/2d0
+			P(i,j)%A=2d0*sqrt(s*(s-r1)*(s-r2)*(s-r3))
+		enddo
+		k=k+npoints(i)
 	enddo
+	k=k/ngrids
+
+	call output("Number of image gridpoints: "//trim(int2string(k,'(i5)')))	
 
 	vmax=0d0
-	do i=1,nImR
-	call tellertje(i,nImR)
-	do j=1,nImPhi(i)
+	do i=1,ngrids
+	print*,npoints(i)
+	do j=1,npoints(i)
+		call tellertje(j,npoints(i))
 		PP => P(i,j)
 		trac%x=P(i,j)%x
 		trac%y=P(i,j)%y

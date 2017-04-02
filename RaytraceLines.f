@@ -23,8 +23,8 @@
 	call output("==================================================================")
 	call output("Preparing the profiles")
 
-	do i=1,nImR
-		do j=1,nImPhi(i)
+	do i=1,ngrids
+		do j=1,npoints(i)
 			allocate(P(i,j)%cont_contr(P(i,j)%n))
 			allocate(P(i,j)%exptau_dust(P(i,j)%n))
 			allocate(P(i,j)%S_dust(P(i,j)%n))
@@ -114,11 +114,9 @@
 			do k=ilam1+1,ilam
 				if(lam_cont(k).gt.lcmin.and.lam_cont(k).lt.Bl%lmin) then
 					flux0=0d0
-					do i=1,nImR
-						do j=1,nImPhi(i)
-							PP => P(i,j)
-							flux0=flux0+PP%flux_cont(k)*PP%A
-						enddo
+					do j=1,npoints(i)
+						PP => P(i,j)
+						flux0=flux0+PP%flux_cont(k)*PP%A
 					enddo
 					flux0=flux0+path2star%flux_cont(k)*path2star%A
 					write(20,*) lam_cont(k),flux0*1e23/(distance*parsec)**2
@@ -142,14 +140,14 @@
 
 		flux2=0d0
 
+			i=ran1(idum)*real(ngrids)+1
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(i,j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0)
-!$OMP& SHARED(P,nImPhi,nImR,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam)
+!$OMP& PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0)
+!$OMP& SHARED(i,P,ngrids,npoints,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam)
 !$OMP DO
-		do i=1,nImR
-			if(iblends.eq.1) call tellertje(i,nImR)
-			do j=1,nImPhi(i)
+			do j=1,npoints(i)
+				if(iblends.eq.1) call tellertje(j,npoints(i))
 				PP => P(i,j)
 				call ContContrPath(PP,flux_c)
 				flux2=flux2+flux_c*PP%A
@@ -222,7 +220,6 @@
 					endif
 				endif
 			enddo
-		enddo
 !$OMP END DO
 !$OMP FLUSH
 !$OMP END PARALLEL
@@ -251,13 +248,11 @@
 
 		flux_l1=0d0
 		flux_l2=0d0
-		do i=1,nImR
-			do j=1,nImPhi(i)
-				PP => P(i,j)
-				flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
-				flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
-			enddo
-		enddo		
+		do j=1,npoints(i)
+			PP => P(i,j)
+			flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
+			flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
+		enddo
 		PP => path2star
 
 		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
@@ -266,10 +261,10 @@
 		flux1=flux_l1**wl11*flux_l2**wl21
 		flux3=flux_l1**wl13*flux_l2**wl23
 
-		do i=Bl%nvmin,Bl%nvmax
+		do iv=Bl%nvmin,Bl%nvmax
 			fc=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
-			flux(i)=flux(i)-flux2+fc
-			flux_cont(i)=fc
+			flux(iv)=flux(iv)-flux2+fc
+			flux_cont(iv)=fc
 		enddo
 
 		if(Bl%n.eq.1) then
@@ -277,23 +272,15 @@
      &											  // "  low: " // trim(int2string(Bl%L(1)%jlow,'(i5)'))
 		else
 			count=0
-			do i=1,Bl%n
-				count(Bl%L(i)%imol)=count(Bl%L(i)%imol)+1
+			do iv=1,Bl%n
+				count(Bl%L(iv)%imol)=count(Bl%L(iv)%imol)+1
 			enddo
 			comment = "blend of "
-			do i=1,nmol
-				if(count(i).gt.0) then
-					comment=trim(comment) // trim(int2string(count(i),'(i3)')) // " " // trim(Mol(i)%name)
+			do iv=1,nmol
+				if(count(iv).gt.0) then
+					comment=trim(comment) // trim(int2string(count(iv),'(i3)')) // " " // trim(Mol(iv)%name)
 				endif
 			enddo
-
-c			comment=' '
-c			comment = trim(comment) // " " // trim(int2string(iblends,'(i5)'))
-c			do i=1,Bl%n
-c				if(i.gt.1) comment = trim(comment) // " & "
-c				comment = trim(comment) // " " // trim(Mol(Bl%L(i)%imol)%name) // "  up: " // trim(int2string(Bl%L(i)%jup,'(i5)'))
-c     &											  // "  low: " // trim(int2string(Bl%L(i)%jlow,'(i5)'))
-c			enddo
 
 		endif
 
@@ -303,16 +290,16 @@ c			enddo
 		lam_w=0d0
 		lam_w_min=1d200
 		lam_w_max=0d0
-		do i=Bl%nvmin,Bl%nvmax
-			lam_velo=lam*sqrt((1d0+real(i)*vresolution/clight)/(1d0-real(i)*vresolution/clight))
+		do iv=Bl%nvmin,Bl%nvmax
+			lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
 			if(lam_velo.gt.lmin_next) then
 				write(20,*) lam_velo,
-     &					flux(i)*1e23/(distance*parsec)**2,
-     &					real(i)*vresolution/1d5,
-     &					flux_cont(i)*1e23/(distance*parsec)**2,
+     &					flux(iv)*1e23/(distance*parsec)**2,
+     &					real(iv)*vresolution/1d5,
+     &					flux_cont(iv)*1e23/(distance*parsec)**2,
      &					trim(comment)
-				Bl%F=Bl%F+dnu*(flux(i)-flux_cont(i))
-				lam_w=lam_w+lam_velo*dnu*(flux(i)-flux_cont(i))
+				Bl%F=Bl%F+dnu*(flux(iv)-flux_cont(iv))
+				lam_w=lam_w+lam_velo*dnu*(flux(iv)-flux_cont(iv))
 				if(lam_velo.lt.lam_w_min) lam_w_min=lam_velo
 				if(lam_velo.gt.lam_w_max) lam_w_max=lam_velo
 			endif
@@ -339,11 +326,9 @@ c		call tellertje_time(iblends,nblends,nl,nlines,starttime)
 	do while(ilam.le.nlam)
 		if(lam_cont(ilam).lt.lmax) then
 			flux0=0d0
-			do i=1,nImR
-				do j=1,nImPhi(i)
-					PP => P(i,j)
-					flux0=flux0+PP%flux_cont(ilam)*PP%A
-				enddo
+			do j=1,npoints(i)
+				PP => P(i,j)
+				flux0=flux0+PP%flux_cont(ilam)*PP%A
 			enddo
 			flux0=flux0+path2star%flux_cont(ilam)*path2star%A
 			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2

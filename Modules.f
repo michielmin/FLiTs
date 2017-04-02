@@ -49,8 +49,8 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	real*8,allocatable :: lam_cont(:),Fstar(:)
 	
 c the image grid
-	integer nImR
-	integer,allocatable :: nImPhi(:)
+	integer nImR,ngrids,npoints_temp
+	integer,allocatable :: nImPhi(:),npoints(:)
 	real*8 vmax
 	
 c the image cube
