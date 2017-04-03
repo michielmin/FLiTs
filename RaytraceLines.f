@@ -3,7 +3,7 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nvmin
-	integer nb,ib0,nb0,ib
+	integer nb,ib0,nb0,ib,nltot
 	integer,allocatable :: imol_blend(:),count(:)
 	real*8,allocatable :: v_blend(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
@@ -85,6 +85,14 @@
 
 	lcmin=lmin
 	lmin_next=0d0
+
+	nltot=0
+	Bl => Blends
+	do iblends=1,nblends
+		nltot=nltot+Bl%n
+		if(iblends.lt.nblends) Bl => Bl%next
+	enddo
+	print*,nltot,nlines,nblends
 
 	Bl => Blends
 	do iblends=1,nblends
@@ -276,10 +284,12 @@
 
 		flux_l1=0d0
 		flux_l2=0d0
+		do i=1,ngrids
 		do j=1,npoints(i)
 			PP => P(i,j)
-			flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
-			flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
+			flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A/real(ngrids)
+			flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
+		enddo
 		enddo
 		PP => path2star
 
@@ -346,7 +356,7 @@
 
 		if(iblends.lt.nblends) Bl => Bl%next
 
-		call tellertje_time(iblends,nblends,nl,nlines,starttime)
+		call tellertje_time(iblends,nblends,nl,nltot,starttime)
 c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
 	enddo
 
@@ -371,10 +381,10 @@ c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
 
 	call output("Time used for the lines:"//trim(dbl2string(stoptime-starttime,'(f8.2)'))
      &			//" s")
-c	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nl),'(f8.2)'))
-c     &			//" s")
-	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nblends),'(f8.2)'))
+	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nlines),'(f8.2)'))
      &			//" s")
+c	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nblends),'(f8.2)'))
+c     &			//" s")
 
 
 	return
@@ -438,7 +448,7 @@ c	dust scattering source function
 	type(Cell),pointer :: CC
 	type(Blend) Bl
 	logical gas,doit(nb)
-	real*8 xx1,xx2,xx3
+	real*8 rj
 	
 	fact=1d0
 	flux=0d0
@@ -459,8 +469,9 @@ c	dust scattering source function
 			do ib=1,nb
 				if(doit(ib)) then
 				imol=imol_blend(ib)
-				jj=int(((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-v*vres_mult)
-     &					*1d5/CC%line_width(imol))
+				rj=((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-v*vres_mult)
+     &					*1d5/CC%line_width(imol)
+				jj=int(rj)
 				if(jj.lt.-nvprofile) jj=-nvprofile
 				if(jj.gt.nvprofile) jj=nvprofile
 				if(profile_nz(jj)) then

@@ -25,7 +25,12 @@
 	
 c increase the resolution in velocity by this factor
 
-	if(accuracy.le.0) then
+	if(accuracy.lt.0) then
+		nrReduce=8
+		res_inc=1d0
+		nPhiMin=2
+		nPhiMax=10
+	else if(accuracy.eq.0) then
 		nrReduce=4
 		res_inc=1d0
 		nPhiMin=15
