@@ -67,7 +67,7 @@
 
 	do k=-nvprofile,nvprofile
 		profile(k)=((real(k)*vresolution/vres_mult)/1d5)**2
-		if(abs(profile(k)).lt.3d0) then
+		if(abs(profile(k)).lt.10d0) then
 			profile_nz(k)=.true.
 		else
 			profile_nz(k)=.false.
@@ -185,15 +185,18 @@
 						doit_ib(1:nb)=doit_ib0(1:nb)
 						do ib=1,nb
 							if(doit_ib0(ib)) then
-								if(abs(real(iv*vresolution)-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol)
-     &					.or.abs(real(iv*vresolution)-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol)) doit_ib(ib)=.false.
+								if((abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol)
+     &					.and.abs((real(iv)-0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol))
+     &					.or.(abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol)
+     &					.and.abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol))) 
+     &							doit_ib(ib)=.false.
     						endif
 						enddo
 						gas=.false.
 						do ib=ib0,ib0+nb0-1
 							imol=Bl%L(ib)%imol
-							if((real(iv*vresolution)-Bl%v(ib)).lt.-PP%vmin(imol)
-     &							.and.(real(iv*vresolution)-Bl%v(ib)).gt.-PP%vmax(imol)) then
+							if(((real(iv)-0.5d0)*vresolution-Bl%v(ib)).lt.-PP%vmin(imol)
+     &							.and.((real(iv)+0.5d0)*vresolution-Bl%v(ib)).gt.-PP%vmax(imol)) then
 	   							gas=.true.
 	   							exit
 	   						endif
@@ -209,15 +212,18 @@
 						doit_ib(1:nb)=doit_ib0(1:nb)
 						do ib=1,nb
 							if(doit_ib0(ib)) then
-								if(abs(real(iv*vresolution)-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol)
-     &					.or.abs(real(iv*vresolution)-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol)) doit_ib(ib)=.false.
+								if((abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol)
+     &					.and.abs((real(iv)-0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol))
+     &					.or.(abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol)
+     &					.and.abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol))) 
+     &							doit_ib(ib)=.false.
     						endif
 						enddo
 						gas=.false.
 						do ib=ib0,ib0+nb0-1
 							imol=Bl%L(ib)%imol
-							if((real(iv*vresolution)-Bl%v(ib)).lt.PP%vmax(imol)
-     &							.and.(real(iv*vresolution)-Bl%v(ib)).gt.PP%vmin(imol)) then
+							if(((real(iv)-0.5d0)*vresolution-Bl%v(ib)).lt.PP%vmax(imol)
+     &							.and.((real(iv)+0.5d0)*vresolution-Bl%v(ib)).gt.PP%vmin(imol)) then
 	   							gas=.true.
 	   							exit
 	   						endif
@@ -229,8 +235,10 @@
 						endif
 						flux(iv)=flux(iv)+flux0*PP%A/2d0
 						if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
-					else if(real(iv*vresolution).gt.PP%vmax(LL%imol)
-     &				.or.real(iv*vresolution).lt.PP%vmin(LL%imol)) then
+					else if(((real(iv)+0.5d0)*vresolution.gt.PP%vmax(LL%imol).and.
+     &						 (real(iv)-0.5d0)*vresolution.gt.PP%vmax(LL%imol))
+     &				.or.((real(iv)+0.5d0)*vresolution.lt.PP%vmin(LL%imol).and.
+     &					 (real(iv)-0.5d0)*vresolution.lt.PP%vmin(LL%imol))) then
 						flux0=flux_c
 						do vmult=-1,1,2
 							flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
@@ -472,15 +480,15 @@ c	dust scattering source function
 				rj=((real(vmult)*p0%v(k)+v_blend(ib))*vres_mult/vresolution-v*vres_mult)
      &					*1d5/CC%line_width(imol)
 				jj=int(rj)
-				if(jj.lt.-nvprofile) jj=-nvprofile
-				if(jj.gt.nvprofile) jj=nvprofile
-				if(profile_nz(jj)) then
-					prof=profile(jj)
-					tau_gas=prof*CC%line_abs(ib+ib0-1)
+				if(jj.gt.-nvprofile.and.jj.lt.nvprofile) then
+					if(profile_nz(jj)) then
+						prof=profile(jj)
+						tau_gas=prof*CC%line_abs(ib+ib0-1)
 c	gas source function
-					S=S+prof*CC%line_emis(ib+ib0-1)
-					tau=tau+tau_gas
-					gas=.true.
+						S=S+prof*CC%line_emis(ib+ib0-1)
+						tau=tau+tau_gas
+						gas=.true.
+					endif
 				endif
 				endif
 			enddo
