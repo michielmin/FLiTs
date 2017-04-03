@@ -113,8 +113,9 @@ c	properties of the molecule
 		real*8,allocatable :: line_width(:),N(:)  ! dimension nmol
 		real*8,allocatable :: N0(:),line_width0(:)
 		type(poplevels),allocatable :: npop0(:)
+		type(poplevels),allocatable :: npop(:)
 		integer,allocatable :: npopmax(:)
-		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
+c		real*8,allocatable :: npop(:,:) ! dimension is nmol, number of levels
 		real*8,allocatable :: line_emis(:),line_abs(:)
 		real*8 kext_l,therm_l,scat_l
 		integer iT

@@ -145,8 +145,8 @@
 				do ilines=1,Bl%n
 					LL = Bl%L(ilines)
 					fact=clight*hplanck*C(i,j)%N(LL%imol)/(4d0*pi*C(i,j)%line_width(LL%imol)*sqrt(pi))
-					C(i,j)%line_abs(ilines)=fact*(C(i,j)%npop(LL%imol,LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol,LL%jup)*LL%Bul)
-					C(i,j)%line_emis(ilines)=fact*C(i,j)%npop(LL%imol,LL%jup)*LL%Aul
+					C(i,j)%line_abs(ilines)=fact*(C(i,j)%npop(LL%imol)%N(LL%jlow)*LL%Blu-C(i,j)%npop(LL%imol)%N(LL%jup)*LL%Bul)
+					C(i,j)%line_emis(ilines)=fact*C(i,j)%npop(LL%imol)%N(LL%jup)*LL%Aul
 				enddo
 			enddo
 		enddo

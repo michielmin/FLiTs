@@ -24,7 +24,8 @@
 				enddo
 		
 				do k=1,Mol(imol)%nlevels
-					C(i,j)%npop(imol,k)=Mol(imol)%g(k)*exp(-Mol(imol)%E(k)/T)/UT
+c					C(i,j)%npop(imol,k)=Mol(imol)%g(k)*exp(-Mol(imol)%E(k)/T)/UT
+					C(i,j)%npop(imol)%N(k)=Mol(imol)%g(k)*exp(-Mol(imol)%E(k)/T)/UT
 				enddo
 			endif
 		enddo
