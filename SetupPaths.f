@@ -2,14 +2,19 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,iint
+	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,iint,it
 	integer,allocatable :: startphi(:)
-	real*8 ct,res_inc,x,y,rr
+	real*8 ct,res_inc,x,y,rr,tt,ph
 	real*8,allocatable :: imR(:),imPhi(:,:)
 	type(Tracer) trac,trac_count
 	type(Path),pointer :: PP
 	real*8 incfact,x11,x12,x21,x22,y11,y12,y21,y22,r1,r2,r3,s
 	real*8 ComputeIncFact,maxRjump
+	real*8 imx,imy,imz
+	integer,allocatable :: t_node(:,:),t_neighbor(:,:)
+	integer matri,icount,ncount
+	real*8,allocatable :: xy(:,:)
+	real*8 matrix(2,2)
 
 	ilam1=1
 	ilam2=nlam
@@ -20,7 +25,12 @@
 	
 c increase the resolution in velocity by this factor
 
-	if(accuracy.le.0) then
+	if(accuracy.lt.0) then
+		nrReduce=8
+		res_inc=1d0
+		nPhiMin=2
+		nPhiMax=10
+	else if(accuracy.eq.0) then
 		nrReduce=4
 		res_inc=1d0
 		nPhiMin=15
@@ -141,6 +151,8 @@ c increase the resolution in velocity by this factor
 
 	nImPhi_max=1
 	startphi(1)=1
+
+	npoints_temp=0
 	do i=1,nImR
 		do k=1,nR-1
 			if(imR(i).gt.R(k).and.imR(i).lt.R(k+1)) exit
@@ -155,11 +167,10 @@ c increase the resolution in velocity by this factor
 			startphi(i+1)=1
 		endif
 		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
+		npoints_temp=npoints_temp+nImPhi(i)
 	enddo
+	ngrids=5
 
-	call output("Number of radial image points: "//trim(int2string(nImR,'(i5)')))
-	call output("Number of phi image points:    "//trim(int2string(nImPhi_max,'(i5)')))
-	
 	allocate(imPhi(nImR,nImPhi_max))
 	
 	do i=1,nImR
@@ -174,87 +185,58 @@ c increase the resolution in velocity by this factor
 		endif
 	enddo
 	
-	allocate(P(nImR,nImPhi_max))
-
-	if(imagecube) then
-		nint=1000
-		allocate(x_im(nImR,nImPhi_max,nint))
-		allocate(y_im(nImR,nImPhi_max,nint))
-	endif
-
-	do i=1,nImR
-		if(i.ne.1) P(i,1)%R1=sqrt(ImR(i-1)*ImR(i))
-		if(i.ne.nImR) P(i,1)%R2=sqrt(ImR(i)*ImR(i+1))
-		if(P(i,1)%R2.gt.R_sphere(nR+1)) P(i,1)%R2=R_sphere(nR+1)
-	enddo
-	P(1,1)%R1=ImR(1)**2/P(1,1)%R2
-	P(nImR,1)%R2=ImR(nImR)**2/P(nImR,1)%R1
-	if(P(nImR,1)%R2.gt.R_sphere(nR+1)) P(nImR,1)%R2=R_sphere(nR+1)
-
-	do i=1,nImR
-		do j=1,nImPhi(i)
-			P(i,j)%R=ImR(i)
-			P(i,j)%Phi=ImPhi(i,j)
-			if(startphi(i).eq.1) then
-				P(i,j)%phi1=pi*real(j-1)/real(nImPhi(i))
-				P(i,j)%phi2=pi*real(j)/real(nImPhi(i))
-			else
-				if(j.eq.1) then
-					P(i,j)%phi1=0d0
-				else
-					P(i,j)%phi1=pi*(real(j)-0.5)/real(nImPhi(i))
-				endif
-				if(j.eq.nImPhi(i)) then
-					P(i,j)%phi2=pi
-				else
-					P(i,j)%phi2=pi*(real(j)+0.5)/real(nImPhi(i))
-				endif
-			endif
-			P(i,j)%R1=P(i,1)%R1
-			P(i,j)%R2=P(i,1)%R2
-		
-			incfact=ComputeIncFact(P(i,j)%R)
-			
-			x11=P(i,j)%R1*cos(P(i,j)%phi1)*incfact
-			y11=P(i,j)%R1*sin(P(i,j)%phi1)
-			x12=P(i,j)%R1*cos(P(i,j)%phi2)*incfact
-			y12=P(i,j)%R1*sin(P(i,j)%phi2)
-			x21=P(i,j)%R2*cos(P(i,j)%phi1)*incfact
-			y21=P(i,j)%R2*sin(P(i,j)%phi1)
-			x22=P(i,j)%R2*cos(P(i,j)%phi2)*incfact
-			y22=P(i,j)%R2*sin(P(i,j)%phi2)
-
-			P(i,j)%x=(x11+x12+x21+x22)/4d0	
-			P(i,j)%y=(y11+y12+y21+y22)/4d0	
-
-			r1=sqrt((x22-x21)**2+(y22-y21)**2)
-			r2=sqrt(x22**2+y22**2)
-			r3=sqrt(x21**2+y21**2)
+	allocate(xy(2,npoints_temp))
+	allocate(npoints(ngrids))
+	matri=2*npoints_temp-3
+	allocate(P(ngrids,matri))
+	allocate(t_node(3,matri))
+	allocate(t_neighbor(3,matri))
+	k=0
+	do i=1,ngrids
+		do j=1,npoints_temp
+			ir=ran1(idum)*real(nR)
+			it=ran1(idum)*real(nTheta)
+			rr=ran1(idum)
+			rr=sqrt(R(ir)**2*rr+R(ir+1)**2*(1d0-rr))
+			tt=ran1(idum)
+			tt=Theta(ir,it)*tt+Theta(ir,it+1)*(1d0-tt)
+			tt=acos(tt)
+			ph=ran1(idum)*pi*2d0
+			imx=rr*cos(ph)*sin(tt)
+			imy=rr*sin(ph)*sin(tt)
+			imz=rr*cos(tt)
+			call rotate(imx,imy,imz,0d0,1d0,0d0,-inc*pi/180d0)
+			xy(1,j)=imx
+			xy(2,j)=imy
+		enddo
+		matrix(1,1)=1d0
+		matrix(1,2)=0d0
+		matrix(2,1)=0d0
+		matrix(2,2)=1d0
+		call dtris2_lmap (npoints_temp, xy, matrix, npoints(i), t_node, t_neighbor )
+		do j=1,npoints(i)
+			P(i,j)%x=(xy(1,t_node(1,j))+xy(1,t_node(2,j))+xy(1,t_node(3,j)))/3d0
+			P(i,j)%y=(xy(2,t_node(1,j))+xy(2,t_node(2,j))+xy(2,t_node(3,j)))/3d0
+			P(i,j)%y=abs(P(i,j)%y)
+			r1=sqrt((xy(1,t_node(1,j))-xy(1,t_node(2,j)))**2+(xy(2,t_node(1,j))-xy(2,t_node(2,j)))**2)
+			r2=sqrt((xy(1,t_node(1,j))-xy(1,t_node(3,j)))**2+(xy(2,t_node(1,j))-xy(2,t_node(3,j)))**2)
+			r3=sqrt((xy(1,t_node(3,j))-xy(1,t_node(2,j)))**2+(xy(2,t_node(3,j))-xy(2,t_node(2,j)))**2)
 			s=(r1+r2+r3)/2d0
 			P(i,j)%A=sqrt(s*(s-r1)*(s-r2)*(s-r3))
-			r1=sqrt((x12-x11)**2+(y12-y11)**2)
-			r2=sqrt(x12**2+y12**2)
-			r3=sqrt(x11**2+y11**2)
-			s=(r1+r2+r3)/2d0
-			P(i,j)%A=P(i,j)%A-sqrt(s*(s-r1)*(s-r2)*(s-r3))
-			P(i,j)%A=P(i,j)%A*2d0
-			
-			if(imagecube) then
-				do iint=1,nint
-					r1=sqrt(P(i,j)%R1**2+ran1(idum)*(P(i,j)%R2**2-P(i,j)%R1**2))
-					s=P(i,j)%phi1+ran1(idum)*(P(i,j)%phi2-P(i,j)%phi1)
-					x_im(i,j,iint)=r1*cos(s)*incfact
-					y_im(i,j,iint)=r1*sin(s)
-				enddo
-			endif
 		enddo
-		
+		k=k+npoints(i)
 	enddo
+	ncount=k
+	k=k/ngrids
+
+	call output("Number of image gridpoints: "//trim(int2string(k,'(i7)')))	
 
 	vmax=0d0
-	do i=1,nImR
-	call tellertje(i,nImR)
-	do j=1,nImPhi(i)
+	icount=0
+	do i=1,ngrids
+	do j=1,npoints(i)
+		icount=icount+1
+		call tellertje(icount,ncount)
 		PP => P(i,j)
 		trac%x=P(i,j)%x
 		trac%y=P(i,j)%y
@@ -349,9 +331,10 @@ c-----------------------------------------------------------------------
 
 	subroutine tracepath(trac,PP,onlycount)
 	use GlobalSetup
+	use Constants
 	IMPLICIT NONE
 	type(Tracer) trac
-	real*8 x,y,z,phi,d,vtot,taumin,v1,v2
+	real*8 x,y,z,phi,d,vtot,taumin,v1,v2,v
 	integer inext,jnext,ntrace,i,j,k,ipop,imol,kk,nk
 	logical hitstar,onlycount
 	type(Path) PP
@@ -401,7 +384,7 @@ c-----------------------------------------------------------------------
 		i=abs(v1-v2)*5d0/C(trac%i,trac%j)%line_width(imol)
 		if(i.gt.nk) nk=i
 	enddo
-	i=abs(v1-v2)*3d0/(5d0*vres_profile)+1
+	i=abs(v1-v2)/(vres_profile)+1
 	if(nk.gt.i) nk=i
 
 	x=trac%x
@@ -424,7 +407,9 @@ c-----------------------------------------------------------------------
 		call checkcell(x,y,z,trac%i,trac%j)
 
 		if(.not.onlycount) then
-			PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+			v=sqrt(G*Mstar*Msun*(x*x+y*y)/((x**2+y**2+z**2)**(3d0/2d0)))
+c			PP%v(k)=C(trac%i,trac%j)%v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
+			PP%v(k)=v*(trac%vy*x-trac%vx*y)/sqrt(x**2+y**2)
 
 			do imol=1,nmol
 				if(C(trac%i,trac%j)%N(imol).gt.1d-50
@@ -433,9 +418,7 @@ c-----------------------------------------------------------------------
 					if(vtot.gt.PP%vmax(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmax(imol)=vtot
 					vtot=abs(PP%v(k))-3d0*C(trac%i,trac%j)%line_width(imol)
 					if(vtot.lt.PP%vmin(imol).and.trac%i.gt.0.and.taumin.lt.tau_max) PP%vmin(imol)=vtot
-					do ipop=Mol(imol)%nlevels,1,-1
-						if(C(trac%i,trac%j)%npop(imol,ipop).gt.1d-150) exit
-					enddo
+					ipop=C(trac%i,trac%j)%npopmax(imol)
 					if(ipop.gt.PP%npopmax(imol)) PP%npopmax(imol)=ipop
 				endif
 			enddo
@@ -799,7 +782,7 @@ c-----------------------------------------------------------------------
 	ComputeIncFact=(cos(inc*pi/180d0)+(1d0-cos(inc*pi/180d0))
      &		*((R0-R_sphere(1))/(R_sphere(nR+1)-R_sphere(1)))**2)
 	if(ComputeIncFact.lt.cos(inc*pi/180d0)) ComputeIncFact=cos(inc*pi/180d0)
-	
+		
 	return
 	end
 	
