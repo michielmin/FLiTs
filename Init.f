@@ -95,6 +95,8 @@ c				all arguments are read
 			read(value,*) accuracy
 		case("imagecube","imcube")
 			read(value,*) imagecube
+		case("idum","seed")
+			read(value,*) idum
 		case default
 			call output("Unknown keyword: " // trim(key))
 			stop
@@ -159,6 +161,8 @@ c===============================================================================
 	vresolution=1d5	! given in cm/s
 	vres_profile=1d4
 	tau_max=15d0
+
+	idum=-42
 	
 	accuracy=1
 		

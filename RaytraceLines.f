@@ -18,8 +18,6 @@
 	character*1000 comment
 	character*500 imcubename
 	
-	idum=-42
-	
 	call output("==================================================================")
 	call output("Preparing the profiles")
 
