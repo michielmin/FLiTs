@@ -29,7 +29,7 @@ c stellar parameters
 c wavelength grid and resolution
 	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max,vres_profile
 	integer nvprofile,accuracy	! accuracy can be 1,2,3 (increasing spatial sampling)
-	logical doblend,cylindrical
+	logical doblend,cylindrical,LTE
 	
 c string converting functions
 	character*20 int2string,dbl2string
@@ -39,7 +39,7 @@ c input files
 	character*500 linefile(100)
 	character*500 FLiTsfile
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
-	integer structtype,LTE
+	integer structtype
 
 c the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
 	real*8,allocatable :: R(:),theta(:,:),R_av(:),theta_av(:,:)
