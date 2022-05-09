@@ -13,7 +13,7 @@ LINKER	      = ifort
 # enforce single core compilation with:
 # cl> make multi=false
 ifeq ($(multi),true)
-  MULTICORE = -openmp -fp-model strict
+  MULTICORE = -qopenmp -fp-model strict
 endif
 
 # array boundary check
@@ -24,7 +24,7 @@ endif
 # Platform specific compilation options
 FLAG_ALL      = -O3 -extend-source -traceback -zero -prec-div $(MULTICORE) $(DEBUGGING)
 FLAG_LINUX    = -msse3 -prefetch
-FLAG_MAC      = -mssse3 -opt-prefetch -static-intel
+FLAG_MAC      = -mssse3 -qopt-prefetch -static-intel
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) -diag-disable vec

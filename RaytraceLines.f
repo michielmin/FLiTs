@@ -44,8 +44,6 @@
 	allocate(imol_blend(maxblend))
 	allocate(v_blend(maxblend))
 	allocate(count(nmol))
-	allocate(doit_ib0(maxblend))
-	allocate(doit_ib(maxblend))
 
 	if(imagecube) then
 		allocate(imcube(npix,npix,nvmin:nvmax))
@@ -156,9 +154,11 @@
 		i=ran1(idum)*real(ngrids)+1
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0)
+!$OMP& PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,doit,flux_c,doit_ib,doit_ib0,lam_velo)
 !$OMP& SHARED(i,P,ngrids,npoints,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam,
-!$OMP& iblends)
+!$OMP& iblends,flux2,maxblend,lam,lmin_next,imagecube)
+	allocate(doit_ib0(maxblend))
+	allocate(doit_ib(maxblend))
 !$OMP DO
 		do j=1,npoints(i)
 			if(iblends.eq.1) call tellertje(j,npoints(i))
@@ -183,15 +183,6 @@
 						nb0=Bl%nb0(iv)
 						vmult=-1
 						doit_ib(1:nb)=doit_ib0(1:nb)
-						do ib=1,nb
-							if(doit_ib0(ib)) then
-								if((abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol)
-     &					.and.abs((real(iv)-0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol))
-     &					.or.(abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol)
-     &					.and.abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol))) 
-     &							doit_ib(ib)=.false.
-    						endif
-						enddo
 						gas=.false.
 						do ib=ib0,ib0+nb0-1
 							imol=Bl%L(ib)%imol
@@ -210,15 +201,6 @@
 						if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
 						vmult=1
 						doit_ib(1:nb)=doit_ib0(1:nb)
-						do ib=1,nb
-							if(doit_ib0(ib)) then
-								if((abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol)
-     &					.and.abs((real(iv)-0.5d0)*vresolution-v_blend(ib)).gt.PP%vmax(Bl%L(ib)%imol))
-     &					.or.(abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol)
-     &					.and.abs((real(iv)+0.5d0)*vresolution-v_blend(ib)).lt.PP%vmin(Bl%L(ib)%imol))) 
-     &							doit_ib(ib)=.false.
-    						endif
-						enddo
 						gas=.false.
 						do ib=ib0,ib0+nb0-1
 							imol=Bl%L(ib)%imol
@@ -265,6 +247,8 @@
 			endif
 		enddo
 !$OMP END DO
+	deallocate(doit_ib0)
+	deallocate(doit_ib)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		PP => path2star
