@@ -21,6 +21,22 @@ c===============================================================================
 	character*80 comment,errmessage
 	character*30 errtext
 	logical :: exdat
+	interface
+	  subroutine output(string)
+	  IMPLICIT NONE
+	  character string*(*)
+	  end
+	  character*20 function int2string(i,form)
+	  IMPLICIT NONE
+	  integer i
+	  character,intent(in),optional :: form*(*)
+	  end
+	  character*20 function dbl2string(x,form)
+	  IMPLICIT NONE
+	  real*8 x
+	  character,intent(in),optional :: form*(*)
+	  end
+	end interface
 
 	! Use unformatted exchange file if present
 	inquire(file="ProDiMoForFLiTs.dat",exist=exdat)

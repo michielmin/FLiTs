@@ -1,9 +1,9 @@
 # makefile for mcmax (with comments!)
 # Tested on MacOSX 10.6 with ifort 11.1.080 (20/12/2012)
 # Tested on Fedora Core 8 with ifort 10.1.015 (20/12/2012)
-	
-#GITVERSION = $(echo "#define gitversion = \"$(shell git rev-parse HEAD)\"" > gitversion.h)
-GITVERSION = $(ls -l)
+
+GITVERSION = $(echo "#define gitversion = \"$(shell git rev-parse HEAD)\"" > gitversion.h)
+#GITVERSION = $(ls -l)
 
 # compiler= FC, flags = FFlags
 # linker= LINKER, flags= LDFLAGS, libraries=LIBS
@@ -13,27 +13,28 @@ LINKER	      = ifort
 # enforce single core compilation with:
 # cl> make multi=false
 ifeq ($(multi),true)
-  MULTICORE = -qopenmp -fp-model strict
+  MULTICORE = -qopenmp 
 endif
 
 # array boundary check
 ifeq ($(debug),true)
-  DEBUGGING = -debug -check all -ftrapuv #-O0 #-fpe0
+  DEBUGGING = -traceback -g -fp-stack-check -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces 
+else
+  DEBUGGING = -traceback -g -O3 -fp-model strict
 endif
 
 # Platform specific compilation options
-FLAG_ALL      = -O3 -extend-source -traceback -zero -prec-div $(MULTICORE) $(DEBUGGING)
-FLAG_LINUX    = -msse3 -prefetch
+FLAG_ALL      = -extend-source -zero -prec-div $(MULTICORE) $(DEBUGGING)
+FLAG_LINUX    = 
 FLAG_MAC      = -mssse3 -qopt-prefetch -static-intel
 
 ifeq ($(shell uname),Linux)
-  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX) -diag-disable vec
+  FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX)
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) -fpp Version.f
-  LIBS     = -lm -lcfitsio -I/sw/include -L/home/sw-astro/cfitsio/lib
+  LIBS     = -L/home/pw31/software/cfitsio/lib -lcfitsio 
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) -fpp Version.f
-#  LIBS	  =  -lm -lcfitsio -I/sw/include
   LIBS	  =  -L/usr/lib -L/sw/lib -L/usr/local/lib -lm -lfftw3 -lcfitsio -I/sw/include
 endif
 
@@ -59,7 +60,7 @@ OBJS	      = Modules.o \
 				RaytraceLines.o \
 				writeFITS.o \
 				delaunay_lmap_2d.o
-		
+
 
 # program name and install location
 PROGRAM       = FLiTs		#$(SUFFIX)-$(shell date +%d-%m-%Y)
@@ -68,7 +69,7 @@ DEST	      = ${HOME}/bin
 # make actions 
 all:		version $(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git describe), git build $(shell git rev-parse HEAD)\"" > gitversion.h
-clean:;		rm -f $(OBJS) $(PROGRAM)
+clean:;		rm -f $(OBJS) $(PROGRAM) *_genmod.*
 install:	version $(PROGRAM)
 		mv $(PROGRAM) $(DEST)
 echo:;		@echo $(SUFFIX)

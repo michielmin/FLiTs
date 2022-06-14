@@ -3,6 +3,22 @@
 	use Constants
 	IMPLICIT NONE
 	integer i,j,k,imol,ispec(nmol),maxlevels,ipop
+	interface
+	  subroutine output(string)
+	  IMPLICIT NONE
+	  character string*(*)
+	  end
+	  character*20 function int2string(i,form)
+	  IMPLICIT NONE
+	  integer i
+	  character,intent(in),optional :: form*(*)
+	  end
+	  character*20 function dbl2string(x,form)
+	  IMPLICIT NONE
+	  real*8 x
+	  character,intent(in),optional :: form*(*)
+	  end
+	end interface
 	
 	do i=0,nR
 		C(i,0)%dens=1d-50

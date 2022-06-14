@@ -32,8 +32,8 @@ c wavelength grid and resolution
 	logical doblend,cylindrical,LTE
 	
 c string converting functions
-	character*20 int2string,dbl2string
-	external int2string,dbl2string
+c       character*20 int2string,dbl2string
+c       external int2string,dbl2string
 	
 c input files
 	character*500 linefile(100)

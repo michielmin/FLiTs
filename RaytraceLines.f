@@ -18,6 +18,22 @@
 	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	character*500 imcubename
+	interface
+	  subroutine output(string)
+	  IMPLICIT NONE
+	  character string*(*)
+	  end
+	  character*20 function int2string(i,form)
+	  IMPLICIT NONE
+	  integer i
+	  character,intent(in),optional :: form*(*)
+	  end
+	  character*20 function dbl2string(x,form)
+	  IMPLICIT NONE
+	  real*8 x
+	  character,intent(in),optional :: form*(*)
+	  end
+	end interface
 		
 	call output("==================================================================")
 	call output("Preparing the profiles")
@@ -276,12 +292,12 @@
 
 		flux_l1=0d0
 		flux_l2=0d0
-		do i=1,ngrids
-		do j=1,npoints(i)
-			PP => P(i,j)
-			flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A/real(ngrids)
-			flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
-		enddo
+		do k=1,ngrids
+		  do j=1,npoints(k)
+		    PP => P(k,j)
+		    flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A/real(ngrids)
+		    flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
+		  enddo
 		enddo
 		PP => path2star
 
@@ -334,7 +350,9 @@
 				if(lam_velo.gt.lam_w_max) lam_w_max=lam_velo
 			endif
 		enddo
-		lam_w=lam_w/Bl%F
+		if (Bl%F.ne.0d0) then     ! added PW, June 13, 2022      
+		  lam_w=lam_w/Bl%F
+		endif
 		Bl%F=Bl%F*1d-3/(distance*parsec)**2
 		write(21,*) lam_w,Bl%F,lam_w_min,lam_w_max,trim(comment)
 		lmin_next=max(lmin_next,lam_velo)

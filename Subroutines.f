@@ -9,7 +9,13 @@ c-----------------------------------------------------------------------
 	h=6.6261d-27
 	nu=c/(lam*1d-4)
 	x=h*nu/(k*T)
-	Planck=(2d0*h*nu**3/c**2)/(exp(x)-1d0)
+	if (x.gt.40d0) then
+	  Planck=(2d0*h*nu**3/c**2)*exp(-x)
+	else if (x.lt.0.1) then
+	  Planck=(2d0*h*nu**3/c**2)*(-0.5d0+1.d0/x+x/12.d0-x**3/720.d0)
+	else
+	  Planck=(2d0*h*nu**3/c**2)/(exp(x)-1d0)
+	endif
 c	Planck=Planck*1e23
 
 	return
@@ -110,6 +116,13 @@ c-----------------------------------------------------------------------
 	subroutine tellertje(i,n)
 	IMPLICIT NONE
 	integer i,n,f
+	interface
+	  subroutine outputform(string,form)
+	  IMPLICIT NONE
+	  character string*(*)
+	  character,intent(in),optional :: form*(*)
+	  end
+	end interface
 	
 	if(i.eq.1) call output("....................")
 	f=int(20d0*dble(i)/dble(n))
@@ -133,7 +146,17 @@ c-----------------------------------------------------------------------
 	integer i,n,f
 	integer ii,nn
 	real*8 starttime,stoptime,xx
-	character*20 dbl2string
+	interface
+	  subroutine output(string)
+	  IMPLICIT NONE
+	  character string*(*)
+	  end
+	  character*20 function dbl2string(x,form)
+	  IMPLICIT NONE
+	  real*8 x
+	  character,intent(in),optional :: form*(*)
+	  end
+	end interface
 	
 	if(i.eq.1) then
 		call cpu_time(stoptime)

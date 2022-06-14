@@ -15,6 +15,22 @@
 	integer matri,icount,ncount
 	real*8,allocatable :: xy(:,:)
 	real*8 matrix(2,2)
+	interface
+	  subroutine output(string)
+	  IMPLICIT NONE
+	  character string*(*)
+	  end
+	  character*20 function int2string(i,form)
+	  IMPLICIT NONE
+	  integer i
+	  character,intent(in),optional :: form*(*)
+	  end
+	  character*20 function dbl2string(x,form)
+	  IMPLICIT NONE
+	  real*8 x
+	  character,intent(in),optional :: form*(*)
+	  end
+	end interface
 
 	ilam1=1
 	ilam2=nlam
