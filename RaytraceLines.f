@@ -4,8 +4,9 @@
 	IMPLICIT NONE
 	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nvmin
 	integer nb,ib0,nb0,ib,nltot
+	integer*4 counts,count_rate,count_max
 	integer,allocatable :: imol_blend(:),count(:)
-	real*8,allocatable :: v_blend(:)
+	real*8,allocatable :: v_blend(:),flux4(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
 	real*8 lmin_next,lam_velo
 	real*8,allocatable :: flux(:),flux_cont(:)
@@ -93,7 +94,9 @@
 	
 	call output("==================================================================")
 
-	call cpu_time(starttime)
+	!call cpu_time(starttime)
+	call SYSTEM_CLOCK(counts, count_rate, count_max)
+        starttime = DBLE(counts)/DBLE(count_rate)
 
 	call output("Tracing " // trim(int2string(nlines,'(i5)')) // " lines")
 
@@ -170,16 +173,19 @@
 		i=ran1(idum)*real(ngrids)+1
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
-!$OMP& PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,doit,flux_c,doit_ib,doit_ib0,lam_velo)
-!$OMP& SHARED(i,P,ngrids,npoints,nb,LL,nv,nvmax,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam,
-!$OMP& iblends,flux2,maxblend,lam,lmin_next,imagecube)
-	allocate(doit_ib0(maxblend))
-	allocate(doit_ib(maxblend))
-!$OMP DO
+!$OMP& PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,flux4,doit,flux_c,doit_ib,doit_ib0,lam_velo)
+!$OMP& SHARED(i,P,ngrids,npoints,nb,LL,nv,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam)
+!$OMP& SHARED(iblends,flux2,maxblend,lam,lmin_next,imagecube,nvmin,nvmax)
+		allocate(doit_ib0(maxblend))
+		allocate(doit_ib(maxblend))
+		allocate(flux4(nvmin:nvmax))
+		flux4(:)=0d0
+!$OMP DO SCHEDULE(dynamic,1)
 		do j=1,npoints(i)
 			if(iblends.eq.1) call tellertje(j,npoints(i))
 			PP => P(i,j)
 			call ContContrPath(PP,flux_c)
+!$OMP ATOMIC
 			flux2=flux2+flux_c*PP%A
 			doit=.false.
 			doit_ib0=.false.
@@ -191,80 +197,85 @@
 			enddo
 			if(doit) then
 				do iv=Bl%nvmin,Bl%nvmax
-				lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
-				if(lam_velo.gt.lmin_next) then
-					vmult=1
-					if(nb.gt.1) then
-						ib0=Bl%ib0(iv)
-						nb0=Bl%nb0(iv)
-						vmult=-1
-						doit_ib(1:nb)=doit_ib0(1:nb)
-						gas=.false.
-						do ib=ib0,ib0+nb0-1
-							imol=Bl%L(ib)%imol
-							if(((real(iv)-0.5d0)*vresolution-Bl%v(ib)).lt.-PP%vmin(imol)
-     &							.and.((real(iv)+0.5d0)*vresolution-Bl%v(ib)).gt.-PP%vmax(imol)) then
-	   							gas=.true.
-	   							exit
-	   						endif
-						enddo
-						if(gas) then
-							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),doit_ib(ib0),nb0,ib0)
-						else
-							flux0=flux_c
-						endif
-						flux(iv)=flux(iv)+flux0*PP%A/2d0
-						if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
+					lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
+					if(lam_velo.gt.lmin_next) then
 						vmult=1
-						doit_ib(1:nb)=doit_ib0(1:nb)
-						gas=.false.
-						do ib=ib0,ib0+nb0-1
-							imol=Bl%L(ib)%imol
-							if(((real(iv)-0.5d0)*vresolution-Bl%v(ib)).lt.PP%vmax(imol)
-     &							.and.((real(iv)+0.5d0)*vresolution-Bl%v(ib)).gt.PP%vmin(imol)) then
-	   							gas=.true.
-	   							exit
-	   						endif
-						enddo
-						if(gas) then
-							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),doit_ib(ib0),nb0,ib0)
-						else
+						if(nb.gt.1) then
+							ib0=Bl%ib0(iv)
+							nb0=Bl%nb0(iv)
+							vmult=-1
+							doit_ib(1:nb)=doit_ib0(1:nb)
+							gas=.false.
+							do ib=ib0,ib0+nb0-1
+								imol=Bl%L(ib)%imol
+								if(((real(iv)-0.5d0)*vresolution-Bl%v(ib)).lt.-PP%vmin(imol)
+     &                        .and.((real(iv)+0.5d0)*vresolution-Bl%v(ib)).gt.-PP%vmax(imol)) then
+									gas=.true.
+									exit
+								endif
+							enddo
+							if(gas) then
+								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),doit_ib(ib0),nb0,ib0)
+							else
+								flux0=flux_c
+							endif
+							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
+							vmult=1
+							doit_ib(1:nb)=doit_ib0(1:nb)
+							gas=.false.
+							do ib=ib0,ib0+nb0-1
+								imol=Bl%L(ib)%imol
+								if(((real(iv)-0.5d0)*vresolution-Bl%v(ib)).lt.PP%vmax(imol)
+     &                        .and.((real(iv)+0.5d0)*vresolution-Bl%v(ib)).gt.PP%vmin(imol)) then
+									gas=.true.
+									exit
+								endif
+							enddo
+							if(gas) then
+								call TraceFluxLines(PP,flux0,iv,vmult,imol_blend(ib0),v_blend(ib0),doit_ib(ib0),nb0,ib0)
+							else
+								flux0=flux_c
+							endif
+							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
+
+						else if(((real(iv)+0.5d0)*vresolution.gt.PP%vmax(LL%imol).and.
+     &                           (real(iv)-0.5d0)*vresolution.gt.PP%vmax(LL%imol))
+     &                      .or.((real(iv)+0.5d0)*vresolution.lt.PP%vmin(LL%imol).and.
+     &                           (real(iv)-0.5d0)*vresolution.lt.PP%vmin(LL%imol))) then
 							flux0=flux_c
+							do vmult=-1,1,2
+								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0
+								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
+							enddo
+						else
+							doit_ib=.true.
+							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,doit_ib,nb,1)
+							do vmult=-1,1,2
+								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0
+								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
+							enddo
 						endif
-						flux(iv)=flux(iv)+flux0*PP%A/2d0
-						if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
-					else if(((real(iv)+0.5d0)*vresolution.gt.PP%vmax(LL%imol).and.
-     &						 (real(iv)-0.5d0)*vresolution.gt.PP%vmax(LL%imol))
-     &				.or.((real(iv)+0.5d0)*vresolution.lt.PP%vmin(LL%imol).and.
-     &					 (real(iv)-0.5d0)*vresolution.lt.PP%vmin(LL%imol))) then
-						flux0=flux_c
-						do vmult=-1,1,2
-							flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
-							if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
-						enddo
-					else
-						doit_ib=.true.
-						call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,doit_ib,nb,1)
-						do vmult=-1,1,2
-							flux(iv*vmult)=flux(iv*vmult)+flux0*PP%A/2d0
-							if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
-						enddo
 					endif
-				endif
 				enddo
 			else
 				flux0=flux_c
-				flux(Bl%nvmin:Bl%nvmax)=flux(Bl%nvmin:Bl%nvmax)+flux0*PP%A
+				flux4(Bl%nvmin:Bl%nvmax)=flux4(Bl%nvmin:Bl%nvmax)+flux0*PP%A
 				if(imagecube) then
 					do iv=Bl%nvmin,Bl%nvmax
 						call AddImage(iv,i,j,flux0*PP%A)
 					enddo
 				endif
 			endif
-		enddo
-!$OMP END DO
-	deallocate(doit_ib0)
-	deallocate(doit_ib)
+		enddo		
+!$OMP END DO		
+!$OMP CRITICAL
+		flux(:)=flux(:)+flux4(:)
+!$OMP END CRITICAL
+		deallocate(doit_ib0)
+		deallocate(doit_ib)
+		deallocate(flux4)
 !$OMP FLUSH
 !$OMP END PARALLEL
 		PP => path2star
@@ -293,11 +304,11 @@
 		flux_l1=0d0
 		flux_l2=0d0
 		do k=1,ngrids
-		  do j=1,npoints(k)
-		    PP => P(k,j)
-		    flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A/real(ngrids)
-		    flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
-		  enddo
+			do j=1,npoints(k)
+				PP => P(k,j)
+				flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A/real(ngrids)
+				flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
+			enddo
 		enddo
 		PP => path2star
 
@@ -350,8 +361,8 @@
 				if(lam_velo.gt.lam_w_max) lam_w_max=lam_velo
 			endif
 		enddo
-		if (Bl%F.ne.0d0) then     ! added PW, June 13, 2022      
-		  lam_w=lam_w/Bl%F
+		if(Bl%F.ne.0d0) then     ! added PW, June 13, 2022      
+			lam_w=lam_w/Bl%F
 		endif
 		Bl%F=Bl%F*1d-3/(distance*parsec)**2
 		write(21,*) lam_w,Bl%F,lam_w_min,lam_w_max,trim(comment)
@@ -387,7 +398,9 @@ c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
 	close(unit=20)
 	close(unit=21)
 	
-	call cpu_time(stoptime)
+	!call cpu_time(stoptime)
+	call SYSTEM_CLOCK(counts, count_rate, count_max)
+        stoptime = DBLE(counts)/DBLE(count_rate)
 
 	call output("Time used for the lines:"//trim(dbl2string(stoptime-starttime,'(f8.2)'))
      &			//" s")
