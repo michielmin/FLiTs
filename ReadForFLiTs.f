@@ -145,7 +145,7 @@ c===============================================================================
 	   if(Theta(i,2).gt.thetamax) thetamax=Theta(i,2)
 	enddo
 	Theta(1:nR-1,1)=(0.9*thetamax+0.1*Theta(1:nR-1,0))
-	theta_av(i:nR-1,1)=acos((Theta(1:nR-1,1)+Theta(1:nR-1,2))/2d0)
+	theta_av(1:nR-1,1)=acos((Theta(1:nR-1,1)+Theta(1:nR-1,2))/2d0)
 
 	Theta(0,0:nTheta+1)=Theta(1,0:nTheta+1)
 	theta_av(0,0:nTheta)=theta_av(1,0:nTheta)
