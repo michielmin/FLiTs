@@ -180,9 +180,11 @@
 		allocate(doit_ib0(maxblend))
 		allocate(doit_ib(maxblend))
 		allocate(flux4(nvmin:nvmax))
-#ifdef _OPENMP
-	        idum = -42-OMP_GET_THREAD_NUM()     ! setting the seed 
+
+#ifdef USE_OPENMP
+		idum = -42-OMP_GET_THREAD_NUM()     ! setting the seed 
 #endif
+
 		flux4(:)=0d0
 !$OMP DO SCHEDULE(dynamic,1)
 		do j=1,npoints(i)

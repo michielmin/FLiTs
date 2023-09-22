@@ -1,41 +1,46 @@
 # makefile for mcmax (with comments!)
 # Tested on MacOSX 10.6 with ifort 11.1.080 (20/12/2012)
-# Tested on Fedora Core 8 with ifort 10.1.015 (20/12/2012)
 
 GITVERSION = $(echo "#define gitversion = \"$(shell git rev-parse HEAD)\"" > gitversion.h)
 #GITVERSION = $(ls -l)
 
 # compiler= FC, flags = FFlags
 # linker= LINKER, flags= LDFLAGS, libraries=LIBS
-FC	      = ifort
-LINKER	      = ifort
+### FC     = ifort
+### LINKER = ifort
+FC     = gfortran
+LINKER = gfortran
 
 # enforce single core compilation with:
 # cl> make multi=false
 ifeq ($(multi),true)
-  MULTICORE = -qopenmp 
+  ### MULTICORE = -qopenmp 
+  MULTICORE = -fopenmp -DUSE_OPENMP
 endif
 
+$(info $$debug is [${debug}])
 # array boundary check
 ifeq ($(debug),true)
-  DEBUGGING = -traceback -g -fp-stack-check -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces 
+  ### FLAGS = -traceback -g -fp-stack-check -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces -fpp
+  FLAGS = -fbacktrace -g -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -fcheck=all -cpp
 else
-  DEBUGGING = -traceback -g -O3 -fp-model strict
+  ### FLAGS = -O3 -xHOST -msse4.2 -fp-model strict -extend-source -zero -prec-div -fpp 
+  FLAGS = -O3 -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -march=native -cpp
 endif
 
 # Platform specific compilation options
-FLAG_ALL      = -extend-source -zero -prec-div $(MULTICORE) $(DEBUGGING)
+FLAG_ALL      = $(MULTICORE) $(FLAGS)
 FLAG_LINUX    = 
-FLAG_MAC      = -mssse3 -qopt-prefetch -static-intel
+FLAG_MAC      = 
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX)
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) -fpp Version.f
-  LIBS     = -L/home/pw31/software/cfitsio/lib -lcfitsio 
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) Version.f
+  LIBS     = -L/home/pwoitke/software/cfitsio/lib -lcfitsio
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) -fpp Version.f
-  LIBS	  =  -L/usr/lib -L/sw/lib -L/usr/local/lib -lm -lfftw3 -lcfitsio -I/sw/include
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) Version.f
+  LIBS	  = -L/usr/lib -L/sw/lib -L/usr/local/lib -lm -lfftw3 -lcfitsio -I/sw/include
 endif
 
 # use a suffix in file name (i.e. static, test etc.)
@@ -46,21 +51,20 @@ endif
 
 # files to make
 OBJS	      = Modules.o \
-				Main.o \
-				InputOutput.o \
-				Subroutines.o \
-				Init.o \
-				ReadLambdaFiles.o \
-				ReadForFLiTs.o \
-				ComputeLTE.o \
-				PrepareStructure.o \
-				SetupPaths.o \
-				SortLines.o \
-				RaytraceContinuum.o \
-				RaytraceLines.o \
-				writeFITS.o \
-				delaunay_lmap_2d.o
-
+		Main.o \
+		InputOutput.o \
+		Subroutines.o \
+		Init.o \
+		ReadLambdaFiles.o \
+		ReadForFLiTs.o \
+		ComputeLTE.o \
+		PrepareStructure.o \
+		SetupPaths.o \
+		SortLines.o \
+		RaytraceContinuum.o \
+		RaytraceLines.o \
+		writeFITS.o \
+		delaunay_lmap_2d.o
 
 # program name and install location
 PROGRAM       = FLiTs		#$(SUFFIX)-$(shell date +%d-%m-%Y)
