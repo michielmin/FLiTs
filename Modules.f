@@ -68,7 +68,7 @@ c random number generator
 	real*8 ran1
 	external ran1
 	integer idum
-
+!$omp threadprivate(idum)
 c line profile
 	real*8,allocatable :: profile(:)
 	logical,allocatable :: profile_nz(:)

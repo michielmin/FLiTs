@@ -5,6 +5,7 @@
 	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nvmin
 	integer nb,ib0,nb0,ib,nltot
 	integer*4 counts,count_rate,count_max
+	integer,external :: OMP_GET_THREAD_NUM
 	integer,allocatable :: imol_blend(:),count(:)
 	real*8,allocatable :: v_blend(:),flux4(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
@@ -179,6 +180,9 @@
 		allocate(doit_ib0(maxblend))
 		allocate(doit_ib(maxblend))
 		allocate(flux4(nvmin:nvmax))
+#ifdef _OPENMP
+	        idum = -42-OMP_GET_THREAD_NUM()     ! setting the seed 
+#endif
 		flux4(:)=0d0
 !$OMP DO SCHEDULE(dynamic,1)
 		do j=1,npoints(i)
