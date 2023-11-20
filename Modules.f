@@ -16,7 +16,7 @@ c	parameter(sigma=5.6704d-5)
 	parameter(mp=1.67262178d-24)  	  ! proton mass
 	parameter(G=6.6725985d-8)         ! in cm^3/g/s^2
 	parameter(hplanck=6.62607554d-27) ! cm^2 g/s
-	
+
 	end module Constants
 
 c=========================================================================================
@@ -30,11 +30,11 @@ c wavelength grid and resolution
 	real*8 lmin,lmax,rlines,vresolution,vres_mult,tau_max,vres_profile
 	integer nvprofile,accuracy	! accuracy can be 1,2,3 (increasing spatial sampling)
 	logical doblend,cylindrical,LTE
-	
+
 c string converting functions
 c       character*20 int2string,dbl2string
 c       external int2string,dbl2string
-	
+
 c input files
 	character*500 linefile(100)
 	character*500 FLiTsfile
@@ -47,22 +47,22 @@ c the grid setup. Note that we store cos(theta) in theta, but real theta in thet
 	integer nR,nTheta,nlam,ilam1,ilam2,nmol,nlines,nblends,nspec
 	real*8 Rin,Rout,inc,Fstar_l
 	real*8,allocatable :: lam_cont(:),Fstar(:)
-	
+
 c the image grid
 	integer nImR,ngrids,npoints_temp
 	integer,allocatable :: nImPhi(:),npoints(:)
 	real*8 vmax
-	
+
 c the image cube
 	real*8,allocatable :: x_im(:,:,:),y_im(:,:,:)
 	real*8,allocatable :: imcube(:,:,:)
 	integer nint,npix,nvim
 	logical imagecube
-	
+
 c store all the blackbodies
 	integer MAXT
 	parameter(MAXT=5000)
-	real*8,allocatable :: BB(:,:)	! dimensions nlam,MAXT
+c	real*8,allocatable :: BB(:,:)	! dimensions nlam,MAXT
 
 c random number generator
 	real*8 ran1
@@ -79,7 +79,7 @@ c line profile
 		integer jup,jlow,imol
 		real*8 Aul,Blu,Bul,freq,lam,Eup
 	end type Line
-	
+
 	type Blend
 		type(Line),pointer :: L(:)
 		real*8,allocatable :: v(:)
@@ -99,7 +99,7 @@ c total mass of the molecule
 		character*10 name
 		logical LTE
 	end type Molecule
-		
+
 	type poplevels
 		real*8,allocatable :: N(:)
 	end type poplevels
@@ -125,7 +125,7 @@ c	Opacities and local radiation field. Opacities are given in units of tau/cm.
 	end type Cell
 
 	type(Cell),allocatable,target :: C(:,:)	! dimension nR,nTheta
-	
+
 	type Path
 c minimum and maximum velocity encountered in this path
 		real*8,allocatable :: vmin(:),vmax(:)
@@ -138,29 +138,29 @@ c surface area of this path in the image and its coordinates
 
 		real*8,allocatable :: v(:),d(:),v1(:),v2(:)
 		integer,allocatable :: i(:),j(:)
-		
+
 		real*8,allocatable :: flux_cont(:) !continuum contribution at each wavelength
 		real*8,allocatable :: cont_contr(:) !continuum contribution at each path element
 		real*8,allocatable :: exptau_dust(:) !dust optical depth at each path element
 		real*8,allocatable :: S_dust(:) !dust source function at each path element
 	end type Path
-	
+
 	type Tracer
 		real*8 x,y,z,vx,vy,vz
 		integer edgeNr,i,j
 		logical onEdge
 	end type Tracer
 
-	
+
 c==============================
-	
+
 	type(Path),allocatable,target :: P(:,:)
 	type(Path),target :: path2star
 	type(Molecule),allocatable :: Mol(:)
 	type(Line),allocatable :: Lines(:)
 	type(Blend),target :: Blends
-	
+
 	end module GlobalSetup
 
 c=========================================================================================
-	
+

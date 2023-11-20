@@ -5,3 +5,6 @@
 _*
 gitversion.h
 FLiTs*
+/.cproject
+/.project
+/.settings/
