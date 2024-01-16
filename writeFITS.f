@@ -1,4 +1,6 @@
 	subroutine writefitsfile(filename,im,nlam,n)
+	use GlobalSetup, only: distance
+	use Constants, only: parsec
 	IMPLICIT NONE
 	character*500 filename
 	integer n,nlam
@@ -43,7 +45,7 @@ C     write the array to the FITS file
       group=1
       fpixel=1
       nelements=naxes(1)*naxes(2)*naxes(3)
-      call ftpprd(unit,group,fpixel,nelements,im,status)
+      call ftpprd(unit,group,fpixel,nelements,im*1e23/(distance*parsec)**2,status)
 
 C     close the file and free the unit number
       call ftclos(unit, status)
