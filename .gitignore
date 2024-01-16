@@ -8,3 +8,5 @@ FLiTs*
 /.cproject
 /.project
 /.settings/
+Makefile.local
+.vscode/settings.json
