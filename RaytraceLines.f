@@ -64,6 +64,8 @@
 	allocate(count(nmol))
 
 	if(imagecube) then
+		npix=100
+		write(*,*) npix,npix,nvmin,nvmax
 		allocate(imcube(npix,npix,nvmin:nvmax))
 	endif
 
@@ -226,7 +228,7 @@
 								flux0=flux_c
 							endif
 							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
-							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP)
 							vmult=1
 							doit_ib(1:nb)=doit_ib0(1:nb)
 							gas=.false.
@@ -244,7 +246,7 @@
 								flux0=flux_c
 							endif
 							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
-							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0)
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP)
 
 						else if(((real(iv)+0.5d0)*vresolution.gt.PP%vmax(LL%imol).and.
      &                           (real(iv)-0.5d0)*vresolution.gt.PP%vmax(LL%imol))
@@ -253,14 +255,14 @@
 							flux0=flux_c
 							do vmult=-1,1,2
 								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0
-								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
+								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0,PP)
 							enddo
 						else
 							doit_ib=.true.
 							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,doit_ib,nb,1)
 							do vmult=-1,1,2
 								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0
-								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0)
+								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0,PP)
 							enddo
 						endif
 					endif
@@ -270,7 +272,7 @@
 				flux4(Bl%nvmin:Bl%nvmax)=flux4(Bl%nvmin:Bl%nvmax)+flux0*PP%A
 				if(imagecube) then
 					do iv=Bl%nvmin,Bl%nvmax
-						call AddImage(iv,i,j,flux0*PP%A)
+						call AddImage(iv,i,j,flux0*PP%A,PP)
 					enddo
 				endif
 			endif
@@ -771,22 +773,43 @@ c Using the source function for now.
 
 	
 	
-	subroutine AddImage(iv,i,j,flux0)
+	subroutine AddImage(iv,i,j,flux0,p0)
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	real*8 flux0,x,y
-	integer i,j,iint,ix,iy,iv
+	type(Path), intent(in) :: p0
+	integer i,j,iint,ix,iy,iv,iym
+	real*8 :: delpix
 
-	do iint=1,nint
-		x=(real(npix)*(x_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
-		ix=x
-		y=(real(npix)*(y_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
-		iy=y
-		if(ix.gt.0.and.ix.le.npix.and.iy.gt.0.and.iy.le.npix) then
-			imcube(ix,iy,iv)=imcube(ix,iy,iv)+flux0/real(nint)
-		endif
-	enddo
+	
+
+
+	delpix=2d0*Rout*AU/real(npix)
+	ix=(p0%x+Rout*AU)/delpix
+	iy=(p0%y+Rout*AU)/delpix
+	iym=npix-iy
+
+	!if (iv==0) then 	
+	!	write(*,*) "AddImage",iv,i,j,flux0,nint,p0%x/AU,p0%y/AU, Rout,delpix/AU,ix,iy,iym
+	!endif
+
+	if(ix.gt.0.and.ix.le.npix.and.iy.gt.0.and.iy.le.npix) then
+		imcube(ix,iy,iv)=imcube(ix,iy,iv)+flux0
+		if (iym.ne.iy) imcube(ix,iym,iv)=imcube(ix,iym,iv)+flux0 ! mirror image
+	endif
+
+
+	! do iint=1,nint
+	! 	x=(real(npix)*(x_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
+	! 	ix=x
+	! 	y=(real(npix)*(y_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
+	! 	iy=y
+	! 	if(ix.gt.0.and.ix.le.npix.and.iy.gt.0.and.iy.le.npix) then
+	! 		write(*,*) flux0/real(nint)
+	! 		imcube(ix,iy,iv)=imcube(ix,iy,iv)+flux0/real(nint)
+	! 	endif
+	! enddo
 
 	return
 	end
