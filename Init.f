@@ -101,6 +101,8 @@ c				all arguments are read
 			read(value,*) accuracy
 		case("imagecube","imcube")
 			read(value,*) imagecube
+		case("imagecube_npix","imcube_npix")
+			read(value,*) npix
 		case("idum","seed")
 			read(value,*) idum
 		case("ngrids")  ! number of grids to use for the line RT, Default is 5
@@ -176,7 +178,11 @@ c===============================================================================
 	LTE=.false.	! default is non-LTE
 	cylindrical=.true.
 	doblend=.true.
+	
+	! imagecube false by default
 	imagecube=.false.
+	npix=0 ! FIXME: not check yet for the case of imagecube=true
+	
 	ngrids=5
 	return
 	end
