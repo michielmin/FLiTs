@@ -20,6 +20,8 @@
 	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	character*500 imcubename
+	character*40 callerstr
+	real*8 :: delpix
 	interface
 	  subroutine output(string)
 	  IMPLICIT NONE
@@ -55,6 +57,7 @@
 	nv=int(vmax*1.1/vresolution)+1
 	nvprofile=int(vmax*vres_mult/vresolution)
 
+	! this should always give nvmin=-nv and nmvmax=nv
 	call DetermineBlends(nv,maxblend,nvmin,nvmax)
 
 	allocate(flux(nvmin:nvmax))
@@ -64,9 +67,14 @@
 	allocate(count(nmol))
 
 	if(imagecube) then
-		npix=100
-		write(*,*) npix,npix,nvmin,nvmax
 		allocate(imcube(npix,npix,nvmin:nvmax))
+		allocate(im_coord(npix))
+		delpix=2.d0*Rout*AU/real(npix)	
+		! create the center coordinates for the pixels		
+		do i=1,npix ! center coordinates of pixels in cm
+			im_coord(i)=delpix/2d0+delpix*(i-1)-Rout*AU
+		enddo	
+		!write(*,*) im_coord/AU
 	endif
 
 	lam=lmin
@@ -117,7 +125,7 @@
 	Bl => Blends
 	do iblends=1,nblends
 		if(imagecube) then
-			imcube=0d0
+			imcube=0d0 ! FIXME: in the end I want only one cube, not for each blend, I think that shoulbe be moved outside of the blends loop (like flux)
 		endif
 		flux=0d0
 		
@@ -141,6 +149,7 @@
 			if(ilam.eq.nlam) exit
 		enddo
 
+		! CHR: What is this doing ?
 		if(ilam.gt.ilam1) then
 			do k=ilam1+1,ilam
 				if(lam_cont(k).gt.lcmin.and.lam_cont(k).lt.Bl%lmin) then
@@ -174,6 +183,11 @@
 		flux2=0d0
 
 		i=ran1(idum)*real(ngrids)+1
+
+
+		if (imagecube) call map_pixels_to_path(i,npoints(i))
+
+		! FIXME: check parallel implementation for imagecube
 !$OMP PARALLEL IF(.true.)
 !$OMP& DEFAULT(NONE)
 !$OMP& PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,flux4,doit,flux_c,doit_ib,doit_ib0,lam_velo)
@@ -192,6 +206,9 @@
 		do j=1,npoints(i)
 			if(iblends.eq.1) call tellertje(j,npoints(i))
 			PP => P(i,j)
+
+			!write(88,*) i,j,PP%x/AU,PP%y/AU
+
 			call ContContrPath(PP,flux_c)
 !$OMP ATOMIC
 			flux2=flux2+flux_c*PP%A
@@ -204,6 +221,8 @@
 				endif
 			enddo
 			if(doit) then
+				!write(*,*) "doit",i,j
+				!write(*,*) Bl%nvmin,Bl%nvmax
 				do iv=Bl%nvmin,Bl%nvmax
 					lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
 					if(lam_velo.gt.lmin_next) then
@@ -228,7 +247,7 @@
 								flux0=flux_c
 							endif
 							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
-							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP)
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP,vmult,"call nb 1")
 							vmult=1
 							doit_ib(1:nb)=doit_ib0(1:nb)
 							gas=.false.
@@ -246,7 +265,8 @@
 								flux0=flux_c
 							endif
 							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
-							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP)
+							! I think here  times vmult is required							
+							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP,vmult,"call nb 2")
 
 						else if(((real(iv)+0.5d0)*vresolution.gt.PP%vmax(LL%imol).and.
      &                           (real(iv)-0.5d0)*vresolution.gt.PP%vmax(LL%imol))
@@ -254,16 +274,24 @@
      &                           (real(iv)-0.5d0)*vresolution.lt.PP%vmin(LL%imol))) then
 							flux0=flux_c
 							do vmult=-1,1,2
-								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0
-								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0,PP)
-							enddo
+								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0								
+								! Seems to be required here and is done twice
+								! FIXME: callerstring is only for debugging, remove it 
+								write(callerstr,"(A,' ' ,i5,' ',i2)") "call nb else if", iv,vmult	
+								if(imagecube) then
+									call AddImage(iv*vmult,i,j,flux0*PP%A/2d0,PP,vmult,callerstr)
+								endif
+							enddo							
 						else
 							doit_ib=.true.
 							call TraceFluxLines(PP,flux0,iv,vmult,imol_blend,v_blend,doit_ib,nb,1)
 							do vmult=-1,1,2
-								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0
-								if(imagecube) call AddImage(iv*vmult,i,j,flux0*PP%A/2d0,PP)
-							enddo
+								flux4(iv*vmult)=flux4(iv*vmult)+flux0*PP%A/2d0								
+								write(callerstr,"(A,' ' ,i5,' ',i2)") "call nb else", iv,vmult																
+								if(imagecube) then 
+									call AddImage(iv*vmult,i,j,flux0*PP%A/2d0,PP,vmult,callerstr)
+								endif
+							enddo							
 						endif
 					endif
 				enddo
@@ -272,7 +300,7 @@
 				flux4(Bl%nvmin:Bl%nvmax)=flux4(Bl%nvmin:Bl%nvmax)+flux0*PP%A
 				if(imagecube) then
 					do iv=Bl%nvmin,Bl%nvmax
-						call AddImage(iv,i,j,flux0*PP%A,PP)
+						call AddImage(iv,i,j,flux0*PP%A,PP,1,"call not doit")
 					enddo
 				endif
 			endif
@@ -287,14 +315,21 @@
 !$OMP FLUSH
 !$OMP END PARALLEL
 		PP => path2star
+		! FIXME: whatever is done here is not considered for the Images
+		! I guess it is for the star ... need to check what are the coordinates, then one might just need to calls AddImage again
+		if (.not.allocated(PP%im_ixy)) allocate(PP%im_ixy(2,1))
 		do iv=Bl%nvmin,Bl%nvmax
-			if(nb.gt.1) then
+			if(nb.gt.1) then  ! FIXME: this if seems to be unnecessary
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
-				flux(iv)=flux(iv)+flux0*PP%A
+				flux(iv)=flux(iv)+flux0*PP%A				
 			else
 				call Trace2StarLines(PP,flux0,iv,imol_blend,v_blend,nb)
 				flux(iv)=flux(iv)+flux0*PP%A
 			endif
+			! FIXME: workaround assume that the star is at the center of the grid
+			PP%im_ixy(:,1)=int(npix/2)+1
+			PP%im_npix=1
+			if(imagecube) call AddImage(iv,0,0,flux0*PP%A,PP,1,"trace star")
 		enddo
 		flux2=flux2+flux0*PP%A
 
@@ -378,15 +413,22 @@
 		
 		endif
 
-		if(imagecube) then
-			imcubename="imcube" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
-			call writefitsfile(imcubename,imcube,nvmax-nvmin+1,npix)
-		endif
-
 		if(iblends.lt.nblends) Bl => Bl%next
 
 		call tellertje_time(iblends,nblends,nl,nltot,starttime)
 c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
+
+		
+		if(imagecube) then
+			imcubename="imcube" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
+			write(*,*) "Writing image cube to file ",trim(imcubename)
+			!write(*,*) imcube(12,60,-1),imcube(12,42,-1),imcube(12,60,1),imcube(12,42,1)
+			call writefitsfile(imcubename,imcube*1e23/(distance*parsec)**2,nvmax-nvmin+1,npix)
+			!imcubename="imcube_hit" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
+			!call writefitsfile(imcubename,imcube_hit,1,npix)
+		endif
+
+
 	enddo
 
 	ilam=ilam+1
@@ -772,45 +814,135 @@ c Using the source function for now.
 	end
 
 	
+
+	! ! create a regular pixel coordinate system in the image (fits) plane 
+	! ! with the center pixel being (0,0) x is the horizontal axis and y the vertical one
+	! ! the x,y coordinates correspond to the center of the grid
+	! subroutine Imcoords(npix,Rout,im_coord)
+	! use GlobalSetup
+	! use Constants
+	! integer, intent(in) :: npix
+	! real*8, intent(in) :: Rout
+	! real*8, intent(inout) :: im_coord(npix,npix) ! should be already allocated
+	! real*8 :: delpix
+
+	! delpix=2.d0*Rout*AU/real(npix)	
+	! ! create the coordinates for the pixels
+	! do i=1,npix ! center coordinates of pixels in cm
+	! 	im_coord(:,:)=delpix/2d0+delpix*(i-1)-Rout*AU
+	! enddo	
+
+	! end subroutine im_coords
+
+
+	subroutine map_pixels_to_path(igrid,npath)
+	use GlobalSetup
+	use Constants
+	implicit none
+	integer, intent(in) :: igrid,npath
+	real*8 :: px(npath),py(npath),dist(npath),im_x,im_y
+	real*8 :: maxx,maxy,maxr,maxrxp,maxrxm
+	type(Path),pointer :: p0
+
+	integer :: i,j,ipath,iminpath,maxnpixpath
+
+
+	! the paths do not sample the whole image (just the disk)
+	! In theory this could be different (e.g. if not a disk)
+	!maxr=maxval(abs(P(igrid,:)%y)) ! this should always be the max r, major axis
+	!write(*,*) maxr/AU
+	maxr=R(nr)
+	!maxrxp=maxval(P(igrid,:)%x)
+	!maxrxm=minval(P(igrid,:)%x) 
+	!maxr=max(maxrxp,maxrxm)
+
+	P(igrid,:)%im_npix=0
+	px(:)=P(igrid,:)%x
+	py(:)=P(igrid,:)%y
+
+	maxnpixpath=npix*int(npix/10)
+	do ipath=1,npath
+		! FIXME: think about how large that can be
+		allocate(P(igrid,ipath)%im_ixy(2,maxnpixpath))
+	enddo
+
+	do i=1,npix
+		im_x=im_coord(i)
+		! only care about the positive half
+		do j=int(npix/2+1),npix
+			im_y=im_coord(j)
+			! the Path grid does not cover a circel (due to inclination)
+			! along the x is the minor axis, which has differen Rmax depending on sign
+			if (sqrt((im_x)**2+(im_y)**2)>maxr) cycle
+			!if ((im_x<0).and.im_x<maxrxm) cycle FIXME: doesn't really work
+			!if ((im_x>0).and.im_x>maxrxp) cycle
+			dist=sqrt((px-im_x)**2+(py-im_y)**2)
+			! don't need squareroot
+			iminpath=minloc(dist,dim=1)
+!			if (i==int(npix/2)) then 
+!				write(*,*) "out: ",i,j,im_x/AU,im_y/AU,dist(iminpath)/AU,iminpath,P(igrid,iminpath)%x/AU,P(igrid,iminpath)%y/AU
+!			endif
+       			
+			P(igrid,iminpath)%im_npix=P(igrid,iminpath)%im_npix+1
+
+			if (P(igrid,iminpath)%im_npix>maxnpixpath) then 
+				write(*,*)'Problem found to many pixels for path'
+				write(*,*) P(igrid,iminpath)%x/AU,P(igrid,iminpath)%y/AU,P(igrid,iminpath)%im_npix
+				stop
+			endif
+			P(igrid,iminpath)%im_ixy(1,P(igrid,iminpath)%im_npix)=i
+			P(igrid,iminpath)%im_ixy(2,P(igrid,iminpath)%im_npix)=j
+		enddo
+	enddo
+
+	! now there will be paths with no pixel assigned as in case for Paths being
+	! close to each other the pixel is only assigned to the closest one
+	! so simply go through the paths without pixels, and assign the closest one. 
+
+	do ipath=1,npath
+		p0 => P(igrid,ipath)
+		if (p0%im_npix>0) cycle
+		! find the closest pixel
+		p0%im_npix=1
+		p0%im_ixy(1,1)=minloc(abs(im_coord-p0%x),dim=1) 
+		p0%im_ixy(2,1)=minloc(abs(im_coord-p0%y),dim=1)
+	enddo 
+
+	end subroutine map_pixels_to_path
 	
-	subroutine AddImage(iv,i,j,flux0,p0)
+	subroutine AddImage(iv,i,j,flux0,p0,vmult,caller) ! FIXME: don't need i, j anymore 
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
 	real*8 flux0,x,y
+	integer, intent(in) :: iv
+	integer, intent(in) :: vmult
 	type(Path), intent(in) :: p0
-	integer i,j,iint,ix,iy,iv,iym
-	real*8 :: delpix
+	character(len=*), intent(in) :: caller	! just for logging, can be removed
+	integer i,j,iint,ix,iy,iym,ipix
+	real*8 :: delpix,fluxperpix
+ 
+	! simply distribute the flux for the path over all pixels equally
+	fluxperpix=flux0/p0%im_npix
 
-	
+	do ipix=1,p0%im_npix
 
+		ix=p0%im_ixy(1,ipix)
+		iy=p0%im_ixy(2,ipix)
 
-	delpix=2d0*Rout*AU/real(npix)
-	ix=(p0%x+Rout*AU)/delpix
-	iy=(p0%y+Rout*AU)/delpix
-	iym=npix-iy
+		! assume here x and y = 0 at the center of the image 
+		if (vmult < 0) then
+			iy=npix-(iy-1) ! for mirroring the whole thing
+		endif
 
-	!if (iv==0) then 	
-	!	write(*,*) "AddImage",iv,i,j,flux0,nint,p0%x/AU,p0%y/AU, Rout,delpix/AU,ix,iy,iym
-	!endif
-
-	if(ix.gt.0.and.ix.le.npix.and.iy.gt.0.and.iy.le.npix) then
-		imcube(ix,iy,iv)=imcube(ix,iy,iv)+flux0
-		if (iym.ne.iy) imcube(ix,iym,iv)=imcube(ix,iym,iv)+flux0 ! mirror image
-	endif
-
-
-	! do iint=1,nint
-	! 	x=(real(npix)*(x_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
-	! 	ix=x
-	! 	y=(real(npix)*(y_im(iint,i,j)+Rout)/(2d0*Rout))+1d0
-	! 	iy=y
-	! 	if(ix.gt.0.and.ix.le.npix.and.iy.gt.0.and.iy.le.npix) then
-	! 		write(*,*) flux0/real(nint)
-	! 		imcube(ix,iy,iv)=imcube(ix,iy,iv)+flux0/real(nint)
-	! 	endif
-	! enddo
-
+		! if (iv==1.or.iv==-1) then 	
+		! 	write(*,*) "Caller: ",trim(caller)
+		! 	write(*,*) "AddImage",iv,i,j,flux0,p0%x/AU,p0%y/AU,ix,iy
+		! 	!write(*,*) delpix/AU,2.d0*Rout,delpix*real(npix)/AU
+		! endif	
+		
+		imcube(iy,ix,iv)=imcube(iy,ix,iv)+fluxperpix ! P%y (Vertical) seems to be along the major axis - make it x
+	enddo
 	return
 	end
 		
