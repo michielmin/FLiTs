@@ -101,6 +101,8 @@ c				all arguments are read
 			read(value,*) accuracy
 		case("imagecube","imcube")
 			read(value,*) imagecube
+		case("imagecube_npix","imcube_npix")
+			read(value,*) npix
 		case("idum","seed")
 			read(value,*) idum
 		case default
@@ -180,7 +182,9 @@ c===============================================================================
 	
 	doblend=.true.
 	
+	! imagecube false by default
 	imagecube=.false.
+	npix=0 ! FIXME: not check yet for the case of imagecube=true
 	
 	return
 	end
