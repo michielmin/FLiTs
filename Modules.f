@@ -54,7 +54,7 @@ c the image grid
 	real*8 vmax
 
 c the image cube
-	real*8,allocatable :: x_im(:,:,:),y_im(:,:,:)
+	real*8,allocatable :: x_im(:,:,:),y_im(:,:,:),im_coord(:)
 	real*8,allocatable :: imcube(:,:,:)
 	integer nint,npix,nvim
 	logical imagecube
@@ -138,7 +138,9 @@ c surface area of this path in the image and its coordinates
 
 		real*8,allocatable :: v(:),d(:),v1(:),v2(:)
 		integer,allocatable :: i(:),j(:)
-
+		integer*2,allocatable :: im_ixy(:,:) ! first axis =2 (x,y), second axis can theoretically go to npix*2 (all pixels), 
+										   ! but is likely much smaller FIXME don't know to estimate that, take npix for now
+		integer*2 :: im_npix    ! nubmer of pixels associated to that path
 		real*8,allocatable :: flux_cont(:) !continuum contribution at each wavelength
 		real*8,allocatable :: cont_contr(:) !continuum contribution at each path element
 		real*8,allocatable :: exptau_dust(:) !dust optical depth at each path element
