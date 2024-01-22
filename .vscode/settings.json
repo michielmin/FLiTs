@@ -1,9 +1,6 @@
 {
-"editor.tabSize": 3,
-"editor.detectIndentation": false,
-"editor.insertSpaces": false,
-"files.exclude": {
-	"**/*.mod": true,
-	"**/*.o": true
-}
+    "files.exclude": {
+        "*.mod": true,
+        "*.o": true
+    }
 }
