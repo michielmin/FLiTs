@@ -9,7 +9,7 @@
 	integer,allocatable :: imol_blend(:),count(:)
 	real*8,allocatable :: v_blend(:),flux4(:)
 	real*8 lam,T,Planck,wl1,wl2,v,flux0,starttime,stoptime,tot,fact,lcmin
-	real*8 lmin_next,lam_velo
+	real*8 lmin_next,lam_velo,lam_velo_imcube
 	real*8,allocatable :: flux(:),flux_cont(:)
 	type(Path),pointer :: PP
 	type(Line) :: LL
@@ -265,7 +265,8 @@
 								flux0=flux_c
 							endif
 							flux4(iv)=flux4(iv)+flux0*PP%A/2d0
-							! I think here  times vmult is required							
+							! FIXME: I think here  times vmult is required, but then it should also be in the line above ? or maybe not
+							! or maybe in that case vmult also needs to be ignored for the imagecube
 							if(imagecube) call AddImage(iv,i,j,flux0*PP%A/2d0,PP,vmult,"call nb 2")
 
 						else if(((real(iv)+0.5d0)*vresolution.gt.PP%vmax(LL%imol).and.
@@ -393,6 +394,7 @@
 		do iv=Bl%nvmin,Bl%nvmax
 			lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
 			if(lam_velo.gt.lmin_next) then
+
 				write(20,*) lam_velo,
      &					flux(iv)*1e23/(distance*parsec)**2,
      &					real(iv)*vresolution/1d5,
@@ -409,9 +411,32 @@
 		endif
 		Bl%F=Bl%F*1d-3/(distance*parsec)**2
 		write(21,*) lam_w,Bl%F,lam_w_min,lam_w_max,trim(comment)
+
+		! has to be here, (i.e. before lmin_next is set, and beofre BL%next is done)
+		if(imagecube) then
+			! do it similar to the flux output ... find the index where we actuall start (have data)
+			do iv=Bl%nvmin,Bl%nvmax
+				lam_velo_imcube=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
+				if(lam_velo_imcube.gt.lmin_next) exit
+			enddo
+			!write(*,*) iv,Bl%nvmax,nvmin,nvmax,lmin_next,lam_velo
+			imcubename="imcube" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
+			write(*,*) "Writing image cube to file ",trim(imcubename)
+			!write(*,*) imcube(12,60,-1),imcube(12,42,-1),imcube(12,60,1),imcube(12,42,1)
+			! currently this is per blend 
+			!call writefitsfile(imcubename,imcube*1e23/(distance*parsec)**2,nvmax-nvmin+1,npix)
+			!lam_velo=lam*sqrt((1d0+real(Bl%nvmin)*vresolution/clight)/(1d0-real(Bl%nvmin)*vresolution/clight))
+			call writefitsfile(imcubename,imcube(:,:,iv:nvmax)*1e23/(distance*parsec)**2,nvmax-iv+1,npix,Bl%lam,lam_velo_imcube)
+			
+			!imcubename="imcube_hit" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
+			!call writefitsfile(imcubename,imcube_hit,1,npix)
+		endif		
+
+
 		lmin_next=max(lmin_next,lam_velo)
+
 		
-		endif
+		endif ! if(lam.gt.lmin.and.lam.lt.lmax)
 
 		if(iblends.lt.nblends) Bl => Bl%next
 
@@ -419,16 +444,6 @@
 c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
 
 		
-		if(imagecube) then
-			imcubename="imcube" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
-			write(*,*) "Writing image cube to file ",trim(imcubename)
-			!write(*,*) imcube(12,60,-1),imcube(12,42,-1),imcube(12,60,1),imcube(12,42,1)
-			call writefitsfile(imcubename,imcube*1e23/(distance*parsec)**2,nvmax-nvmin+1,npix)
-			!imcubename="imcube_hit" // trim(int2string(iblends,'(i0.10)')) // ".fits.gz"
-			!call writefitsfile(imcubename,imcube_hit,1,npix)
-		endif
-
-
 	enddo
 
 	ilam=ilam+1
@@ -847,6 +862,13 @@ c Using the source function for now.
 	integer :: i,j,ipath,iminpath,maxnpixpath
 
 
+    ! If already allocated this was done already (same grid igrid is used again), no need to map things again
+	if (allocated(P(igrid,1)%im_ixy)) return
+
+
+	write(*,*) "Mapping pixels to path igrid,npath",igrid,npath
+
+    
 	! the paths do not sample the whole image (just the disk)
 	! In theory this could be different (e.g. if not a disk)
 	!maxr=maxval(abs(P(igrid,:)%y)) ! this should always be the max r, major axis

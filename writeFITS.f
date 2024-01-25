@@ -1,17 +1,18 @@
-	subroutine writefitsfile(filename,im,nlam,n)
+	subroutine writefitsfile(filename,im,nv,n,restlam,reflam)
 	use GlobalSetup, only : Rout,distance,lmin,vresolution
 	use Constants, only : pi,clight,parsec,AU
 	IMPLICIT NONE
 	character*500 filename
-	integer,intent(in) :: nlam,n
+	integer,intent(in) :: nv,n
+	real*8,intent(in) :: restlam,reflam
 	real centerpix
-	real*8 im(n,n,nlam)
+	real*8 im(n,n,nv)
 	real*8 degree,delpix,spixdegree
 
 	integer status,unit,blocksize,bitpix,naxis,naxes(3)
 	integer i,j,group,fpixel,nelements
 	logical simple,extend,truefalse
-	real refFrqHz,delHz
+	real refFrqHz,delHz,restFrqHz
 
 	inquire(file=filename,exist=truefalse)
 	if(truefalse) then
@@ -33,9 +34,9 @@ C     initialize parameters about the FITS image (IMDIM x IMDIM 64-bit reals)
 	bitpix=-32 ! single precision should be enough
 	naxes(1)=n
 	naxes(2)=n
-	if(nlam.gt.1) then
+	if(nv.gt.1) then
 		naxis=3
-		naxes(3)=nlam
+		naxes(3)=nv
 	else
 		naxis=2
 		naxes(3)=1
@@ -71,15 +72,16 @@ C     write the required header keywords
 	call ftpkyd(unit,'crpix2',centerpix,12,'center pixel',status)
 	call ftpkys(unit,'RADESYS','ICRS','',status)
 
-	! put in some grid for the velocity 
-	! reference is lmin
-
 	! the the first point (which should be lmin as the reference
-	refFrqHz=clight/(lmin/1.e4)
-	delHz=-refFrqHz*vresolution/clight
 
-    ! Frequency/Spectral coordinate
-    ! the first channel (velo) point is the reference
+	restFrqHz=clight/(restlam/1.e4)
+	refFrqHz=clight/(reflam/1.e4)
+	
+	delHz=-restFrqHz*vresolution/clight
+	write(*,*) reflam,restlam,vresolution,restFrqHz,refFrqHz,delHz
+
+	! Frequency/Spectral coordinate
+	! the first channel (velo) point is the reference
 	call ftpkys(unit,'CTYPE3','FREQ','[Hz]',status)
 	call ftpkys(unit,'cunit3','Hz      ','',status)
 	call ftpkyd(unit,'crval3',refFrqHz,12,'Reference FREQ',status)
@@ -91,20 +93,19 @@ C     write the required header keywords
 	call ftpkys(unit,'timesys','UTC     ','',status)
 	call ftpkys(unit,'cellscal','CONSTANT','',status)
 	call ftpkys(unit,'origin','FLiTs/ProDiMo model','',status)
-	! FIXME: does not make so much sense here if we have not a single line spectrum 
-	! but for now focus on a single line spectrum 
-	call ftpkyd(unit,'RESTFREQ',refFrqHz,12,'',status) ! this means first spectral axis point would give v=0
+	! Restfrequency 
+	call ftpkyd(unit,'RESTFREQ',restFrqHz,12,'',status) ! this means first spectral axis point would give v=0
 
 
 C     write the array to the FITS file
-      group=1
-      fpixel=1
-      nelements=naxes(1)*naxes(2)*naxes(3)
-      call ftpprd(unit,group,fpixel,nelements,im,status)
+	group=1
+	fpixel=1
+	nelements=naxes(1)*naxes(2)*naxes(3)
+	call ftpprd(unit,group,fpixel,nelements,im,status)
 
 C     close the file and free the unit number
-      call ftclos(unit, status)
-      call ftfiou(unit, status)
+	call ftclos(unit, status)
+	call ftfiou(unit, status)
 
 
 	return
