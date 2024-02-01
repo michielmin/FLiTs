@@ -1,10 +1,11 @@
-	subroutine writefitsfile(filename,im,nv,n,restlam,reflam)
+	subroutine writefitsfile(filename,im,nv,n,restlam,reflam,specunitwl)
 	use GlobalSetup, only : Rout,distance,lmin,vresolution
 	use Constants, only : pi,clight,parsec,AU
 	IMPLICIT NONE
 	character*500 filename
 	integer,intent(in) :: nv,n
 	real*8,intent(in) :: restlam,reflam
+	logical,intent(in) :: specunitwl
 	real centerpix
 	real*8 im(n,n,nv)
 	real*8 degree,delpix,spixdegree
@@ -12,7 +13,7 @@
 	integer status,unit,blocksize,bitpix,naxis,naxes(3)
 	integer i,j,group,fpixel,nelements
 	logical simple,extend,truefalse
-	real refFrqHz,delHz,restFrqHz
+	real refFrqHz,delHz,restFrqHz,delwl
 
 	inquire(file=filename,exist=truefalse)
 	if(truefalse) then
@@ -78,23 +79,35 @@ C     write the required header keywords
 	refFrqHz=clight/(reflam/1.e4)
 	
 	delHz=-restFrqHz*vresolution/clight
-	write(*,*) reflam,restlam,vresolution,restFrqHz,refFrqHz,delHz
+	delwl=restlam*vresolution/clight
+	!write(*,*) reflam,restlam,vresolution,restFrqHz,refFrqHz,delHz,delwl
 
-	! Frequency/Spectral coordinate
-	! the first channel (velo) point is the reference
-	call ftpkys(unit,'CTYPE3','FREQ','[Hz]',status)
-	call ftpkys(unit,'cunit3','Hz      ','',status)
-	call ftpkyd(unit,'crval3',refFrqHz,12,'Reference FREQ',status)
-	call ftpkyd(unit,'CDELT3',delHz,12,'d_Hz (channel width)',status)
-	call ftpkyd(unit,'crpix3',1.0,12,'Reference channel',status)
-	! this is for velocity spectral units.
-	call ftpkys(unit,'SPECSYS','LSRK','Spectral reference frame',status)
-	call ftpkyj(unit,'VELREF',257,'Radio velocity in CASA',status)
-	call ftpkys(unit,'timesys','UTC     ','',status)
-	call ftpkys(unit,'cellscal','CONSTANT','',status)
+
+	if (specunitwl) then 
+		call ftpkys(unit,'CTYPE3','WAVE','[micron]',status)
+		call ftpkys(unit,'cunit3','um      ','',status)
+		call ftpkyd(unit,'crval3',reflam,12,'Reference wl',status)
+		call ftpkyd(unit,'CDELT3',delwl,12,'d_wl (channel width)',status)
+		call ftpkyd(unit,'crpix3',1.0,12,'Reference channel',status)
+	else
+		!----- spectral axis -----
+		! Frequency/Spectral coordinate
+		! the first channel (velo) point is the reference
+		call ftpkys(unit,'CTYPE3','FREQ','[Hz]',status)
+		call ftpkys(unit,'cunit3','Hz      ','',status)
+		call ftpkyd(unit,'crval3',refFrqHz,12,'Reference FREQ',status)
+		call ftpkyd(unit,'CDELT3',delHz,12,'d_Hz (channel width)',status)
+		call ftpkyd(unit,'crpix3',1.0,12,'Reference channel',status)
+		! this is for velocity spectral units.
+		call ftpkys(unit,'SPECSYS','LSRK','Spectral reference frame',status)
+		call ftpkyj(unit,'VELREF',257,'Radio velocity in CASA',status)
+		call ftpkys(unit,'timesys','UTC     ','',status)
+		call ftpkys(unit,'cellscal','CONSTANT','',status)
+		! Restfrequency 
+		call ftpkyd(unit,'RESTFREQ',restFrqHz,12,'',status) ! this means first spectral axis point would give v=0
+	endif
+
 	call ftpkys(unit,'origin','FLiTs/ProDiMo model','',status)
-	! Restfrequency 
-	call ftpkyd(unit,'RESTFREQ',restFrqHz,12,'',status) ! this means first spectral axis point would give v=0
 
 
 C     write the array to the FITS file
