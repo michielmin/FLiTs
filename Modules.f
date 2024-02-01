@@ -57,6 +57,7 @@ c the image cube
 	real*8,allocatable :: x_im(:,:,:),y_im(:,:,:),im_coord(:)
 	real*8,allocatable :: imcube(:,:,:)
 	integer nint,npix,nvim
+	integer*4,allocatable :: imcube_hit(:,:,:)
 	logical imagecube
 
 c store all the blackbodies
