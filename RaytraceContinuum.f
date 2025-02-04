@@ -9,22 +9,22 @@
 	call output("==================================================================")
 	call output("Raytracing the continuum")
 
-	
-	allocate(BB(nlam,MAXT))
-	do ilam=1,nlam
-		do i=1,MAXT
-			T=real(i)
-			BB(ilam,i)=Planck(T,lam_cont(ilam))
-		enddo
-	enddo
-	
+c BB is not used and this produces a floating overflow, already for T=1
+c	allocate(BB(nlam,MAXT))
+c	do ilam=1,nlam
+c		do i=1,MAXT
+c			T=real(i)
+c			BB(ilam,i)=Planck(T,lam_cont(ilam))
+c		enddo
+c	enddo
+
 	do i=1,ngrids
 	do j=1,npoints(i)
 		allocate(P(i,j)%flux_cont(nlam))
 	enddo
 	enddo
 	allocate(path2star%flux_cont(nlam))
-	
+
 	do ilam=1,nlam
 		call tellertje(ilam-1,nlam-2)
 		doit=.false.
@@ -47,11 +47,11 @@
 		flux=flux+path2star%flux_cont(ilam)*path2star%A
 		endif
 	enddo
-	
+
 	return
 	end
-	
-	
+
+
 	subroutine TraceFluxCont(p0,ilam,flux)
 	use GlobalSetup
 	use Constants
@@ -78,12 +78,12 @@ c Using the source function for now.
 		fact=fact*exptau
 		if(fact.lt.1d-6) exit
 	enddo
-	
+
 	return
 	end
-	
 
-	
+
+
 	subroutine Trace2StarCont(p0,ilam,flux)
 	use GlobalSetup
 	use Constants
@@ -100,7 +100,7 @@ c Using the source function for now.
 	enddo
 
 	flux=Fstar(ilam)*exp(-tau)
-	
+
 	return
 	end
-	
+
