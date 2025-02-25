@@ -48,8 +48,8 @@
 		enddo
 	enddo
 
-	open(unit=20,file='specFLiTs.out',RECL=1500)
-	open(unit=21,file='lineFlux_FLiTs.out',RECL=1500)
+	open(unit=20,file=outputFile,RECL=1500)
+	open(unit=21,file=output_lineFluxFile,RECL=1500)
 	write(21,'("# lam[mu]   Fline[W/m^2]    lmin[mu]    lmax[mu]    comment")')
 
 	nv=int(vmax*1.1/vresolution)+1
@@ -150,7 +150,7 @@
 					enddo
 					enddo
 					flux0=flux0+path2star%flux_cont(k)*path2star%A
-					write(20,*) lam_cont(k),flux0*1e23/(distance*parsec)**2
+					write(20,"(F15.8, 1pE16.8)") lam_cont(k),flux0*1e23/(distance*parsec)**2
 				endif
 			enddo
 			ilam1=ilam
@@ -356,7 +356,7 @@
 		do iv=Bl%nvmin,Bl%nvmax
 			lam_velo=lam*sqrt((1d0+real(iv)*vresolution/clight)/(1d0-real(iv)*vresolution/clight))
 			if(lam_velo.gt.lmin_next) then
-				write(20,*) lam_velo,
+				write(20,"(F15.8, 1pE16.8, 1pE16.8, 1pE16.8, 3X, A)") lam_velo,
      &					flux(iv)*1e23/(distance*parsec)**2,
      &					real(iv)*vresolution/1d5,
      &					flux_cont(iv)*1e23/(distance*parsec)**2,
@@ -396,7 +396,7 @@ c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
 				flux0=flux0+PP%flux_cont(ilam)*PP%A
 			enddo
 			flux0=flux0+path2star%flux_cont(ilam)*path2star%A
-			write(20,*) lam_cont(ilam),flux0*1e23/(distance*parsec)**2
+			write(20,"(F15.8, 1pE16.8)") lam_cont(ilam),flux0*1e23/(distance*parsec)**2
 		endif
 		ilam=ilam+1
 	enddo
