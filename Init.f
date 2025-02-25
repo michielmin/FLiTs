@@ -71,6 +71,10 @@ c				all arguments are read
 			stop
 		case("flitsfile")
 			FLiTsfile=value
+		case("outputfile")
+			outputFile=value
+		case("outputlinefluxfile")
+			output_lineFluxFile=value
 		case("lte")
 			read(value,*) LTE
 		case("blend")
@@ -157,6 +161,8 @@ c===============================================================================
 	Mstar=1d0
 	Rstar=1d0
 	FLiTsfile='ProDiMoForFLiTs.fits.gz'
+	outputFile='specFLiTs.out'
+	output_lineFluxFile='lineFlux_FLiTs.out'
 	lmin=5
 	lmax=50
 	inc=30d0

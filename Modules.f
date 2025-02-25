@@ -37,7 +37,7 @@ c       external int2string,dbl2string
 
 c input files
 	character*500 linefile(100)
-	character*500 FLiTsfile
+	character*500 FLiTsfile, outputFile, output_lineFluxFile
 c type of structure. 1=MCMax(LTE,homogeneous abundance), 2=ProDiMo
 	integer structtype
 
