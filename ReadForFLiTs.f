@@ -12,8 +12,10 @@ c===============================================================================
 	real*8,allocatable :: array(:,:,:,:)
 	real*8,allocatable :: array_d(:,:,:,:)
 	integer*4 :: status,stat2,stat3,readwrite,unit,blocksize,nfound,group
-	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam
+	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam  
 	integer*4 :: istat,stat4,tmp_int,stat5,stat6,idummy,Npop
+      integer*8 :: npixelsll  ! this is for the ll (huge files) routines of cfitsio
+      integer*8,parameter :: firstpixelll=1 
 	real*8  :: nullval
 	real*8  :: nullval_d,xx,zz,rr,tot,thetamax,rdummy
 	logical*4 :: anynull
@@ -653,61 +655,68 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	allocate(npop0(nspec))
 	
 	do imol=1,nspec
-
- 	  if (exdat) then
-	    read(1) mol_name0(imol)
-	    read(1) Npop
-	    allocate(array_d(Npop,nR-1,nTheta-1,1))
-	    read(1) array_d
-	  else  
-	    ! move to next hdu
-	    call ftmrhd(unit,1,hdutype,status)
-	    if (status.ne.0) then
-	       status=0
-	       goto 1
-	    endif
-	    naxis=3
-	    ! Check dimensions
-	    call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	    call ftgkyj(unit,'NLEV',Npop,comment,status)
-	    call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
-	    do i=naxis+1,4
-	       naxes(i)=1
-	    enddo
-	    npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-            ! read_image
-	    allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	    call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
-	  endif  
-
-	  npop0(imol) = Npop
-	  call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")
-	  do i=0,nR
-	     do j=0,nTheta
-		allocate(C(i,j)%npop0(imol)%N(Npop))
-	     enddo
+      if (exdat) then
+	  read(1) mol_name0(imol)
+	  read(1) Npop
+	  allocate(array_d(Npop,nR-1,nTheta-1,1))
+	  read(1) array_d
+	else  
+	  ! move to next hdu
+	  call ftmrhd(unit,1,hdutype,status)
+	  if (status.ne.0) then
+	     status=0
+	     goto 1
+	  endif
+	  naxis=3
+	  ! Check dimensions
+	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+	  call ftgkyj(unit,'NLEV',Npop,comment,status)
+	  call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
+        !write(*,*) "Reading species ", trim(mol_name0(imol)), " with Npop = ", Npop
+	  do i=naxis+1,4
+	    naxes(i)=1
 	  enddo
-	
-	  do i=1,nR-1
-	     do j=2,nTheta
-		C(i,j)%npop0(imol)%N=0d0
-		tot=0d0
-		do k=1,Npop
-		   C(i,j)%npop0(imol)%N(k)=array_d(k,i,nTheta+1-j,1)
-		   tot=tot+C(i,j)%npop0(imol)%N(k)
-		enddo
-c               C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
-	     enddo
-	     do k=1,Npop
-		C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
-	     enddo
+        ! just to be absolutely sure that npixels8 stays integer*8
+        npixelsll=INT(1,kind(npixelsll))
+        do i=1,naxis
+          npixelsll=npixelsll*naxes(i)
+        enddo
+	  !npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
+        !write(*,*) "naxes = ", naxes
+        !write(*,*) "npixels = ", npixelsll
+        ! read_image
+	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+	  call ftgpvdll(unit,group,firstpixelll,npixelsll,nullval_d,array_d,anynull,status)
+        ! check for errors
+        if (status.ne.0) goto 1
+      endif
+
+	npop0(imol) = Npop
+	call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")
+	do i=0,nR
+	  do j=0,nTheta
+	    allocate(C(i,j)%npop0(imol)%N(Npop))
 	  enddo
-
-	  deallocate(array_d)
-
 	enddo
+	
+	do i=1,nR-1
+	  do j=2,nTheta
+	    C(i,j)%npop0(imol)%N=0d0
+	    tot=0d0
+	    do k=1,Npop
+		C(i,j)%npop0(imol)%N(k)=array_d(k,i,nTheta+1-j,1)
+		tot=tot+C(i,j)%npop0(imol)%N(k)
+	    enddo
+            ! C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
+	  enddo
+	  do k=1,Npop
+	    C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
+	  enddo
+	enddo
+	deallocate(array_d)
+	enddo ! NSPEC loop
 
-1	continue
+1     continue
 	if (.not.exdat) then
 	  ! Close the file and free the unit number.
 	  call ftclos(unit, status)
@@ -724,7 +733,7 @@ c               C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
 	      call ftgmsg(errmessage)
 	    end do
 	  endif
-        endif
+      endif
 	
 	do i=1,nR-1
 	   do j=1,nTheta
