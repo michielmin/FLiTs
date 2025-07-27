@@ -28,16 +28,25 @@ c===============================================================================
 	  IMPLICIT NONE
 	  character string*(*)
 	  end
+
 	  character*20 function int2string(i,form)
 	  IMPLICIT NONE
 	  integer i
 	  character,intent(in),optional :: form*(*)
 	  end
+
 	  character*20 function dbl2string(x,form)
 	  IMPLICIT NONE
 	  real*8 x
 	  character,intent(in),optional :: form*(*)
 	  end
+
+		subroutine fill_npop(imol,ipop_start,ipop_end,array)
+			implicit none
+			integer, intent(in) :: imol
+			integer, intent(in) :: ipop_start,ipop_end
+			real*8, intent(in) :: array(:,:,:,:)			
+		end
 	end interface
 
 	! Use unformatted exchange file if present
@@ -655,65 +664,41 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	allocate(npop0(nspec))
 	
 	do imol=1,nspec
-      if (exdat) then
-	  read(1) mol_name0(imol)
-	  read(1) Npop
-	  allocate(array_d(Npop,nR-1,nTheta-1,1))
-	  read(1) array_d
-	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=3
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  call ftgkyj(unit,'NLEV',Npop,comment,status)
-	  call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
-        !write(*,*) "Reading species ", trim(mol_name0(imol)), " with Npop = ", Npop
-	  do i=naxis+1,4
-	    naxes(i)=1
-	  enddo
-        ! just to be absolutely sure that npixels8 stays integer*8
-        npixelsll=INT(1,kind(npixelsll))
-        do i=1,naxis
-          npixelsll=npixelsll*naxes(i)
-        enddo
-	  !npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-        !write(*,*) "naxes = ", naxes
-        !write(*,*) "npixels = ", npixelsll
-        ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvdll(unit,group,firstpixelll,npixelsll,nullval_d,array_d,anynull,status)
-        ! check for errors
-        if (status.ne.0) goto 1
-      endif
-
-	npop0(imol) = Npop
-	call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")
-	do i=0,nR
-	  do j=0,nTheta
-	    allocate(C(i,j)%npop0(imol)%N(Npop))
-	  enddo
-	enddo
-	
-	do i=1,nR-1
-	  do j=2,nTheta
-	    C(i,j)%npop0(imol)%N=0d0
-	    tot=0d0
-	    do k=1,Npop
-		C(i,j)%npop0(imol)%N(k)=array_d(k,i,nTheta+1-j,1)
-		tot=tot+C(i,j)%npop0(imol)%N(k)
-	    enddo
-            ! C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
-	  enddo
-	  do k=1,Npop
-	    C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
-	  enddo
-	enddo
-	deallocate(array_d)
+		if (exdat) then
+      read(1) mol_name0(imol)
+      read(1) Npop
+      allocate(array_d(Npop,nR-1,nTheta-1,1))
+      read(1) array_d
+	  else  
+	  	! move to next hdu
+	  	call ftmrhd(unit,1,hdutype,status)
+	  	if (status.ne.0) then
+	    	status=0
+	    	goto 1
+	  	endif
+	  	naxis=3
+	  	! Check dimensions
+	  	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+	  	call ftgkyj(unit,'NLEV',Npop,comment,status)
+	  	call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
+      !write(*,*) "Reading species ", trim(mol_name0(imol)), " with Npop = ", Npop
+	  	do i=naxis+1,4
+	    	naxes(i)=1
+	  	enddo
+    	! just to be absolutely sure that npixels8 stays integer*8
+			npixelsll=INT(1,kind(npixelsll))
+			do i=1,naxis
+				npixelsll=npixelsll*naxes(i)
+			enddo
+	  	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+	  	call ftgpvdll(unit,group,firstpixelll,npixelsll,nullval_d,array_d,anynull,status)
+    	! check for errors
+			if (status.ne.0) goto 1
+		endif
+		call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")	
+		call alloc_npop(imol,Npop)
+		call fill_npop(imol,1,Npop,array_d)
+		deallocate(array_d)
 	enddo ! NSPEC loop
 
 1     continue
@@ -733,7 +718,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	      call ftgmsg(errmessage)
 	    end do
 	  endif
-      endif
+	endif
 	
 	do i=1,nR-1
 	   do j=1,nTheta
@@ -776,6 +761,47 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	enddo
 	
 	return
+	
 	end
 	
+	subroutine alloc_npop(imol,Npop)
+		! This subroutine allocates the whole npop0 array for one molecule
+		use GlobalSetup, only: C, mol_name0, npop0,nR,nTheta
+		implicit none
+		integer, intent(in) :: imol
+		integer, intent(in) :: Npop
+		integer :: i,j
+		npop0(imol) = Npop		
+		do i=0,nR
+	  	do j=0,nTheta
+	    	allocate(C(i,j)%npop0(imol)%N(Npop))
+	  	enddo
+		enddo
+	end subroutine alloc_npop
+
+	subroutine fill_npop(imol,ipop_start,ipop_end,array)
+  	! This subroutine fill the npop array, from ipop_start to ipop_end
+		! The array has dimension (ipop_end-ipop_start,nR,nTheta,1)
+		use GlobalSetup, only: C, mol_name0, npop0,nR,nTheta
+		implicit none
+		integer, intent(in) :: imol
+		integer, intent(in) :: ipop_start,ipop_end
+		real*8, intent(in) :: array(:,:,:,:)
+		integer :: i,j,k
+		do i=1,nR-1
+			do j=2,nTheta
+				C(i,j)%npop0(imol)%N=0d0
+				!tot=0d0
+				do k=ipop_start,ipop_end
+					C(i,j)%npop0(imol)%N(k)=array((k-ipop_start)+1,i,nTheta+1-j,1)
+					!tot=tot+C(i,j)%npop0(imol)%N(k)
+				enddo
+				! C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
+			enddo
+			do k=ipop_start,ipop_end
+				C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
+			enddo
+		enddo		
+	end subroutine fill_npop
+
 
