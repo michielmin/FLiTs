@@ -1,11 +1,6 @@
-# makefile for mcmax (with comments!)
-# Tested on MacOSX 10.6 with ifort 11.1.080 (20/12/2012)
+# makefile for FLiTs (with comments!)
 
-GITVERSION = $(echo "#define gitversion = \"$(shell git rev-parse HEAD)\"" > gitversion.h)
-#GITVERSION = $(ls -l)
-
-# compiler= FC, flags = FFlags
-# linker= LINKER, flags= LDFLAGS, libraries=LIBS
+# Change here the compiler if you want to use a different one
 ### FC     = ifort
 ### LINKER = ifort
 FC     = gfortran
@@ -36,7 +31,8 @@ FLAG_MAC      =
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX)
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) Version.f
-  LIBS     = -L/home/pwoitke/software/cfitsio/lib -lcfitsio
+# Adjust if needed, e.g add -L/home/pwoitke/software/cfitsio/lib -lcfitsio 	
+  LIBS     = -lcfitsio        
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) Version.f
