@@ -50,6 +50,7 @@ c===============================================================================
 	end interface
 
 	! Use unformatted exchange file if present
+	! FIXME: this is not used anymore, ProDiMo can only write the fits file now. 
 	inquire(file="ProDiMoForFLiTs.dat",exist=exdat)
 	
   	!------------------------------------------------------------------------
@@ -72,7 +73,7 @@ c===============================================================================
 	else   
 	  ! Get an unused Logical Unit Number to use to open the FITS file.
 	  status=0
-  	  call ftgiou (unit,status)
+		call ftgiou (unit,status)
 	  ! Open file
 	  readwrite=0
 	  call ftopen(unit,FLiTsfile,readwrite,blocksize,status)
@@ -84,6 +85,7 @@ c===============================================================================
 	     write(9,'("--------------------------------------------------------")')
 	     stop
 	  endif
+		call output("Reading forFLiTs file: "//trim(FLiTsfile)//" ...")
 	  group=1
 	  firstpix=1
 	  nullval=-999
@@ -92,15 +94,32 @@ c===============================================================================
 	  call ftgknj(unit,'NAXIS',1,3,naxes,nfound,status)
 	  npixels=naxes(1)*naxes(2)*naxes(3)
 	  ! Read model info
-  	  call ftgkyd(unit,'Rin',Rin,comment,status)
-	  call ftgkyd(unit,'Rout',Rout,comment,status)
-	  call ftgkyd(unit,'Mstar',Mstar,comment,status)
-	  call ftgkyd(unit,'Rstar',Rstar,comment,status)
-	  call ftgkyd(unit,'distance',distance,comment,status)
-	  call ftgkyj(unit,'NXX',nR,comment,status)
-	  call ftgkyj(unit,'NZZ',nTheta,comment,status)
-  	  call ftgkyj(unit,'NSPEC',nspec,comment,status)
-  	endif
+		call ftgkyd(unit,'Rin',Rin,comment,status)
+		call ftgkyd(unit,'Rout',Rout,comment,status)
+		call ftgkyd(unit,'Mstar',Mstar,comment,status)
+		call ftgkyd(unit,'Rstar',Rstar,comment,status)
+		call ftgkyd(unit,'distance',distance,comment,status)
+		call ftgkyj(unit,'NXX',nR,comment,status)
+		call ftgkyj(unit,'NZZ',nTheta,comment,status)
+		call ftgkyj(unit,'NSPEC',nspec,comment,status)
+
+		! potentially slow, but need to know all the species names. 
+	  ! move to the population hdu
+		allocate(mol_name0(nspec))
+		call ftmahd(unit,13,hdutype,status) ! one HDU before the population data
+	  do i=1,nspec
+			! move to next hdu, do it at beginng of loop to avoid problems at the end
+			call ftmrhd(unit,1,hdutype,status)
+			call ftgkys(unit,'SPECIES',mol_name0(i),comment,status)
+			if (status.ne.0) then
+				write(*,*) "Error reading species name for imol=",i
+				goto 1				
+			endif
+		end do
+	  ! move back to the first hdu
+	  call ftmahd(unit,1,hdutype,status) 
+		if (status.ne.0) goto 1
+	endif
 
 	nR=nR+1
 	nTheta=nTheta+1
@@ -205,7 +224,7 @@ c===============================================================================
 	enddo
 
 
-  	!------------------------------------------------------------------------------
+  !------------------------------------------------------------------------------
 	! HDU 1 : Gas Temperature 
 	!------------------------------------------------------------------------------
 	if (exdat) then
@@ -213,11 +232,11 @@ c===============================================================================
 	  read(1) array_d    ! read pointgrid
 	  read(1) array_d
 	else   
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
+	  ! move to first image hdu
+	  call ftmahd(unit,2,hdutype,status)
+	  if (status.ne.0) then			
+			!status=0
+	    goto 1
 	  endif
 	  naxis=2
 	  ! Check dimensions
@@ -586,6 +605,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	!------------------------------------------------------------------------------
 	! HDU 11 : Molecular particle densities [1/cm^3]
 	!------------------------------------------------------------------------------
+	! TODO: similar to the pops also here N0 is just a temporary array
 	if (exdat) then
 	  allocate(array_d(nspec,nR-1,nTheta-1,1))
 	  read(1) array_d
@@ -623,6 +643,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	!------------------------------------------------------------------------------
 	! HDU 12 : Line broadening parameter
 	!------------------------------------------------------------------------------
+	! TODO: also here line_width0 is just a temporary array
 	if (exdat) then
 	  allocate(array_d(nspec,nR-1,nTheta-1,1))
 	  read(1) array_d
@@ -660,7 +681,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	!------------------------------------------------------------------------------
 	! HDU 13... : relative level populations
 	!------------------------------------------------------------------------------
-	allocate(mol_name0(nspec))
+	!allocate(mol_name0(nspec))
 	allocate(npop0(nspec))
 	
 	do imol=1,nspec
@@ -708,10 +729,11 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	  call ftfiou(unit, status)
 	  !  Check for any error, and if so print out error messages
 	  !  Get the text string which describes the error
+	  ! TODO: I think if we get an error here, we should stop, because something went wrong
 	  if (status > 0) then
 	    call ftgerr(status,errtext)
 	    print *,'FITSIO Error Status =',status,': ',errtext
-	    !  Read and print out all the error messages on the FITSIO stack
+	    !  Read and print out all the error messages on the FITSIO stack		 
 	    call ftgmsg(errmessage)
 	    do while (errmessage .ne. ' ')
 	      print *,errmessage
