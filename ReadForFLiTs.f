@@ -697,13 +697,18 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	    	status=0
 	    	goto 1
 	  	endif
-	  	naxis=3
-	  	! Check dimensions
+      ! so mol_name0 should be correctly initialized, so 
+      ! no need to read the header to check if we should read the data or not
+      if (.not. ANY(Mol(:)%name==mol_name0(imol))) then
+        call output(int2string(imol,'(i3)')//"Skipping " // trim(mol_name0(imol)) // " in FLiTs file.")
+        cycle
+      endif
+      naxis=3
+      ! Check dimensions
 	  	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 	  	call ftgkyj(unit,'NLEV',Npop,comment,status)
-	  	call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
-      !write(*,*) "Reading species ", trim(mol_name0(imol)), " with Npop = ", Npop
-	  	do i=naxis+1,4
+	  	!call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
+ 	  	do i=naxis+1,4
 	    	naxes(i)=1
 	  	enddo
     	! just to be absolutely sure that npixels8 stays integer*8
