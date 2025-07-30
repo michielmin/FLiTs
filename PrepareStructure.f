@@ -54,7 +54,7 @@ c			if(.not.LTE) call output("Switching to LTE for this species")
 	do i=0,nR
 		call tellertje(i+1,nR+1)
 		do j=0,nTheta
-			allocate(C(i,j)%N(nmol))
+			!allocate(C(i,j)%N(nmol))
 c			allocate(C(i,j)%npop(nmol,maxlevels))
 			allocate(C(i,j)%npop(nmol))
 			allocate(C(i,j)%line_width(nmol))
@@ -68,7 +68,7 @@ c			allocate(C(i,j)%npop(nmol,maxlevels))
 						C(i,j)%npop(imol)%N(k)=0d0
 					enddo
 				else
-					C(i,j)%N(imol)=C(i,j)%N0(ispec(imol))
+					!C(i,j)%N(imol)=C(i,j)%N0(ispec(imol))
 					C(i,j)%line_width(imol)=C(i,j)%line_width0(ispec(imol))
 					if(C(i,j)%line_width(imol).lt.vres_profile*3d0) C(i,j)%line_width(imol)=3d0*vres_profile
 					do k=1,npop0(ispec(imol))
@@ -80,7 +80,7 @@ c			allocate(C(i,j)%npop(nmol,maxlevels))
 				if(allocated(C(i,j)%npop0(imol)%N)) deallocate(C(i,j)%npop0(imol)%N)
 			enddo
 			deallocate(C(i,j)%npop0)
-			deallocate(C(i,j)%N0)
+			!deallocate(C(i,j)%N0)
 		enddo
 	enddo
 

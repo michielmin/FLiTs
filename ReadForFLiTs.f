@@ -22,6 +22,7 @@ c===============================================================================
 	integer*4, dimension(4) :: naxes
 	character*80 comment,errmessage
 	character*30 errtext
+	integer*4, dimension(nmol) :: ispec
 	logical :: exdat
 	interface
 	  subroutine output(string)
@@ -119,6 +120,19 @@ c===============================================================================
 	  ! move back to the first hdu
 	  call ftmahd(unit,1,hdutype,status) 
 		if (status.ne.0) goto 1
+    ! now build an index
+		
+		do imol=1,nmol
+			! means that we have a molecule that is not in the FITS file
+			! at least in contect with ProDiMo this should not happen (as there would be not lamda.dat file)
+			ispec(imol)=-1 
+      do i=nspec,1,-1
+        if(trim(Mol(imol)%name).eq.trim(mol_name0(i))) then 					
+					ispec(imol)=i
+					exit
+				endif
+      enddo
+		enddo
 	endif
 
 	nR=nR+1
@@ -218,7 +232,7 @@ c===============================================================================
 	do i=0,nR
 	   do j=0,nTheta
 	      allocate(C(i,j)%npop0(nspec))
-	      allocate(C(i,j)%N0(nspec))
+	      allocate(C(i,j)%N(nmol))
 	      allocate(C(i,j)%line_width0(nspec))
 	   enddo
 	enddo
@@ -628,13 +642,16 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 	endif  
 
+	write(*,*) nmol,nspec
 	do i=1,nR-1
-	   do j=2,nTheta
-	      do imol=1,nspec
-		 C(i,j)%N0(imol)=array_d(imol,i,nTheta+1-j,1)
-	      enddo
-	   enddo
-	   C(i,1)%N0(1:nspec)=C(i,2)%N0(1:nspec)/1d20
+	  do j=2,nTheta     ! FIXME: that will not for if it is not a fits file.
+	    do imol=1,nmol ! fill only the molecules we need				
+				!write(*,*) imol,ispec(imol)	
+		 		C(i,j)%N(imol)=array_d(ispec(imol),i,nTheta+1-j,1)
+	    enddo
+	  enddo
+!		write(*,*) "C(i,1)%N(1:nmol)=",i,j,nmol,C(i,1)%N(:)
+		C(i,1)%N(1:nmol)=C(i,2)%N(1:nmol)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -681,7 +698,6 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	!------------------------------------------------------------------------------
 	! HDU 13... : relative level populations
 	!------------------------------------------------------------------------------
-	!allocate(mol_name0(nspec))
 	allocate(npop0(nspec))
 	
 	do imol=1,nspec
