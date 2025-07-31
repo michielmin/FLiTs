@@ -696,8 +696,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 
 	!------------------------------------------------------------------------------
 	! HDU 13... : relative level populations
-	!------------------------------------------------------------------------------
-	allocate(npop0(nspec))
+	!------------------------------------------------------------------------------	
 	
 	do is=1,nspec
 		! find the imol that belongs to is
@@ -716,7 +715,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			! always need to read, but if we do not need it we skip it
       read(1) array_d
 		if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
-			call output(int2string(is,'(i3)')//"Skipping " // trim(mol_name0(is)) // " in FLiTs file.")
+			call output(int2string(is,'(i3)')//"Skipping "//trim(mol_name0(is))//" in FLiTs file.")
 			deallocate(array_d)
 			cycle
 		endif
@@ -754,8 +753,6 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 
 		! imol was already initialised properly
 		call alloc_npop(imol,Npop)
-		! I guess we could also get rid of this as npop()%N has already the correct size
-		npop0(is) = Npop		
 		call fill_npop(imol,1,Npop,array_d)
 		deallocate(array_d)
 	enddo ! NSPEC loop
@@ -826,7 +823,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	
 	subroutine alloc_npop(imol,Npop)
 		! This subroutine allocates the whole npop0 array for one molecule
-		use GlobalSetup, only: C, mol_name0, npop0,nR,nTheta
+		use GlobalSetup, only: C,nR,nTheta
 		implicit none
 		integer, intent(in) :: imol
 		integer, intent(in) :: Npop
@@ -839,7 +836,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	end subroutine alloc_npop
 
 	subroutine fill_npop(imol,ipop_start,ipop_end,array)
-  	! This subroutine fill the npop array, from ipop_start to ipop_end
+  		! This subroutine fill the npop array, from ipop_start to ipop_end
 		! The array has dimension (ipop_end-ipop_start,nR,nTheta,1)
 		use GlobalSetup, only: C, mol_name0, nR,nTheta
 		implicit none

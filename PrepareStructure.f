@@ -2,7 +2,7 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,k,imol,ispec(nmol),maxlevels,ipop
+	integer i,j,imol,ispec(nmol),ipop
 	interface
 	  subroutine output(string)
 	  IMPLICIT NONE
@@ -32,7 +32,6 @@
 		Mol(imol)%LTE=LTE
 	enddo
 
-	maxlevels=0
 c now the data should be rearranged properly
 	do imol=1,nmol
 		do i=nspec,1,-1
@@ -42,50 +41,27 @@ c now the data should be rearranged properly
 		if(ispec(imol).lt.1.or.ispec(imol).gt.nspec) then
 			call output("Species " // trim(Mol(imol)%name) // " not found")
 c			if(.not.LTE) call output("Switching to LTE for this species")
-      ! FIXME: the species is not removed, but LTE is set to true
+			! FIXME: the species is not removed, but LTE is set to true
 			call output("removing this species")
 			Mol(imol)%LTE=.true.
-		else
-			if(npop0(ispec(imol)).gt.maxlevels) maxlevels=npop0(ispec(imol))
 		endif
-		if(Mol(imol)%nlevels.gt.maxlevels) maxlevels=Mol(imol)%nlevels
 	enddo
 
 	do i=0,nR
 		call tellertje(i+1,nR+1)
 		do j=0,nTheta
-			!allocate(C(i,j)%N(nmol))
 c			allocate(C(i,j)%npop(nmol,maxlevels))
-			!allocate(C(i,j)%npop(nmol))
-			!allocate(C(i,j)%line_width(nmol))
 			do imol=1,nmol
-				!allocate(C(i,j)%npop(imol)%N(max(npop0(ispec(imol)),Mol(imol)%nlevels)))
-				!C(i,j)%npop(imol)%N=0d0
 				! this is the case where we do have a lamda file, but species is not in the fits file
 				if(ispec(imol).lt.1.or.ispec(imol).gt.nspec) then
 					C(i,j)%N(imol)=1d-70
 					C(i,j)%line_width(imol)=1d5
 					! FIXME: maybe just do not allocate it at all, for the LTE case?
 					allocate(C(i,j)%npop(imol)%N(Mol(imol)%nlevels),source=0.d0)
-					!do k=1,Mol(imol)%nlevels
-					!	C(i,j)%npop(imol)%N(k)=0d0
-					!enddo
 				else
-					! is now done directly in ReadForFliTs.f
-					!C(i,j)%N(imol)=C(i,j)%N0(ispec(imol))
-					!C(i,j)%line_width(imol)=C(i,j)%line_width0(ispec(imol))
-					! FIXME, maybe also move that to ReadForFLiTs.f
 					if(C(i,j)%line_width(imol).lt.vres_profile*3d0) C(i,j)%line_width(imol)=3d0*vres_profile
-					!do k=1,npop0(ispec(imol))
-					!	C(i,j)%npop(imol)%N(k)=C(i,j)%npop0(ispec(imol))%N(k)
-					!enddo
 				endif
 			enddo
-			!do imol=1,nspec
-			!	if(allocated(C(i,j)%npop0(imol)%N)) deallocate(C(i,j)%npop0(imol)%N)
-			!enddo
-			!deallocate(C(i,j)%npop0)
-			!deallocate(C(i,j)%N0)
 		enddo
 	enddo
 
@@ -99,7 +75,7 @@ c			allocate(C(i,j)%npop(nmol,maxlevels))
 			do imol=1,nmol
 				C(i,j)%npopmax(imol)=1
 				if(ispec(imol).ge.1.and.ispec(imol).le.nspec) then
-					do ipop=npop0(ispec(imol)),1,-1
+					do ipop=size(C(i,j)%npop(imol)%N),1,-1
 						if(C(i,j)%npop(imol)%N(ipop).gt.1d-150) exit
 					enddo
 					if(ipop.gt.C(i,j)%npopmax(imol)) C(i,j)%npopmax(imol)=ipop
@@ -132,4 +108,4 @@ c output the setup to the screen and the log file
 	
 	return
 	end
-
+	
