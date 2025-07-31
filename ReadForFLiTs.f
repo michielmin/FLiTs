@@ -23,7 +23,8 @@ c===============================================================================
 	character*80 comment,errmessage
 	character*30 errtext
 	integer*4, dimension(nmol) :: ispec
-	logical :: exdat
+	integer*4 :: is
+	logical :: exdat,found
 	interface
 	  subroutine output(string)
 	  IMPLICIT NONE
@@ -231,9 +232,10 @@ c===============================================================================
 
 	do i=0,nR
 	   do j=0,nTheta
-	      allocate(C(i,j)%npop0(nspec))
+	      allocate(C(i,j)%npop(nmol))
+        ! TODO: check if it is okay to allocate it here, or if it should be allocated earlier
 	      allocate(C(i,j)%N(nmol))
-	      allocate(C(i,j)%line_width0(nspec))
+	      allocate(C(i,j)%line_width(nmol))
 	   enddo
 	enddo
 
@@ -642,15 +644,12 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
 	endif  
 
-	write(*,*) nmol,nspec
 	do i=1,nR-1
-	  do j=2,nTheta     ! FIXME: that will not for if it is not a fits file.
+	  do j=2,nTheta    ! FIXME: that will not work, if it is not a fits file.
 	    do imol=1,nmol ! fill only the molecules we need				
-				!write(*,*) imol,ispec(imol)	
 		 		C(i,j)%N(imol)=array_d(ispec(imol),i,nTheta+1-j,1)
 	    enddo
 	  enddo
-!		write(*,*) "C(i,1)%N(1:nmol)=",i,j,nmol,C(i,1)%N(:)
 		C(i,1)%N(1:nmol)=C(i,2)%N(1:nmol)/1d20
 	enddo
 
@@ -684,12 +683,12 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	endif  
 
 	do i=1,nR-1
-	   do j=2,nTheta
-	      do imol=1,nspec
-		 C(i,j)%line_width0(imol)=array_d(imol,i,nTheta+1-j,1)
-	      enddo
-	   enddo
-	   C(i,1)%line_width0(1:nspec)=C(i,2)%line_width0(1:nspec)/1d20
+		do j=2,nTheta
+	  	do imol=1,nmol
+				C(i,j)%line_width(imol)=array_d(ispec(imol),i,nTheta+1-j,1)
+	    enddo
+	  enddo
+	  C(i,1)%line_width(1:nmol)=C(i,2)%line_width(1:nmol)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -700,67 +699,85 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	!------------------------------------------------------------------------------
 	allocate(npop0(nspec))
 	
-	do imol=1,nspec
-		if (exdat) then
-      read(1) mol_name0(imol)
+	do is=1,nspec
+		! find the imol that belongs to is
+		found=.false.
+		do imol=1,nmol
+			if (ispec(imol)==is) then 
+				found=.true.
+				exit
+			endif
+		enddo 
+
+	if (exdat) then
+      read(1) mol_name0(is)
       read(1) Npop
       allocate(array_d(Npop,nR-1,nTheta-1,1))
+			! always need to read, but if we do not need it we skip it
       read(1) array_d
-	  else  
-	  	! move to next hdu
+		if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
+			call output(int2string(is,'(i3)')//"Skipping " // trim(mol_name0(is)) // " in FLiTs file.")
+			deallocate(array_d)
+			cycle
+		endif
+	else
+	  	! move to next hdu, always need to move 
 	  	call ftmrhd(unit,1,hdutype,status)
-	  	if (status.ne.0) then
-	    	status=0
+	  	if (status.ne.0) then ! if we get an error here, we assume we reached the end of file
+	    	status=0 ! to not have an error message
 	    	goto 1
 	  	endif
-      ! so mol_name0 should be correctly initialized, so 
-      ! no need to read the header to check if we should read the data or not
-      if (.not. ANY(Mol(:)%name==mol_name0(imol))) then
-        call output(int2string(imol,'(i3)')//"Skipping " // trim(mol_name0(imol)) // " in FLiTs file.")
+
+		if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
+        call output(int2string(is,'(i3)')//"Skipping " // trim(mol_name0(is)) // " in FLiTs file.")
         cycle
       endif
+
       naxis=3
       ! Check dimensions
 	  	call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 	  	call ftgkyj(unit,'NLEV',Npop,comment,status)
-	  	!call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
  	  	do i=naxis+1,4
 	    	naxes(i)=1
 	  	enddo
     	! just to be absolutely sure that npixels8 stays integer*8
-			npixelsll=INT(1,kind(npixelsll))
-			do i=1,naxis
-				npixelsll=npixelsll*naxes(i)
-			enddo
+		npixelsll=INT(1,kind(npixelsll))
+		do i=1,naxis
+			npixelsll=npixelsll*naxes(i)
+		enddo
 	  	allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
 	  	call ftgpvdll(unit,group,firstpixelll,npixelsll,nullval_d,array_d,anynull,status)
     	! check for errors
 			if (status.ne.0) goto 1
 		endif
-		call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")	
+		call output(int2string(is,'(i3)') // "Found " // trim(mol_name0(is)) // " in FLiTs file")	
+
+		! imol was already initialised properly
 		call alloc_npop(imol,Npop)
+		! I guess we could also get rid of this as npop()%N has already the correct size
+		npop0(is) = Npop		
 		call fill_npop(imol,1,Npop,array_d)
 		deallocate(array_d)
 	enddo ! NSPEC loop
 
 1     continue
 	if (.not.exdat) then
-	  ! Close the file and free the unit number.
-	  call ftclos(unit, status)
-	  call ftfiou(unit, status)
-	  !  Check for any error, and if so print out error messages
-	  !  Get the text string which describes the error
-	  ! TODO: I think if we get an error here, we should stop, because something went wrong
-	  if (status > 0) then
-	    call ftgerr(status,errtext)
-	    print *,'FITSIO Error Status =',status,': ',errtext
-	    !  Read and print out all the error messages on the FITSIO stack		 
-	    call ftgmsg(errmessage)
-	    do while (errmessage .ne. ' ')
-	      print *,errmessage
-	      call ftgmsg(errmessage)
-	    end do
-	  endif
+	   ! Close the file and free the unit number.
+	   call ftclos(unit, status)
+		call ftfiou(unit, status)
+		!  Check for any error, and if so print out error messages
+		!  Get the text string which describes the error
+		if (status > 0) then
+			call ftgerr(status,errtext)
+			print *,'FITSIO Error Status =',status,': ',errtext
+			!  Read and print out all the error messages on the FITSIO stack		 
+			call ftgmsg(errmessage)
+			do while (errmessage .ne. ' ')
+				print *,errmessage
+				call ftgmsg(errmessage)				
+			end do
+		stop ! We got an error, so better to stop everything
+	endif
 	endif
 	
 	do i=1,nR-1
@@ -814,10 +831,9 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 		integer, intent(in) :: imol
 		integer, intent(in) :: Npop
 		integer :: i,j
-		npop0(imol) = Npop		
 		do i=0,nR
 	  	do j=0,nTheta
-	    	allocate(C(i,j)%npop0(imol)%N(Npop))
+	    	allocate(C(i,j)%npop(imol)%N(Npop))
 	  	enddo
 		enddo
 	end subroutine alloc_npop
@@ -825,7 +841,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	subroutine fill_npop(imol,ipop_start,ipop_end,array)
   	! This subroutine fill the npop array, from ipop_start to ipop_end
 		! The array has dimension (ipop_end-ipop_start,nR,nTheta,1)
-		use GlobalSetup, only: C, mol_name0, npop0,nR,nTheta
+		use GlobalSetup, only: C, mol_name0, nR,nTheta
 		implicit none
 		integer, intent(in) :: imol
 		integer, intent(in) :: ipop_start,ipop_end
@@ -833,16 +849,13 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 		integer :: i,j,k
 		do i=1,nR-1
 			do j=2,nTheta
-				C(i,j)%npop0(imol)%N=0d0
-				!tot=0d0
+				C(i,j)%npop(imol)%N=0d0
 				do k=ipop_start,ipop_end
-					C(i,j)%npop0(imol)%N(k)=array((k-ipop_start)+1,i,nTheta+1-j,1)
-					!tot=tot+C(i,j)%npop0(imol)%N(k)
+					C(i,j)%npop(imol)%N(k)=array((k-ipop_start)+1,i,nTheta+1-j,1)
 				enddo
-				! C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
 			enddo
 			do k=ipop_start,ipop_end
-				C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
+				C(i,1)%npop(imol)%N(k)=C(i,2)%npop(imol)%N(k)
 			enddo
 		enddo		
 	end subroutine fill_npop
