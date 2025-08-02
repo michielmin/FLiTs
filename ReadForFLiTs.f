@@ -17,6 +17,7 @@ c===============================================================================
 	integer*4 :: istat,stat4,tmp_int,stat5,stat6,idummy,Npop
 	integer*8 :: npixelsll  ! this is for the ll (huge files) routines of cfitsio
 	integer*8,parameter :: firstpixelll=1 
+	integer*8 :: counts, count_rate,startcount,endcount
 	real*8  :: nullval
 	real*8  :: nullval_d,xx,zz,rr,tot,thetamax,rdummy
 	logical*4 :: anynull
@@ -63,6 +64,8 @@ c===============================================================================
 			integer*4,intent(out) :: stat
 		end
 	end interface
+
+	call system_clock(count_rate=count_rate)
 
 	! Use unformatted exchange file if present
 	! FIXME: this is not used anymore, ProDiMo can only write the fits file now. 
@@ -655,7 +658,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			! always need to read, but if we do not need it we skip it
 			read(1) array_d
 			if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
-				call output(int2string(is,'(i3)')//"Skipping "//trim(mol_name0(is))//" in FLiTs file.")
+				call output(trim(int2string(is,'(i3)'))//" skipping "//trim(mol_name0(is))//" in FLiTs file.")
 				deallocate(array_d)
 				cycle
 			endif
@@ -667,12 +670,12 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 				goto 1
 			endif
 			if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
-				call output(int2string(is,'(i3)')//"Skipping "//trim(mol_name0(is))//" in FLiTs file.")
+				call output(trim(int2string(is,'(i3)'))//" skipping "//trim(mol_name0(is))//" in FLiTs file.")
 				cycle
 			endif
 			naxis=3
 			! Check dimensions
-			call output(int2string(is,'(i3)') // "Read " // trim(mol_name0(is)) // " from FLiTs file")										
+			call output(trim(int2string(is,'(i3)'))//" read " // trim(mol_name0(is)) // " from FLiTs file")										
 			call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 			call ftgkyj(unit,'NLEV',Npop,comment,status)
 			do i=naxis+1,4
@@ -684,14 +687,15 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 				npixelsll=npixelsll*naxes(i)
 			enddo
 			! if we have a lot of Npops we read it in in junks, to avoid memory problems
-			if (Npop>50000) then 
-				write(*,*) "Reading junks for ",trim(mol_name0(is))," with Npop=",Npop
+			step=50000
+			if (Npop>step) then 
+				write(*,*) "\n    reading junks for ",trim(mol_name0(is))," with Npop=",Npop
 				! imol was already initialised properly
 				call alloc_npop(imol,Npop)
-				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)				
-				step=30000
-				do i=1,Npop,step
-					write(*,*) "Reading population levels from ",i," to ",min(i+step-1,Npop)	
+				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)								
+				do i=1,Npop,step					
+					call system_clock(startcount)
+					write(*,"(a,i7,a,i7)",advance="no") "    reading population levels from ",i," to ",min(i+step-1,Npop)
 					call tellertje(i+1,Npop+1)
 					startF(1)=i
 					startF(2)=1
@@ -702,23 +706,34 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 					strideF(:)=1
 					allocate(array_d(endF(1)-startF(1)+1,naxes(2),naxes(3),1))
 					call ftgsvd(unit,group,naxis,naxes,startF,endF,strideF,nullval_d,array_d,anynull,status)
+					call system_clock(endcount)
+        			write(*,"(a,f10.2,a)",advance="no") "    time read: ",(endcount-startcount)/DBLE(count_rate)," s"
+					call system_clock(startcount)
 					if (status.ne.0) goto 1
 					call fill_npop(imol,startF(1),endF(1),array_d)
 					deallocate(array_d)
+					call system_clock(endcount)
+					write(*,"(a,f10.2,a)") "    time fill: ",(endcount-startcount)/DBLE(count_rate)," s"
 				enddo
-			else 			
+			else 
+				call system_clock(startcount)
 				allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
 				call ftgpvdll(unit,group,firstpixelll,npixelsll,nullval_d,array_d,anynull,status)
 				if (status.ne.0) goto 1 ! check for errors
+				call system_clock(endcount)
+				write(*,"(a,f10.2,a)",advance="no") "    time read: ",(endcount-startcount)/DBLE(count_rate)," s"
 			endif
 		endif
 
 		! if we do not read junks, will still need to fill npop
 		if (.not.allocated(C(0,0)%npop(imol)%N)) then
+			call system_clock(startcount)
 			! allocate the npop array for this molecule
 			call alloc_npop(imol,Npop)
 			call fill_npop(imol,1,Npop,array_d)
 			deallocate(array_d)
+			call system_clock(endcount)
+			write(*,"(a,f10.2,a)") "   time fill: ",(endcount-startcount)/DBLE(count_rate)," seconds"
 		endif
 	enddo ! NSPEC loop
 
