@@ -675,7 +675,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			endif
 			naxis=3
 			! Check dimensions
-			call output(trim(int2string(is,'(i3)'))//" read " // trim(mol_name0(is)) // " from FLiTs file")										
+			call output(trim(int2string(is,'(i3)'))//" read " // trim(mol_name0(is)) // " from FLiTs file, Npop="//trim(int2string(Npop,'(i6)')))										
 			call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 			call ftgkyj(unit,'NLEV',Npop,comment,status)
 			do i=naxis+1,4
@@ -689,7 +689,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			! if we have a lot of Npops we read it in in junks, to avoid memory problems
 			step=50000
 			if (Npop>step) then 
-				write(*,*) "\n    reading junks for ",trim(mol_name0(is))," with Npop=",Npop
+				write(*,*) "\\n    reading junks for ",trim(mol_name0(is))," with Npop=",Npop
 				! imol was already initialised properly
 				call alloc_npop(imol,Npop)
 				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)								
