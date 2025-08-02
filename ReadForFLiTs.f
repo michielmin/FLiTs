@@ -684,13 +684,14 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 				npixelsll=npixelsll*naxes(i)
 			enddo
 			! if we have a lot of Npops we read it in in junks, to avoid memory problems
-			if (Npop>10000) then 
+			if (Npop>50000) then 
 				write(*,*) "Reading junks for ",trim(mol_name0(is))," with Npop=",Npop
 				! imol was already initialised properly
 				call alloc_npop(imol,Npop)
 				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)				
-				step=5000
-				do i=1,Npop,step					
+				step=30000
+				do i=1,Npop,step
+					write(*,*) "Reading population levels from ",i," to ",min(i+step-1,Npop)	
 					call tellertje(i+1,Npop+1)
 					startF(1)=i
 					startF(2)=1
