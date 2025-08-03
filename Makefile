@@ -17,7 +17,7 @@ $(info $$debug is [${debug}])
 # array boundary check
 ifeq ($(debug),true)
   ### FLAGS = -traceback -g -fp-stack-check -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces -fpp
-  FLAGS = -fbacktrace -g -Og -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -fcheck=all -cpp
+  FLAGS = -fbacktrace -g -Og -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -fcheck=all --warn-all -cpp
 else
   ### FLAGS = -O3 -xHOST -msse4.2 -fp-model strict -extend-source -zero -prec-div -fpp 
   FLAGS = -O3 -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -march=native -cpp
