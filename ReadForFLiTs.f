@@ -7,32 +7,26 @@ c===============================================================================
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nvars,ivars,i,j,k,imol,l,naxis
-	character*7 vars(10),hdu
+	integer i,j,imol,l,naxis
 	real*8,allocatable :: array(:,:,:,:)
-	real*8,allocatable :: array_d(:,:,:,:)
-	real*8,allocatable :: array_part(:,:,:)
-	integer*4 :: status,stat2,stat3,readwrite,unit,blocksize,nfound,group
-	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam  
-	integer*4 :: istat,stat4,tmp_int,stat5,stat6,idummy,Npop
+	real*8,allocatable :: array_d(:,:,:,:)	
+	integer*4 :: status,readwrite,unit,blocksize,nfound,group
+	integer*4 :: firstpix,npixels,hdutype
+	integer*4 :: idummy,Npop
 	integer*8 :: npixelsll  ! this is for the ll (huge files) routines of cfitsio
 	integer*8,parameter :: firstpixelll=1 
-	integer*8 :: counts, count_rate,startcount,endcount
+	integer*8 :: count_rate,startcount,endcount
 	real*8  :: nullval
-	real*8  :: nullval_d,xx,zz,rr,tot,thetamax,rdummy
+	real*8  :: nullval_d,xx,zz,rr,thetamax,rdummy
 	logical*4 :: anynull
 	integer*4, dimension(4) :: naxes
-	integer*4, dimension(2) :: naxs
 	character*80 comment,errmessage
 	character*30 errtext
 	integer*4, dimension(nmol) :: ispec
 	integer*4 :: is
 	logical :: exdat,found
-	integer :: start(2), end(2), stride(2)
 	integer :: startF(3), endF(3), strideF(3)
-	integer :: naxesF(3)
 	integer :: step
-	real*8, allocatable :: subimage(:,:)	
 	interface
 	  subroutine output(string)
 	  IMPLICIT NONE
@@ -689,7 +683,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			! if we have a lot of Npops we read it in in junks, to avoid memory problems
 			step=50000
 			if (Npop>step) then 
-				write(*,*) "\\n    reading junks for ",trim(mol_name0(is))," with Npop=",Npop
+				write(*,*) "    reading junks for ",trim(mol_name0(is))," with Npop=",Npop
 				! imol was already initialised properly
 				call alloc_npop(imol,Npop)
 				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)								
@@ -808,11 +802,10 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 		integer, intent(in) :: u
 		real*8,intent(inout),allocatable :: arr(:,:,:,:)
 		integer*4,intent(out) :: stat
-		integer*4 :: i, naxis,nfound,firstpix,nbuffer,npixels,hdutype,group
+		integer*4 :: i, naxis,nfound,firstpix,npixels,hdutype,group
 		real*8  :: nullval_d
 		logical*4 :: anynull
 		integer*4, dimension(4) :: naxes
-		integer*4, dimension(3) :: startidx,endidx
 	  
 		group=1
 	  	firstpix=1
@@ -850,15 +843,16 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	end subroutine alloc_npop
 
 	subroutine fill_npop(im,ipop_start,ipop_end,arr)
-  		! This subroutine fill the npop array, from ipop_start to ipop_end
-		! The array has dimension (ipop_end-ipop_start,nR,nTheta,1)
-		! no init of N can be done in this routine (might override already filled values)
-		use GlobalSetup, only: C, mol_name0, nR,nTheta
+  		! Fill the npop array, from ipop_start to ipop_end
+		! 
+		! The passed arr has dimension (ipop_end-ipop_start,nR,nTheta,1)
+		! No init of N can be done in this routine (might override already filled values)
+		use GlobalSetup, only: C,nR,nTheta
 		implicit none
-		integer, intent(in) :: im
-		integer, intent(in) :: ipop_start,ipop_end
-		real*8, intent(in) :: arr(:,:,:,:)
-		integer :: i,j,k
+		integer, intent(in) :: im ! the molecule index
+		integer, intent(in) :: ipop_start,ipop_end ! start/end index in the N array, that should be filled
+		real*8, intent(in) :: arr(:,:,:,:) ! the data to fill the npop array
+		integer :: i,j
 		do i=1,nR-1
 			do j=2,nTheta
 				C(i,j)%npop(im)%N(ipop_start:ipop_end)=arr(:,i,nTheta+1-j,1)
