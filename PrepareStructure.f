@@ -40,9 +40,8 @@ c now the data should be rearranged properly
 		ispec(imol)=i
 		if(ispec(imol).lt.1.or.ispec(imol).gt.nspec) then
 			call output("Species " // trim(Mol(imol)%name) // " not found")
-c			if(.not.LTE) call output("Switching to LTE for this species")
-			! FIXME: the species is not removed, but LTE is set to true
-			call output("removing this species")
+			if(.not.LTE) call output("Switching to LTE for this species")
+			!call output("removing this species")
 			Mol(imol)%LTE=.true.
 		endif
 	enddo
@@ -56,7 +55,6 @@ c			allocate(C(i,j)%npop(nmol,maxlevels))
 				if(ispec(imol).lt.1.or.ispec(imol).gt.nspec) then
 					C(i,j)%N(imol)=1d-70
 					C(i,j)%line_width(imol)=1d5
-					! FIXME: maybe just do not allocate it at all, for the LTE case?
 					allocate(C(i,j)%npop(imol)%N(Mol(imol)%nlevels),source=0.d0)
 				else
 					if(C(i,j)%line_width(imol).lt.vres_profile*3d0) C(i,j)%line_width(imol)=3d0*vres_profile
