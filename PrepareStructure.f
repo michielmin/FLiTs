@@ -40,8 +40,8 @@ c now the data should be rearranged properly
 		ispec(imol)=i
 		if(ispec(imol).lt.1.or.ispec(imol).gt.nspec) then
 			call output("Species " // trim(Mol(imol)%name) // " not found")
-			if(.not.LTE) call output("Switching to LTE for this species")
-			!call output("removing this species")
+c			if(.not.LTE) call output("Switching to LTE for this species")
+			call output("removing this species")
 			Mol(imol)%LTE=.true.
 		endif
 	enddo
