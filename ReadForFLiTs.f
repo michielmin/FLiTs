@@ -680,10 +680,10 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			do i=1,naxis
 				npixelsll=npixelsll*naxes(i)
 			enddo
-			! if we have a lot of Npops we read it in in junks, to avoid memory problems
+			! if we have a lot of Npops we read it in in chunks, to avoid memory problems
 			step=50000
 			if (Npop>step) then 
-				write(*,*) "    reading junks for ",trim(mol_name0(is))," with Npop=",Npop
+				write(*,*) "    reading chunks for ",trim(mol_name0(is))," with Npop=",Npop
 				! imol was already initialised properly
 				call alloc_npop(imol,Npop)
 				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)								
@@ -719,7 +719,7 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			endif
 		endif
 
-		! if we do not read junks, will still need to fill npop
+		! if we do not read chunks, will still need to fill npop
 		if (.not.allocated(C(0,0)%npop(imol)%N)) then
 			call system_clock(startcount)
 			! allocate the npop array for this molecule
