@@ -669,9 +669,9 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 			endif
 			naxis=3
 			! Check dimensions
-			call output(trim(int2string(is,'(i3)'))//" read " // trim(mol_name0(is)) // " from FLiTs file, Npop="//trim(int2string(Npop,'(i6)')))										
 			call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
 			call ftgkyj(unit,'NLEV',Npop,comment,status)
+			call output(trim(int2string(is,'(i3)'))//" read " // trim(mol_name0(is)) // " from FLiTs file, Npop="//trim(int2string(Npop,'(i6)')))			
 			do i=naxis+1,4
 				naxes(i)=1
 			enddo
