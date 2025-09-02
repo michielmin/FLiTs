@@ -1,11 +1,6 @@
-# makefile for mcmax (with comments!)
-# Tested on MacOSX 10.6 with ifort 11.1.080 (20/12/2012)
+# makefile for FLiTs (with comments!)
 
-GITVERSION = $(echo "#define gitversion = \"$(shell git rev-parse HEAD)\"" > gitversion.h)
-#GITVERSION = $(ls -l)
-
-# compiler= FC, flags = FFlags
-# linker= LINKER, flags= LDFLAGS, libraries=LIBS
+# Change here the compiler if you want to use a different one
 ### FC     = ifort
 ### LINKER = ifort
 FC     = gfortran
@@ -22,7 +17,7 @@ $(info $$debug is [${debug}])
 # array boundary check
 ifeq ($(debug),true)
   ### FLAGS = -traceback -g -fp-stack-check -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces -fpp
-  FLAGS = -fbacktrace -g -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -fcheck=all -cpp
+  FLAGS = -fbacktrace -g -Og -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -fcheck=all --warn-all -cpp
 else
   ### FLAGS = -O3 -xHOST -msse4.2 -fp-model strict -extend-source -zero -prec-div -fpp 
   FLAGS = -O3 -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -march=native -cpp
@@ -36,11 +31,15 @@ FLAG_MAC      =
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX)
   LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) Version.f
-  LIBS     = -L/home/pwoitke/software/cfitsio/lib -lcfitsio
+# Adjust if needed, e.g add 
+# -L/home/pwoitke/software/cfitsio/lib -lcfitsio 	
+  LIBS     = -lcfitsio        
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC)
   LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) Version.f
-  LIBS	  = -L/usr/lib -L/sw/lib -L/usr/local/lib -lm -lfftw3 -lcfitsio -I/sw/include
+	# Adjust if needed, e.g add
+	#	LIBS	  = -L/usr/lib -L/sw/lib -L/usr/local/lib -lm -lfftw3 -lcfitsio -I/sw/include
+  LIBS     = -lcfitsio  
 endif
 
 # use a suffix in file name (i.e. static, test etc.)

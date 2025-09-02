@@ -7,38 +7,62 @@ c===============================================================================
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer nvars,ivars,i,j,k,imol,l,naxis
-	character*7 vars(10),hdu
+	integer i,j,imol,l,naxis
 	real*8,allocatable :: array(:,:,:,:)
-	real*8,allocatable :: array_d(:,:,:,:)
-	integer*4 :: status,stat2,stat3,readwrite,unit,blocksize,nfound,group
-	integer*4 :: firstpix,nbuffer,npixels,hdunum,hdutype,ix,iz,ilam
-	integer*4 :: istat,stat4,tmp_int,stat5,stat6,idummy,Npop
+	real*8,allocatable :: array_d(:,:,:,:)	
+	integer*4 :: status,readwrite,unit,blocksize,nfound,group
+	integer*4 :: firstpix,npixels,hdutype
+	integer*4 :: idummy,Npop
+	integer*8 :: npixelsll  ! this is for the ll (huge files) routines of cfitsio
+	integer*8,parameter :: firstpixelll=1 
+	integer*8 :: count_rate,startcount,endcount
 	real*8  :: nullval
-	real*8  :: nullval_d,xx,zz,rr,tot,thetamax,rdummy
+	real*8  :: nullval_d,xx,zz,rr,thetamax,rdummy
 	logical*4 :: anynull
 	integer*4, dimension(4) :: naxes
 	character*80 comment,errmessage
 	character*30 errtext
-	logical :: exdat
+	integer*4, dimension(nmol) :: ispec
+	integer*4 :: is
+	logical :: exdat,found
+	integer :: startF(3), endF(3), strideF(3)
+	integer :: step
 	interface
 	  subroutine output(string)
 	  IMPLICIT NONE
 	  character string*(*)
 	  end
+
 	  character*20 function int2string(i,form)
 	  IMPLICIT NONE
 	  integer i
 	  character,intent(in),optional :: form*(*)
 	  end
+
 	  character*20 function dbl2string(x,form)
 	  IMPLICIT NONE
 	  real*8 x
 	  character,intent(in),optional :: form*(*)
 	  end
+
+		subroutine fill_npop(im,ipop_start,ipop_end,arr)
+			implicit none
+			integer, intent(in) :: im
+			integer, intent(in) :: ipop_start,ipop_end
+			real*8, intent(in) :: arr(:,:,:,:)			
+		end
+		subroutine readNextHDU(u,arr,stat)
+			implicit none
+			integer, intent(in) :: u
+			real*8,intent(inout),allocatable :: arr(:,:,:,:)
+			integer*4,intent(out) :: stat
+		end
 	end interface
 
+	call system_clock(count_rate=count_rate)
+
 	! Use unformatted exchange file if present
+	! FIXME: this is not used anymore, ProDiMo can only write the fits file now. 
 	inquire(file="ProDiMoForFLiTs.dat",exist=exdat)
 	
   	!------------------------------------------------------------------------
@@ -61,7 +85,7 @@ c===============================================================================
 	else   
 	  ! Get an unused Logical Unit Number to use to open the FITS file.
 	  status=0
-  	  call ftgiou (unit,status)
+		call ftgiou (unit,status)
 	  ! Open file
 	  readwrite=0
 	  call ftopen(unit,FLiTsfile,readwrite,blocksize,status)
@@ -73,6 +97,7 @@ c===============================================================================
 	     write(9,'("--------------------------------------------------------")')
 	     stop
 	  endif
+		call output("Reading forFLiTs file: "//trim(FLiTsfile)//" ...")
 	  group=1
 	  firstpix=1
 	  nullval=-999
@@ -81,15 +106,45 @@ c===============================================================================
 	  call ftgknj(unit,'NAXIS',1,3,naxes,nfound,status)
 	  npixels=naxes(1)*naxes(2)*naxes(3)
 	  ! Read model info
-  	  call ftgkyd(unit,'Rin',Rin,comment,status)
-	  call ftgkyd(unit,'Rout',Rout,comment,status)
-	  call ftgkyd(unit,'Mstar',Mstar,comment,status)
-	  call ftgkyd(unit,'Rstar',Rstar,comment,status)
-	  call ftgkyd(unit,'distance',distance,comment,status)
-	  call ftgkyj(unit,'NXX',nR,comment,status)
-	  call ftgkyj(unit,'NZZ',nTheta,comment,status)
-  	  call ftgkyj(unit,'NSPEC',nspec,comment,status)
-  	endif
+		call ftgkyd(unit,'Rin',Rin,comment,status)
+		call ftgkyd(unit,'Rout',Rout,comment,status)
+		call ftgkyd(unit,'Mstar',Mstar,comment,status)
+		call ftgkyd(unit,'Rstar',Rstar,comment,status)
+		call ftgkyd(unit,'distance',distance,comment,status)
+		call ftgkyj(unit,'NXX',nR,comment,status)
+		call ftgkyj(unit,'NZZ',nTheta,comment,status)
+		call ftgkyj(unit,'NSPEC',nspec,comment,status)
+
+		! potentially slow, but need to know all the species names. 
+	  ! move to the population hdu
+		allocate(mol_name0(nspec))
+		call ftmahd(unit,13,hdutype,status) ! one HDU before the population data
+	  do i=1,nspec
+			! move to next hdu, do it at beginng of loop to avoid problems at the end
+			call ftmrhd(unit,1,hdutype,status)
+			call ftgkys(unit,'SPECIES',mol_name0(i),comment,status)
+			if (status.ne.0) then
+				write(*,*) "Error reading species name for imol=",i
+				goto 1				
+			endif
+		end do
+	  ! move back to the first hdu
+	  call ftmahd(unit,1,hdutype,status) 
+		if (status.ne.0) goto 1
+    ! now build an index
+		
+		do imol=1,nmol
+			! means that we have a molecule that is not in the FITS file
+			! at least in contect with ProDiMo this should not happen (as there would be not lamda.dat file)
+			ispec(imol)=-1 
+      do i=nspec,1,-1
+        if(trim(Mol(imol)%name).eq.trim(mol_name0(i))) then 					
+					ispec(imol)=i
+					exit
+				endif
+      enddo
+		enddo
+	endif
 
 	nR=nR+1
 	nTheta=nTheta+1
@@ -187,14 +242,15 @@ c===============================================================================
 
 	do i=0,nR
 	   do j=0,nTheta
-	      allocate(C(i,j)%npop0(nspec))
-	      allocate(C(i,j)%N0(nspec))
-	      allocate(C(i,j)%line_width0(nspec))
+	      allocate(C(i,j)%npop(nmol))
+        ! TODO: check if it is okay to allocate it here, or if it should be allocated earlier
+	      allocate(C(i,j)%N(nmol))
+	      allocate(C(i,j)%line_width(nmol))
 	   enddo
 	enddo
 
 
-  	!------------------------------------------------------------------------------
+  !------------------------------------------------------------------------------
 	! HDU 1 : Gas Temperature 
 	!------------------------------------------------------------------------------
 	if (exdat) then
@@ -202,11 +258,11 @@ c===============================================================================
 	  read(1) array_d    ! read pointgrid
 	  read(1) array_d
 	else   
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
+	  ! move to first image hdu
+	  call ftmahd(unit,2,hdutype,status)
+	  if (status.ne.0) then			
+			!status=0
+	    goto 1
 	  endif
 	  naxis=2
 	  ! Check dimensions
@@ -374,22 +430,12 @@ c===============================================================================
 	  allocate(array_d(nlam,1,1,1))
 	  read(1) array_d
 	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=1
-  	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-  	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+			status=0
+			goto 1
+		endif
 	endif  
 
 	do i=1,nlam
@@ -424,22 +470,12 @@ c===============================================================================
 	  allocate(array_d(nlam,nR-1,nTheta-1,1))
 	  read(1) array_d
 	else  
-  	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=4
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+			status=0
+			goto 1
+		endif
 	endif  
 
 	do i=1,nR-1
@@ -461,22 +497,12 @@ c===============================================================================
 	  allocate(array_d(nlam,nR-1,nTheta-1,1))
 	  read(1) array_d
 	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=4
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+			status=0
+			goto 1
+		endif
 	endif
   
 	do i=1,nR-1
@@ -504,22 +530,12 @@ c===============================================================================
 	  allocate(array_d(nlam,nR-1,nTheta-1,1))
 	  read(1) array_d
 	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=3
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+			status=0
+			goto 1
+		endif
 	endif  
 
 	do i=1,nR-1
@@ -539,25 +555,15 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	! HDU 10 : Source function
 	!------------------------------------------------------------------------------
 	if (exdat) then
-	  allocate(array_d(nlam,nR-1,nTheta-1,1))
-	  read(1) array_d
-	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=3
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		allocate(array_d(nlam,nR-1,nTheta-1,1))
+		read(1) array_d
+	else  		
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+	   	status=0
+			goto 1
+	  	endif
 	endif  
 
 	do i=1,nR-1
@@ -568,79 +574,59 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	   enddo
 	   C(i,1)%S(1:nlam)=C(i,2)%S(1:nlam)/1d20
 	enddo
-
 	deallocate(array_d)
 
 
 	!------------------------------------------------------------------------------
 	! HDU 11 : Molecular particle densities [1/cm^3]
 	!------------------------------------------------------------------------------
+	! TODO: similar to the pops also here N0 is just a temporary array
 	if (exdat) then
 	  allocate(array_d(nspec,nR-1,nTheta-1,1))
 	  read(1) array_d
 	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=3
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+			status=0
+			goto 1
+		endif
 	endif  
 
 	do i=1,nR-1
-	   do j=2,nTheta
-	      do imol=1,nspec
-		 C(i,j)%N0(imol)=array_d(imol,i,nTheta+1-j,1)
-	      enddo
-	   enddo
-	   C(i,1)%N0(1:nspec)=C(i,2)%N0(1:nspec)/1d20
+		do j=2,nTheta    ! FIXME: that will not work, if it is not a fits file.
+			do imol=1,nmol ! fill only the molecules we need				
+		 		C(i,j)%N(imol)=array_d(ispec(imol),i,nTheta+1-j,1)
+			enddo
+		enddo
+		C(i,1)%N(1:nmol)=C(i,2)%N(1:nmol)/1d20
 	enddo
-
 	deallocate(array_d)
 
 
 	!------------------------------------------------------------------------------
 	! HDU 12 : Line broadening parameter
 	!------------------------------------------------------------------------------
+	! TODO: also here line_width0 is just a temporary array
 	if (exdat) then
-	  allocate(array_d(nspec,nR-1,nTheta-1,1))
-	  read(1) array_d
+		allocate(array_d(nspec,nR-1,nTheta-1,1))
+		read(1) array_d
 	else  
-	  ! move to next hdu
-	  call ftmrhd(unit,1,hdutype,status)
-	  if (status.ne.0) then
-	     status=0
-	     goto 1
-	  endif
-	  naxis=3
-	  ! Check dimensions
-	  call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	  do i=naxis+1,4
-	     naxes(i)=1
-	  enddo
-	  npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-	  ! read_image
-	  allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	  call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
+		! read next hdu
+		call readNextHDU(unit,array_d,status)
+		if (status.ne.0) then
+			status=0
+			goto 1
+		endif
 	endif  
 
 	do i=1,nR-1
-	   do j=2,nTheta
-	      do imol=1,nspec
-		 C(i,j)%line_width0(imol)=array_d(imol,i,nTheta+1-j,1)
-	      enddo
-	   enddo
-	   C(i,1)%line_width0(1:nspec)=C(i,2)%line_width0(1:nspec)/1d20
+		do j=2,nTheta
+	  	do imol=1,nmol
+				C(i,j)%line_width(imol)=array_d(ispec(imol),i,nTheta+1-j,1)
+	    enddo
+	  enddo
+	  C(i,1)%line_width(1:nmol)=C(i,2)%line_width(1:nmol)/1d20
 	enddo
 
 	deallocate(array_d)
@@ -648,84 +634,123 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 
 	!------------------------------------------------------------------------------
 	! HDU 13... : relative level populations
-	!------------------------------------------------------------------------------
-	allocate(mol_name0(nspec))
-	allocate(npop0(nspec))
-	
-	do imol=1,nspec
+	!------------------------------------------------------------------------------	
+	do is=1,nspec
+		! find the imol that belongs to is
+		found=.false.
+		do imol=1,nmol
+			if (ispec(imol)==is) then 
+				found=.true.
+				exit
+			endif
+		enddo 
 
- 	  if (exdat) then
-	    read(1) mol_name0(imol)
-	    read(1) Npop
-	    allocate(array_d(Npop,nR-1,nTheta-1,1))
-	    read(1) array_d
-	  else  
-	    ! move to next hdu
-	    call ftmrhd(unit,1,hdutype,status)
-	    if (status.ne.0) then
-	       status=0
-	       goto 1
-	    endif
-	    naxis=3
-	    ! Check dimensions
-	    call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
-	    call ftgkyj(unit,'NLEV',Npop,comment,status)
-	    call ftgkys(unit,'SPECIES',mol_name0(imol),comment,status)
-	    do i=naxis+1,4
-	       naxes(i)=1
-	    enddo
-	    npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
-            ! read_image
-	    allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
-	    call ftgpvd(unit,group,firstpix,npixels,nullval_d,array_d,anynull,status)
-	  endif  
+		if (exdat) then
+			read(1) mol_name0(is)
+			read(1) Npop
+			allocate(array_d(Npop,nR-1,nTheta-1,1))
+			! always need to read, but if we do not need it we skip it
+			read(1) array_d
+			if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
+				call output(trim(int2string(is,'(i3)'))//" skipping "//trim(mol_name0(is))//" in FLiTs file.")
+				deallocate(array_d)
+				cycle
+			endif
+		else
+			! move to next hdu, always need to move 
+			call ftmrhd(unit,1,hdutype,status)
+			if (status.ne.0) then ! if we get an error here, we assume we reached the end of file
+				status=0 ! to not have an error message
+				goto 1
+			endif
+			if (.not.found) then ! ispec is not in the list of the imol ... so do not need it
+				call output(trim(int2string(is,'(i3)'))//" skipping "//trim(mol_name0(is))//" in FLiTs file.")
+				cycle
+			endif
+			naxis=3
+			! Check dimensions
+			call ftgknj(unit,'NAXIS',1,naxis,naxes,nfound,status)
+			call ftgkyj(unit,'NLEV',Npop,comment,status)
+			call output(trim(int2string(is,'(i3)'))//" read " // trim(mol_name0(is)) // " from FLiTs file, Npop="//trim(int2string(Npop,'(i6)')))			
+			do i=naxis+1,4
+				naxes(i)=1
+			enddo
+			! just to be absolutely sure that npixels8 stays integer*8
+			npixelsll=INT(1,kind(npixelsll))
+			do i=1,naxis
+				npixelsll=npixelsll*naxes(i)
+			enddo
+			! if we have a lot of Npops we read it in in chunks, to avoid memory problems
+			step=50000
+			if (Npop>step) then 
+				write(*,*) "    reading chunks for ",trim(mol_name0(is))," with Npop=",Npop
+				! imol was already initialised properly
+				call alloc_npop(imol,Npop)
+				! maybe make this a parameter, it really depends on how big the array is (also nr,ntheta)								
+				do i=1,Npop,step					
+					call system_clock(startcount)
+					write(*,"(a,i7,a,i7)",advance="no") "    reading population levels from ",i," to ",min(i+step-1,Npop)
+					call tellertje(i+1,Npop+1)
+					startF(1)=i
+					startF(2)=1
+					startF(3)=1
+					endF(1)=min(i+step-1,Npop)
+					endF(2)=naxes(2)
+					endF(3)=naxes(3)
+					strideF(:)=1
+					allocate(array_d(endF(1)-startF(1)+1,naxes(2),naxes(3),1))
+					call ftgsvd(unit,group,naxis,naxes,startF,endF,strideF,nullval_d,array_d,anynull,status)
+					call system_clock(endcount)
+        			write(*,"(a,f10.2,a)",advance="no") "    time read: ",(endcount-startcount)/DBLE(count_rate)," s"
+					call system_clock(startcount)
+					if (status.ne.0) goto 1
+					call fill_npop(imol,startF(1),endF(1),array_d)
+					deallocate(array_d)
+					call system_clock(endcount)
+					write(*,"(a,f10.2,a)") "    time fill: ",(endcount-startcount)/DBLE(count_rate)," s"
+				enddo
+			else 
+				call system_clock(startcount)
+				allocate(array_d(naxes(1),naxes(2),naxes(3),naxes(4)))
+				call ftgpvdll(unit,group,firstpixelll,npixelsll,nullval_d,array_d,anynull,status)
+				if (status.ne.0) goto 1 ! check for errors
+				call system_clock(endcount)
+				write(*,"(a,f10.2,a)",advance="no") "    time read: ",(endcount-startcount)/DBLE(count_rate)," s"
+			endif
+		endif
 
-	  npop0(imol) = Npop
-	  call output(int2string(imol,'(i3)') // "Found " // trim(mol_name0(imol)) // " in FLiTs file")
-	  do i=0,nR
-	     do j=0,nTheta
-		allocate(C(i,j)%npop0(imol)%N(Npop))
-	     enddo
-	  enddo
-	
-	  do i=1,nR-1
-	     do j=2,nTheta
-		C(i,j)%npop0(imol)%N=0d0
-		tot=0d0
-		do k=1,Npop
-		   C(i,j)%npop0(imol)%N(k)=array_d(k,i,nTheta+1-j,1)
-		   tot=tot+C(i,j)%npop0(imol)%N(k)
-		enddo
-c               C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
-	     enddo
-	     do k=1,Npop
-		C(i,1)%npop0(imol)%N(k)=C(i,2)%npop0(imol)%N(k)
-	     enddo
-	  enddo
+		! if we do not read chunks, will still need to fill npop
+		if (.not.allocated(C(0,0)%npop(imol)%N)) then
+			call system_clock(startcount)
+			! allocate the npop array for this molecule
+			call alloc_npop(imol,Npop)
+			call fill_npop(imol,1,Npop,array_d)
+			deallocate(array_d)
+			call system_clock(endcount)
+			write(*,"(a,f10.2,a)") "   time fill: ",(endcount-startcount)/DBLE(count_rate)," seconds"
+		endif
+	enddo ! NSPEC loop
 
-	  deallocate(array_d)
-
-	enddo
-
-1	continue
+1     continue
 	if (.not.exdat) then
-	  ! Close the file and free the unit number.
-	  call ftclos(unit, status)
-	  call ftfiou(unit, status)
-	  !  Check for any error, and if so print out error messages
-	  !  Get the text string which describes the error
-	  if (status > 0) then
-	    call ftgerr(status,errtext)
-	    print *,'FITSIO Error Status =',status,': ',errtext
-	    !  Read and print out all the error messages on the FITSIO stack
-	    call ftgmsg(errmessage)
-	    do while (errmessage .ne. ' ')
-	      print *,errmessage
-	      call ftgmsg(errmessage)
-	    end do
-	  endif
-        endif
-	
+	   ! Close the file and free the unit number.
+	   call ftclos(unit, status)
+		call ftfiou(unit, status)
+		!  Check for any error, and if so print out error messages
+		!  Get the text string which describes the error
+		if (status > 0) then
+			call ftgerr(status,errtext)
+			print *,'FITSIO Error Status =',status,': ',errtext
+			!  Read and print out all the error messages on the FITSIO stack		 
+			call ftgmsg(errmessage)
+			do while (errmessage .ne. ' ')
+				print *,errmessage
+				call ftgmsg(errmessage)				
+			end do
+			stop ! We got an error, so better to stop
+		endif
+	endif
+
 	do i=1,nR-1
 	   do j=1,nTheta
 	      xx=R_av(i)
@@ -767,6 +792,73 @@ c               C(i,j)%npop0(imol)%N(1:Npop)=C(i,j)%npop0(imol)%N(1:Npop)/tot
 	enddo
 	
 	return
-	end
 	
+	end
+
+	subroutine readNextHDU(u,arr,stat)
+		! Utility function
+		! moves to the next hdu and fills the passed arr structure
+		implicit none
+		integer, intent(in) :: u
+		real*8,intent(inout),allocatable :: arr(:,:,:,:)
+		integer*4,intent(out) :: stat
+		integer*4 :: i, naxis,nfound,firstpix,npixels,hdutype,group
+		real*8  :: nullval_d
+		logical*4 :: anynull
+		integer*4, dimension(4) :: naxes
+	  
+		group=1
+	  	firstpix=1
+	  	nullval_d=-999
+
+		call ftmrhd(u,1,hdutype,stat)
+		if (stat.ne.0) return
+
+		naxis=3
+		! Check dimensions, up to three axes, if it is lower also okay
+		call ftgknj(u,'NAXIS',1,naxis,naxes,nfound,stat)		
+		! nfound it the number of axes found
+		do i=nfound+1,4
+			naxes(i)=1
+		enddo
+	  	npixels=naxes(1)*naxes(2)*naxes(3)*naxes(4)
+		! read_image
+		allocate(arr(naxes(1),naxes(2),naxes(3),naxes(4)))
+		call ftgpvd(u,group,firstpix,npixels,nullval_d,arr,anynull,stat)
+	end subroutine readNextHDU
+	
+	subroutine alloc_npop(imol,Npop)
+		! This subroutine allocates the whole npop0 array for one molecule
+		use GlobalSetup, only: C,nR,nTheta
+		implicit none
+		integer, intent(in) :: imol
+		integer, intent(in) :: Npop
+		integer :: i,j
+		do i=0,nR
+	  	do j=0,nTheta
+	    	allocate(C(i,j)%npop(imol)%N(Npop))
+	  	enddo
+		enddo
+		
+	end subroutine alloc_npop
+
+	subroutine fill_npop(im,ipop_start,ipop_end,arr)
+  		! Fill the npop array, from ipop_start to ipop_end
+		! 
+		! The passed arr has dimension (ipop_end-ipop_start,nR,nTheta,1)
+		! No init of N can be done in this routine (might override already filled values)
+		use GlobalSetup, only: C,nR,nTheta
+		implicit none
+		integer, intent(in) :: im ! the molecule index
+		integer, intent(in) :: ipop_start,ipop_end ! start/end index in the N array, that should be filled
+		real*8, intent(in) :: arr(:,:,:,:) ! the data to fill the npop array
+		integer :: i,j
+		do i=1,nR-1
+			do j=2,nTheta
+				C(i,j)%npop(im)%N(ipop_start:ipop_end)=arr(:,i,nTheta+1-j,1)
+			enddo
+			C(i,1)%npop(im)%N(ipop_start:ipop_end)=C(i,2)%npop(im)%N(ipop_start:ipop_end)
+		enddo		
+	end subroutine fill_npop
+
 

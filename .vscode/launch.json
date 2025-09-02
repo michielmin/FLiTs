@@ -1,0 +1,29 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [		
+		{
+			"type": "cppdbg",
+			"request": "launch",
+			"name": "Launch FLiTs executable",
+			"program": "/home/rab/git/FLiTs/FLiTs",
+			"cwd": "${input:workdir}",
+			"stopAtEntry": true,
+	//            "console": "integratedTerminal",
+			"args": ["inputFLiTs.dat"],
+			"environment": [
+					{ "name": "OMP_NUM_THREADS", "value": "1" },
+			]
+		}
+	],
+	"inputs": [
+		{
+			"id": "workdir",
+			"type": "promptString",
+			"description": "Enter working directory for FLiTs",
+			"default": "/home/rab/MODELS/"
+		}
+	]  
+}

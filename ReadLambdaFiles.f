@@ -5,6 +5,8 @@
 	integer i,j,i_low,i_up,imol,ios
 	real*8 v1,v2
 	
+	call output("Reading lambda files ...")
+
 	allocate(Mol(nmol))
 
 	do imol=1,nmol
@@ -22,7 +24,7 @@
 	    do i=1,Mol(imol)%nlevels
 	      read(80,*) j,Mol(imol)%E(i),Mol(imol)%g(i)
 	                 Mol(imol)%E(i)=Mol(imol)%E(i)*11600d0/8065.54d0
-            enddo
+			enddo
 	    read(80,*)
 	    read(80,*) Mol(imol)%nlines
 	    read(80,*)
@@ -45,8 +47,7 @@
 	    Mol(imol)%nlevels = 0
 	    Mol(imol)%nlines = 0
 	  endif
-	  close(unit=80)
-		
+	  close(unit=80)		
 	enddo
 
 	return
