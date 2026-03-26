@@ -184,4 +184,63 @@ c===============================================================================
 	
 	return
 	end
+
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	subroutine WriteSysinfo()
+	! Write some info about the system, openmp etc. into the log file
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		use iso_fortran_env, ONLY: compiler_version, compiler_options  
+		implicit none
+		character(len=100) :: host,folder
+		integer :: numPE,OK
+		integer,external :: OMP_GET_NUM_THREADS,omp_get_proc_bind
+		integer,external :: omp_get_num_places
+		integer :: ompversion,OMP_PROC_BIND, OMP_PLACES
+		real*4 :: cfitsioversion
+		character*20 :: int2string,dbl2string
+
+		write(*,*)
+		write(*,*) "WRITE_SYSINFO: ..."
+		call GET_ENVIRONMENT_VARIABLE(NAME="HOSTNAME",VALUE=host,STATUS=OK)
+		
+		if (ok.eq.0) then ! does not always exist
+			call output("running on host "//trim(host))
+		endif
+
+		call GET_ENVIRONMENT_VARIABLE(NAME="PWD",VALUE=folder,STATUS=OK)
+		call output("running in folder "//trim(folder))
+
+!$omp parallel
+#ifdef _OPENMP
+		numPE=OMP_GET_NUM_THREADS()
+		ompversion= _OPENMP
+		OMP_PROC_BIND = omp_get_proc_bind()
+		OMP_PLACES= omp_get_num_places()
+#else
+		numPE=1
+		ompversion=0
+		OMP_PROC_BIND = -1
+		OMP_PLACES= -1
+#endif
+!$omp end parallel
+		call output(" using" // trim(int2string(numPE,'(i3)')) // " processors, with PROC_BIND=" // trim(int2string(OMP_PROC_BIND,'(i3)')) // " and PLACES=" // trim(int2string(OMP_PLACES,'(i3)')))
+		if (ompversion >0) then
+			call output(" using OMP version: " // trim(int2string(ompversion,'(i7)')))
+		endif
+
+		call output(" compiler version: " // trim(compiler_version()))
+		call output(" compiler options: " // trim(compiler_options()))
+
+		! check for required cfitsio version
+		call ftvers(cfitsioversion)
+		call output(" using cfitsio version: " // trim(dbl2string(cfitsioversion*1.d0,'(f7.5)')))
+
+		! This should not happen, because the compilation should fail anyway
+		! Hoever, keep it in case somebody is copying prodimo binaries around
+		if (cfitsioversion.lt.4.0199) then ! cfitsio return 4.01999 for 4.2.0
+			call output("*** ERROR: FLiTs requires cfitsio version>=4.2.0")
+			stop
+		endif
+
+	end subroutine WriteSysinfo	
 	

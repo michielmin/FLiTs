@@ -24,7 +24,10 @@ c terms of use
 	call output("==================================================================")
 	call output("Let's get the show on the road!!")
 	call output("FLiTs "//trim(VersionGIT()))
+	
+	call WriteSysinfo()
 	call output("==================================================================")
+	call output(" ")
 
 c initialization
 	call Initialize()
