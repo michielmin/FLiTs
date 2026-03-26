@@ -265,7 +265,7 @@
 						endif
 					endif
 				enddo
-			else
+			else				
 				flux0=flux_c
 				flux4(Bl%nvmin:Bl%nvmax)=flux4(Bl%nvmin:Bl%nvmax)+flux0*PP%A
 				if(imagecube) then
@@ -301,10 +301,15 @@
 
 		f=sqrt((1d0+real(Bl%nvmin)*vresolution/clight)/(1d0-real(Bl%nvmin)*vresolution/clight))
 		wl11=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		! wl11 can be > 1 if the continuum if nv*vresolution is wider than the spacing between the continuum points. 
+		! So the continuum grid is to fine, just assume the nearest continuum point then. 
+		! not sure if this is the best solution, but it avoids NaN values.
+		wl11=min(1d0,max(0d0,wl11))
 		wl21=1d0-wl11
 
 		f=sqrt((1d0+real(Bl%nvmax)*vresolution/clight)/(1d0-real(Bl%nvmax)*vresolution/clight))
 		wl13=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		wl13=min(1d0,max(0d0,wl13))
 		wl23=1d0-wl13
 
 		flux_l1=0d0
@@ -316,7 +321,7 @@
 				flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
 			enddo
 		enddo
-		PP => path2star
+		PP => path2star		
 
 		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
 		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
