@@ -580,7 +580,6 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 	!------------------------------------------------------------------------------
 	! HDU 11 : Molecular particle densities [1/cm^3]
 	!------------------------------------------------------------------------------
-	! TODO: similar to the pops also here N0 is just a temporary array
 	if (exdat) then
 	  allocate(array_d(nspec,nR-1,nTheta-1,1))
 	  read(1) array_d
@@ -599,10 +598,9 @@ c                C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
 		 		C(i,j)%N(imol)=array_d(ispec(imol),i,nTheta+1-j,1)
 			enddo
 		enddo
-		C(i,1)%N(1:nmol)=C(i,2)%N(1:nmol)/1d20
+		C(i,1)%N(1:nmol)=C(i,2)%N(1:nmol)/1d20		
 	enddo
 	deallocate(array_d)
-
 
 	!------------------------------------------------------------------------------
 	! HDU 12 : Line broadening parameter
