@@ -150,7 +150,8 @@
 					enddo
 					enddo
 					flux0=flux0+path2star%flux_cont(k)*path2star%A
-					write(20,"(F15.8, 1pE16.8)") lam_cont(k),flux0*1e23/(distance*parsec)**2
+					write(20,"(F15.8, 1pE16.8, 1pE16.8, 1pE16.8, 3X, A)") lam_cont(k),
+     &						flux0*1e23/(distance*parsec)**2,0.0,flux0*1e23/(distance*parsec)**2,"continuum"
 				endif
 			enddo
 			ilam1=ilam
@@ -265,7 +266,7 @@
 						endif
 					endif
 				enddo
-			else
+			else				
 				flux0=flux_c
 				flux4(Bl%nvmin:Bl%nvmax)=flux4(Bl%nvmin:Bl%nvmax)+flux0*PP%A
 				if(imagecube) then
@@ -301,10 +302,16 @@
 
 		f=sqrt((1d0+real(Bl%nvmin)*vresolution/clight)/(1d0-real(Bl%nvmin)*vresolution/clight))
 		wl11=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		! wl11 can be > 1 if nv*vresolution is wider than the spacing between the continuum points. 
+		! So the continuum grid is too fine, just assume the nearest continuum point then. 
+		! > 1 would mean extrapolation, but in some cases that ends in NaN, limiting it to 1 means, no extrapolation
+		wl11=min(1d0,max(0d0,wl11))
 		wl21=1d0-wl11
 
 		f=sqrt((1d0+real(Bl%nvmax)*vresolution/clight)/(1d0-real(Bl%nvmax)*vresolution/clight))
 		wl13=log10(lam_cont(ilam+1)/(lam*f))/log10(lam_cont(ilam+1)/lam_cont(ilam))
+		! see above wl11
+		wl13=min(1d0,max(0d0,wl13))
 		wl23=1d0-wl13
 
 		flux_l1=0d0
@@ -316,7 +323,7 @@
 				flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A/real(ngrids)
 			enddo
 		enddo
-		PP => path2star
+		PP => path2star		
 
 		flux_l1=flux_l1+PP%flux_cont(ilam)*PP%A
 		flux_l2=flux_l2+PP%flux_cont(ilam+1)*PP%A
@@ -420,7 +427,14 @@ c     &			//" s")
 	end
 	
 	
-	subroutine ContContrPath(p0,flux)
+	subroutine ContContrPath(p0,flux)! 		
+!	Compute the continuum flux along path p0 at the current line-center
+!	wavelength (set by the last call to InterpolateLam). Integrates the
+!	formal RT solution cell by cell using the pre-interpolated dust opacity
+!	kext_l and source function (therm_l + scat_l). As a side effect, caches
+!	exptau_dust(k), S_dust(k) and cont_contr(k) per path element so that
+!	TraceFluxLines can reuse them without recomputing the dust RT.
+! DOC by Claude
 	use GlobalSetup
 	use Constants
 	integer i,j,k,vmult,iv,ii,nv,nn

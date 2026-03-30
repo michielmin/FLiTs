@@ -2,12 +2,13 @@
 	use GlobalSetup
 	use Constants
 	IMPLICIT NONE
-	integer i,j,ilam,k
+	integer i,j,ilam,k,ilamstart,ilamend
 	real*8 flux,lam0,T,Planck,wl1,wl2
+	character(len=20) :: int2string
 	logical doit
 
 	call output("==================================================================")
-	call output("Raytracing the continuum")
+	!call output("Raytracing the continuum")
 
 c BB is not used and this produces a floating overflow, already for T=1
 c	allocate(BB(nlam,MAXT))
@@ -25,17 +26,18 @@ c	enddo
 	enddo
 	allocate(path2star%flux_cont(nlam))
 
-	do ilam=1,nlam
-		call tellertje(ilam-1,nlam-2)
-		doit=.false.
-		if(ilam.eq.1) then
-			if(lam_cont(ilam+1).gt.lmin) doit=.true.
-		else if(ilam.eq.nlam) then
-			if(lam_cont(ilam-1).lt.lmax) doit=.true.
-		else if(lam_cont(ilam-1).lt.lmax.and.lam_cont(ilam+1).gt.lmin) then
-			doit=.true.
-		endif
-		if(doit) then
+	do ilamstart=1,nlam-1
+		if(lam_cont(ilamstart+1).gt.lmin) exit
+	enddo		
+
+	do ilamend=ilamstart,nlam
+		if(lam_cont(ilamend).gt.lmax) exit
+	enddo		
+	ilamend=min(ilamend,nlam) ! case of last point
+
+	call output("Raytracing the continuum for " // trim(int2string(ilamend-ilamstart,'(i5)')) // " wavelengths")
+	do ilam=ilamstart,ilamend
+		call tellertje(ilam-ilamstart+1,ilamend-ilamstart)		
 		flux=0d0
 		do i=1,ngrids
 		do j=1,npoints(i)
@@ -45,8 +47,9 @@ c	enddo
 		enddo
 		call Trace2StarCont(path2star,ilam,path2star%flux_cont(ilam))
 		flux=flux+path2star%flux_cont(ilam)*path2star%A
-		endif
+		!endif
 	enddo
+	call output("")
 
 	return
 	end
