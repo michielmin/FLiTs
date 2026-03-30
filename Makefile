@@ -31,13 +31,13 @@ FLAG_MAC      =
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX)
-  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) Version.f
+  LDFLAGS  = $(FLAG_ALL) $(FLAG_LINUX) Version.f90
 # Adjust if needed, e.g add 
 # -L/home/pwoitke/software/cfitsio/lib -lcfitsio 	
   LIBS     = -lcfitsio        
 else
   FFLAGS  = $(FLAG_ALL) $(FLAG_MAC)
-  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) Version.f
+  LDFLAGS = $(FLAG_ALL) $(FLAG_MAC) Version.f90
 	# Adjust if needed, e.g add
 	#	LIBS	  = -L/usr/lib -L/sw/lib -L/usr/local/lib -lm -lfftw3 -lcfitsio -I/sw/include
   LIBS     = -lcfitsio  
