@@ -1,10 +1,10 @@
 	subroutine RaytraceContinuum()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer i,j,ilam,k,ilamstart,ilamend
 	real*8 flux,lam0,T,Planck,wl1,wl2
-	character(len=20) :: int2string
 	logical doit
 
 	call output("==================================================================")

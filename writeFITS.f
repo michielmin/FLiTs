@@ -1,4 +1,5 @@
 	subroutine writefitsfile(filename,im,nlam,n)
+	use InOut
 	IMPLICIT NONE
 	character*500 filename
 	integer n,nlam

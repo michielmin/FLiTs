@@ -1,6 +1,7 @@
 	subroutine SetupPaths()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer ip,jp,i,j,k,ir,nRreduce,ilam,imol,nImPhi_max,nPhiMin,nPhiMax,iint,it
 	integer,allocatable :: startphi(:)
@@ -14,24 +15,9 @@
 	integer,allocatable :: t_node(:,:),t_neighbor(:,:)
 	integer matri,icount,ncount
 	real*8,allocatable :: xy(:,:)
-	real*8 matrix(2,2)
-	interface
-	  subroutine output(string)
-	  IMPLICIT NONE
-	  character string*(*)
-	  end
-	  character*20 function int2string(i,form)
-	  IMPLICIT NONE
-	  integer i
-	  character,intent(in),optional :: form*(*)
-	  end
-	  character*20 function dbl2string(x,form)
-	  IMPLICIT NONE
-	  real*8 x
-	  character,intent(in),optional :: form*(*)
-	  end
-	end interface
-
+	real*8 matrix(2,2)	
+	real*8 time,utime
+	
 	ilam1=1
 	ilam2=nlam
 	do ilam=1,nlam
@@ -80,6 +66,8 @@ c increase the resolution in velocity by this factor
 		
 	call output("==================================================================")
 	call output("Setup up the paths for raytracing")
+
+	call clock(time,utime)
 
 	do while(nR/nRreduce.lt.40.and.nRreduce.gt.1)
 		nRreduce=nRreduce-1
@@ -298,6 +286,7 @@ c increase the resolution in velocity by this factor
 	enddo
 !$OMP END PARALLEL DO
 	enddo
+	call output("")
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
      &			//" km/s")
 
@@ -342,9 +331,11 @@ c increase the resolution in velocity by this factor
 	call tracepath(trac,PP,.false.)
 
 	deallocate(startphi)
+	
+	call clock_write(time,utime,"SetupPaths:")
 
 	return
-	end
+	end subroutine SetupPaths
 
 
 c-----------------------------------------------------------------------

@@ -11,6 +11,7 @@ c FLiTs input.dat -s keyword=value -s keyword2=value2
 c That's it, have fun!
 c=========================================================================================
 	program FLiTs
+	use InOut
 	IMPLICIT NONE
 	character*500 VersionGIT
 

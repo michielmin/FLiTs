@@ -5,6 +5,7 @@ c===============================================================================
 	subroutine Initialize()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer ncla	! number of command line arguments
 	character*1000 readline,inputfile
@@ -186,6 +187,7 @@ c===============================================================================
 	! Write some info about the system, openmp etc. into the log file
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		use iso_fortran_env, ONLY: compiler_version, compiler_options  
+		use InOut
 		implicit none
 		character(len=100) :: host,folder
 		integer :: numPE,OK
@@ -193,7 +195,6 @@ c===============================================================================
 		integer,external :: omp_get_num_places
 		integer :: ompversion,OMP_PROC_BIND, OMP_PLACES
 		real*4 :: cfitsioversion
-		character*20 :: int2string,dbl2string
 
 		write(*,*)
 		write(*,*) "WRITE_SYSINFO: ..."

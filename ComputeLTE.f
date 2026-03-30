@@ -1,6 +1,7 @@
 	subroutine ComputeLTE()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer i,j,ilines,k,i_low,i_up,imol
 	real*8 UT,T

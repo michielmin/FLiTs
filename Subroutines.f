@@ -112,15 +112,9 @@ c-----------------------------------------------------------------------
 
 
 	subroutine tellertje(i,n)
+	use InOut
 	IMPLICIT NONE
-	integer i,n,f
-	interface
-	  subroutine outputform(string,form)
-	  IMPLICIT NONE
-	  character string*(*)
-	  character,intent(in),optional :: form*(*)
-	  end
-	end interface
+	integer i,n,f	
 	
 	if(i.eq.1) call output("....................")
 	f=int(20d0*dble(i)/dble(n))
@@ -140,22 +134,12 @@ c-----------------------------------------------------------------------
 
 
 	subroutine tellertje_time(i,n,ii,nn,starttime)
+	use InOut
 	IMPLICIT NONE
 	integer i,n,f
 	integer ii,nn
 	integer*4 counts, count_rate, count_max
 	real*8 starttime,stoptime,xx
-	interface
-	  subroutine output(string)
-	  IMPLICIT NONE
-	  character string*(*)
-	  end
-	  character*20 function dbl2string(x,form)
-	  IMPLICIT NONE
-	  real*8 x
-	  character,intent(in),optional :: form*(*)
-	  end
-	end interface
 	
 	if(i.eq.1) then
 		!call cpu_time(stoptime)

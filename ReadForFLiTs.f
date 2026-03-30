@@ -6,6 +6,7 @@ c===============================================================================
 	subroutine ReadForFLiTs()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer i,j,imol,l,naxis
 	real*8,allocatable :: array(:,:,:,:)
@@ -28,23 +29,6 @@ c===============================================================================
 	integer :: startF(3), endF(3), strideF(3)
 	integer :: step
 	interface
-	  subroutine output(string)
-	  IMPLICIT NONE
-	  character string*(*)
-	  end
-
-	  character*20 function int2string(i,form)
-	  IMPLICIT NONE
-	  integer i
-	  character,intent(in),optional :: form*(*)
-	  end
-
-	  character*20 function dbl2string(x,form)
-	  IMPLICIT NONE
-	  real*8 x
-	  character,intent(in),optional :: form*(*)
-	  end
-
 		subroutine fill_npop(im,ipop_start,ipop_end,arr)
 			implicit none
 			integer, intent(in) :: im

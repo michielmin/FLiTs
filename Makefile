@@ -10,23 +10,24 @@ LINKER = gfortran
 # cl> make multi=false
 ifeq ($(multi),true)
   ### MULTICORE = -qopenmp 
-  MULTICORE = -fopenmp -DUSE_OPENMP
+  MULTICORE = -fopenmp
 endif
 
 $(info $$debug is [${debug}])
 # array boundary check
 ifeq ($(debug),true)
   ### FLAGS = -traceback -g -fp-stack-check -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces -fpp
-  FLAGS = -fbacktrace -g -Og -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -fcheck=all --warn-all -cpp
+  FLAGS = -fbacktrace -g -Og -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -fcheck=all --warn-all -cpp
 else
   ### FLAGS = -O3 -xHOST -msse4.2 -fp-model strict -extend-source -zero -prec-div -fpp 
-  FLAGS = -O3 -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -std=legacy -march=native -cpp
+  FLAGS = -O3 -fdefault-real-8 -fdefault-double-8 -finit-local-zero -ffixed-line-length-none -march=native -cpp 
 endif
 
 # Platform specific compilation options
 FLAG_ALL      = $(MULTICORE) $(FLAGS)
 FLAG_LINUX    = 
 FLAG_MAC      = 
+
 
 ifeq ($(shell uname),Linux)
   FFLAGS   = $(FLAG_ALL) $(FLAG_LINUX)
@@ -49,7 +50,7 @@ ifneq ($(name),)
 endif
 
 # files to make
-OBJS	      = Modules.o \
+OBJS	= Modules.o \
 		Main.o \
 		InputOutput.o \
 		Subroutines.o \
@@ -69,6 +70,8 @@ OBJS	      = Modules.o \
 PROGRAM       = FLiTs		#$(SUFFIX)-$(shell date +%d-%m-%Y)
 DEST	      = ${HOME}/bin
 
+.SUFFIXES : .o .f .f90 .F
+
 # make actions 
 all:		version $(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git describe), git build $(shell git rev-parse HEAD)\"" > gitversion.h
@@ -78,17 +81,23 @@ install:	version $(PROGRAM)
 echo:;		@echo $(SUFFIX)
 
 # special rule to make fortran 90 files
-fit_module.o:	fit_module.f90
-		${FC} $(FFLAGS) -c fit_module.f90 -o fit_module.o
+#fit_module.o:	fit_module.f90
+#		${FC} $(FFLAGS) -c fit_module.f90 -o fit_module.o
 
-delaunay_lmap_2d.o:	delaunay_lmap_2d.f90
-		${FC} $(FFLAGS) -c delaunay_lmap_2d.f90 -o delaunay_lmap_2d.o
+#InputOutput.o:	InputOutput.f90
+#		${FC} $(FFLAGS) -c InputOutput.f90 -o InputOutput.o
+
+#delaunay_lmap_2d.o:	delaunay_lmap_2d.f90
+#		${FC} $(FFLAGS) -c delaunay_lmap_2d.f90 -o delaunay_lmap_2d.o
 
 # special rule to make Regrid.f files for fast compilation
 #RegridR.o:	RegridR.f
 #		${FC} $(FFLAGS) -O0 -c RegridR.f -o RegridR.o
 #Init.o:	Init.f
 #		${FC} $(FFLAGS) -O0 -c Init.f -o Init.o
+
+.f90.o:
+	$(FC) $(FFLAGS) -c $<
 
 # how to compile program 
 $(PROGRAM):     $(OBJS)

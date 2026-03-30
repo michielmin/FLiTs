@@ -1,6 +1,7 @@
 	subroutine ReadLambdaFiles()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer i,j,i_low,i_up,imol,ios
 	real*8 v1,v2

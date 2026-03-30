@@ -1,6 +1,7 @@
 	subroutine RaytraceLines()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer i,j,ilam,k,iblends,vmult,iv,nv,nl,imol,maxblend,ilines,nvmax,nvmin
 	integer nb,ib0,nb0,ib,nltot
@@ -20,22 +21,6 @@
 	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	character*500 imcubename
-	interface
-	  subroutine output(string)
-	  IMPLICIT NONE
-	  character string*(*)
-	  end
-	  character*20 function int2string(i,form)
-	  IMPLICIT NONE
-	  integer i
-	  character,intent(in),optional :: form*(*)
-	  end
-	  character*20 function dbl2string(x,form)
-	  IMPLICIT NONE
-	  real*8 x
-	  character,intent(in),optional :: form*(*)
-	  end
-	end interface
 		
 	call output("==================================================================")
 	call output("Preparing the profiles")
@@ -182,7 +167,7 @@
 		allocate(doit_ib(maxblend))
 		allocate(flux4(nvmin:nvmax))
 
-#ifdef USE_OPENMP
+#ifdef _OPENMP
 		idum = -42-OMP_GET_THREAD_NUM()     ! setting the seed 
 #endif
 

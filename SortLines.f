@@ -1,5 +1,6 @@
 	subroutine SortLines()
 	use GlobalSetup
+	use InOut
 	IMPLICIT NONE
 	real*8 lam_min
 	integer i,j,imin,imolmin,maxlines,imol
@@ -48,6 +49,7 @@
 
 	subroutine LineList()
 	use GlobalSetup
+	use InOut
 	IMPLICIT NONE
 	integer i
 	

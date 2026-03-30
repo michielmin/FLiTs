@@ -77,4 +77,37 @@ c-----------------------------------------------------------------------
 	return
 	end
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	subroutine CLOCK(t,ut)
+	! clock both the CPU-time (t) and user time (ut)
+	! both values will be returned
+	implicit none
+	real, intent(out) :: t,ut
+	integer :: count,count_rate,count_max
 
+	call CPU_TIME(t)
+	call SYSTEM_CLOCK(count, count_rate, count_max)
+	ut = REAL(count)/REAL(count_rate)
+
+	end subroutine CLOCK
+
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	subroutine CLOCK_WRITE(t0,ut0,info)
+	! write out some time information (CPU-time and user time)
+	! t0, ut0 have to be initialised via CLOCK (see above)
+	! info string is optional and is written just before the time information
+	implicit none
+	real, intent(in) :: t0,ut0
+	character(*), intent(in), optional :: info
+	real :: t1,ut1
+
+	call CLOCK(t1,ut1)
+	if (present(info)) then
+		write(*,*) info
+	endif
+	write(*,'("  CPU-time=",F10.2," sec")') t1-t0
+	write(*,'("      time=",F10.2," sec ("F6.2," x speedup)" )') 
+	>            ut1-ut0,(t1-t0)/(ut1-ut0)
+	write(*,*)
+
+	end subroutine CLOCK_WRITE
