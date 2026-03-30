@@ -1,6 +1,7 @@
 	subroutine ReadStructure()
 	use GlobalSetup
 	use Constants
+	use InOut
 	IMPLICIT NONE
 	integer i,j
 	
