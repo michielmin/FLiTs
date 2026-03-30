@@ -249,9 +249,14 @@ c increase the resolution in velocity by this factor
 	vmax=0d0
 	icount=0
 	do i=1,ngrids
+!$OMP PARALLEL DO DEFAULT(NONE) REDUCTION(max:vmax) SCHEDULE(dynamic) 
+!$OMP& PRIVATE(PP,trac,trac_count,rr,ct,k,imol) 
+!$OMP& SHARED(i,npoints,icount,ncount,P,R_sphere,nR,nTheta,Theta,inc,nmol)
 	do j=1,npoints(i)
+		!$OMP CRITICAL
 		icount=icount+1
 		call tellertje(icount,ncount)
+		!$OMP END CRITICAL
 		PP => P(i,j)
 		trac%x=P(i,j)%x
 		trac%y=P(i,j)%y
@@ -291,6 +296,7 @@ c increase the resolution in velocity by this factor
 			if((-P(i,j)%vmin(imol)).gt.vmax) vmax=abs(P(i,j)%vmin(imol))
 		enddo
 	enddo
+!$OMP END PARALLEL DO
 	enddo
 	call output("Maximum velocity encountered: "//trim(dbl2string(vmax/1d5,'(f6.1)'))
      &			//" km/s")
