@@ -325,7 +325,7 @@
 		flux3=flux_l1**wl13*flux_l2**wl23
 
 		do iv=Bl%nvmin,Bl%nvmax
-			fc=flux1+(flux3-flux1)*real(i-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
+			fc=flux1+(flux3-flux1)*real(iv-Bl%nvmin)/real(Bl%nvmax-Bl%nvmin)
 			flux(iv)=flux(iv)-flux2+fc
 			flux_cont(iv)=fc
 		enddo
