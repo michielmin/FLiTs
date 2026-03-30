@@ -6,9 +6,11 @@ subroutine RaytraceContinuum()
   integer          :: i, j, ilam, k, ilamstart, ilamend
   double precision :: flux, lam0, T, Planck, wl1, wl2
   logical          :: doit
+	double precision :: time, utime
 
   call output("==================================================================")
-  !call output("Raytracing the continuum")
+  call clock(time,utime)
+	!call output("Raytracing the continuum")
 
 ! BB is not used and this produces a floating overflow, already for T=1
 !  allocate(BB(nlam,MAXT))
@@ -35,20 +37,25 @@ subroutine RaytraceContinuum()
   end do
   ilamend = min(ilamend, nlam) ! case of last point
 
-  call output("Raytracing the continuum for " // trim(int2string(ilamend-ilamstart,'(i5)')) // " wavelengths")
+  call output("Raytracing the continuum for " // trim(int2string(ilamend-ilamstart,'(i5)')) // " wavelengths")	
   do ilam = ilamstart, ilamend
     call tellertje(ilam-ilamstart+1, ilamend-ilamstart)
     flux = 0d0
     do i = 1, ngrids
+!$OMP PARALLEL DO DEFAULT(NONE) REDUCTION(+:flux) &
+!$OMP& PRIVATE(j) &
+!$OMP& SHARED(i, ilam, npoints, P, ngrids)
       do j = 1, npoints(i)
         call TraceFluxCont(P(i,j), ilam, P(i,j)%flux_cont(ilam))
         flux = flux + P(i,j)%flux_cont(ilam)*P(i,j)%A/real(ngrids)
       end do
+!$OMP END PARALLEL DO
     end do
     call Trace2StarCont(path2star, ilam, path2star%flux_cont(ilam))
     flux = flux + path2star%flux_cont(ilam)*path2star%A
   end do
-  call output("")
+	call clock_write(time,utime,"RaytraceContinuum:")
+  
 
 end subroutine RaytraceContinuum
 
