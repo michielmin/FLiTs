@@ -122,6 +122,7 @@ c-----------------------------------------------------------------------
 	if(20d0*real(i-1)/real(n).lt.real(f)
      &   .and.20d0*real(i+1)/real(n).gt.real(f)) then
 		call outputform(".",'(a1,$)')
+		flush(6)
 	endif
 	
 	if(i.eq.n) call output("")
