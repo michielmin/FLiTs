@@ -21,6 +21,7 @@
 	real*8 wl11,wl21,wl12,wl22,wl13,wl23,flux_l1,flux_l2,flux_c
 	character*1000 comment
 	character*500 imcubename
+	real*8 time,utime
 		
 	call output("==================================================================")
 	call output("Preparing the profiles")
@@ -80,6 +81,7 @@
 	
 	call output("==================================================================")
 
+	call clock(time,utime)
 	!call cpu_time(starttime)
 	call SYSTEM_CLOCK(counts, count_rate, count_max)
         starttime = DBLE(counts)/DBLE(count_rate)
@@ -406,7 +408,7 @@ c		call tellertje_time(iblends,nblends,iblends,nblends,starttime)
      &			//" s")
 c	call output("Time used per line:     "//trim(dbl2string((stoptime-starttime)/real(nblends),'(f8.2)'))
 c     &			//" s")
-
+	call clock_write(time,utime,"RaytraceLines:")
 
 	return
 	end
