@@ -103,6 +103,8 @@ c				all arguments are read
 			read(value,*) imagecube
 		case("idum","seed")
 			read(value,*) idum
+		case("ngrids")  ! number of grids to use for the line RT, Default is 5
+			read(value,*) ngrids						
 		case default
 			call output("Unknown keyword: " // trim(key))
 			stop
@@ -160,7 +162,7 @@ c===============================================================================
 	
 	Mstar=1d0
 	Rstar=1d0
-	FLiTsfile='ProDiMoForFLiTs.fits.gz'
+	FLiTsfile='ProDiMoForFLiTs.fits'
 	outputFile='specFLiTs.out'
 	output_lineFluxFile='lineFlux_FLiTs.out'
 	lmin=5
@@ -169,19 +171,13 @@ c===============================================================================
 	vresolution=1d5	! given in cm/s
 	vres_profile=1d4
 	tau_max=15d0
-
 	idum=-42
-	
 	accuracy=1
-		
 	LTE=.false.	! default is non-LTE
-
 	cylindrical=.true.
-	
 	doblend=.true.
-	
 	imagecube=.false.
-	
+	ngrids=5
 	return
 	end
 

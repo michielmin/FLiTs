@@ -185,7 +185,6 @@ c increase the resolution in velocity by this factor
 		if(nImPhi(i).gt.nImPhi_max) nImPhi_max=nImPhi(i)
 		npoints_temp=npoints_temp+nImPhi(i)
 	enddo
-	ngrids=5
 
 	allocate(imPhi(nImR,nImPhi_max))
 	
