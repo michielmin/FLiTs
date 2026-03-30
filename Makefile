@@ -80,16 +80,6 @@ install:	version $(PROGRAM)
 		mv $(PROGRAM) $(DEST)
 echo:;		@echo $(SUFFIX)
 
-# special rule to make fortran 90 files
-#fit_module.o:	fit_module.f90
-#		${FC} $(FFLAGS) -c fit_module.f90 -o fit_module.o
-
-#InputOutput.o:	InputOutput.f90
-#		${FC} $(FFLAGS) -c InputOutput.f90 -o InputOutput.o
-
-#delaunay_lmap_2d.o:	delaunay_lmap_2d.f90
-#		${FC} $(FFLAGS) -c delaunay_lmap_2d.f90 -o delaunay_lmap_2d.o
-
 # special rule to make Regrid.f files for fast compilation
 #RegridR.o:	RegridR.f
 #		${FC} $(FFLAGS) -O0 -c RegridR.f -o RegridR.o
