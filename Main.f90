@@ -18,7 +18,7 @@ program FLiTs
   ! terms of use
   call output("==================================================================")
   call output("By using FLiTs you agree to the terms of use that can be found")
-  call output("in the User Guide: http://www.michielmin.nl/FLiTs/UserGuide.pdf")
+  call output("in the User Guide: https://www.exoclouds.com/resources/UserGuideFLiTs.pdf")
   call output("It basically means you offer me co-author rights on any paper")
   call output("that uses results computed with FLiTs.")
 

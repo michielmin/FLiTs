@@ -3,14 +3,14 @@ subroutine SetupPaths()
   use Constants
   use InOut
   implicit none
-  integer :: ip, jp, i, j, k, ir, nRreduce, ilam, imol, nImPhi_max, nPhiMin, nPhiMax, iint, it
+  integer :: i, j, k, ir, nRreduce, ilam, imol, nImPhi_max, nPhiMin, nPhiMax, it
   integer, allocatable :: startphi(:)
-  double precision :: ct, res_inc, x, y, rr, tt, ph
+  double precision :: ct, res_inc, rr, tt, ph
   double precision, allocatable :: imR(:), imPhi(:,:)
   type(Tracer) :: trac, trac_count
   type(Path), pointer :: PP
-  double precision :: incfact, x11, x12, x21, x22, y11, y12, y21, y22, r1, r2, r3, s
-  double precision :: ComputeIncFact, maxRjump
+  double precision :: r1, r2, r3, s
+  double precision :: ComputeIncFact
   double precision :: imx, imy, imz
   integer, allocatable :: t_node(:,:), t_neighbor(:,:)
   integer :: matri, icount, ncount
@@ -344,9 +344,9 @@ subroutine tracepath(trac, PP, onlycount)
   use Constants
   implicit none
   type(Tracer)     :: trac
-  double precision :: x, y, z, phi, d, vtot, taumin, v1, v2, v
-  integer          :: inext, jnext, ntrace, i, j, k, ipop, imol, kk, nk
-  logical          :: hitstar, onlycount
+  double precision :: x, y, z, d, vtot, taumin, v1, v2, v
+  integer          :: inext, jnext, i, k, ipop, imol, kk, nk
+  logical          :: onlycount
   type(Path)       :: PP
 
   PP%vx = trac%vx

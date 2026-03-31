@@ -94,7 +94,7 @@ contains
   ! t0, ut0 have to be initialised via CLOCK (see above)
   ! info string is optional and is written just before the time information
     implicit none
-    real,             intent(in)           :: t0, ut0
+    real(kind=8),             intent(in)           :: t0, ut0
     character(len=*), intent(in), optional :: info
     character(len=200) :: outstr
     real :: t1, ut1
