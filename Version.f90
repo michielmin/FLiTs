@@ -1,4 +1,4 @@
-	subroutine VersionDateTime(string)
+subroutine VersionDateTime(string)
   character(len=500) :: version, string
   parameter(version=trim(__DATE__)//' '//trim(__TIME__))
 
@@ -7,7 +7,6 @@
   return
 end subroutine VersionDateTime
 
-
 character(len=500) function VersionGIT()
 #include "gitversion.h"
 
@@ -15,4 +14,4 @@ character(len=500) function VersionGIT()
 
   return
 end function VersionGIT
-	
+

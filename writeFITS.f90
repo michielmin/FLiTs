@@ -1,4 +1,4 @@
-	subroutine writefitsfile(filename, im, nlam, n)
+subroutine writefitsfile(filename, im, nlam, n)
   use InOut
   implicit none
   character(len=500) :: filename
@@ -6,15 +6,15 @@
   real(kind=8) :: im(n, n, nlam)
 
   integer :: status, unit, blocksize, bitpix, naxis, naxes(3)
-  integer :: i, j, group, fpixel, nelements
+  integer :: group, fpixel, nelements
   logical :: simple, extend, truefalse
 
-  inquire(file=filename, exist=truefalse)
+  inquire (file=filename, exist=truefalse)
   if (truefalse) then
     call output("FITS file already exists, overwriting")
-    open(unit=90, file=filename)
-    close(unit=90, status='delete')
-  endif
+    open (unit=90, file=filename)
+    close (unit=90, status='delete')
+  end if
 
   status = 0
   ! Get an unused Logical Unit Number to use to create the FITS file
@@ -34,7 +34,7 @@
   else
     naxis = 2
     naxes(3) = 1
-  endif
+  end if
   extend = .true.
 
   ! write the required header keywords
@@ -52,5 +52,4 @@
 
   return
 end subroutine writefitsfile
-
 
