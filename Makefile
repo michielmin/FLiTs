@@ -94,4 +94,4 @@ $(PROGRAM):     $(OBJS)
 		$(LINKER) $(LDFLAGS) $(OBJS) $(LIBS) -o $(PROGRAM)
 
 # recompile everything if Modules.f has changed 
-$(OBJS):	Modules.f
+$(OBJS):	Modules.f90
