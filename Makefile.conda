@@ -27,8 +27,8 @@ endif
 
 # files to make
 OBJS	= Modules.o \
-		Main.o \
 		InputOutput.o \
+		Main.o \
 		Subroutines.o \
 		Init.o \
 		ReadLambdaFiles.o \
@@ -52,7 +52,7 @@ PROGRAM     = FLiTs
 # make actions 
 all:		version $(PROGRAM)
 version:;	echo "#define gitversion \"$(shell git describe), git build $(shell git rev-parse HEAD)\"" > gitversion.h
-clean:;		rm -f $(OBJS) $(PROGRAM) *_genmod.*
+clean:;		rm -f $(OBJS) $(PROGRAM) *_genmod.* *.mod
 
 # install just creates a link to the executable, so make install is required only once
 install:	version $(PROGRAM)
@@ -65,5 +65,5 @@ install:	version $(PROGRAM)
 $(PROGRAM):     $(OBJS)
 		$(LINKER) $(FLAGS) Version.f90 $(OBJS) $(LIBS) -o $(PROGRAM)
 
-# recompile everything if Modules.f has changed 
-$(OBJS):	Modules.f90
+# recompile everything if some modules changed
+$(OBJS):	Modules.f90 InputOutput.f90
