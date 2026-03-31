@@ -164,6 +164,7 @@ subroutine tellertje_time(i, n, ii, nn, starttime)
          trim(dbl2string((stoptime-starttime)*(nn-ii)/real(ii), '(f10.2)')) &
          //" s left. (" // &
          trim(dbl2string(xx, '(f5.1)')) // " %)")
+    flush(6)
   endif
 
   return
