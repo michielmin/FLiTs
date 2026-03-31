@@ -86,7 +86,7 @@ subroutine RaytraceLines()
   call SYSTEM_CLOCK(counts, count_rate, count_max)
   starttime = DBLE(counts)/DBLE(count_rate)
 
-  call output("Tracing "//trim(int2string(nlines, '(i5)'))//" lines")
+  call output("Tracing "//trim(int2string(nlines, '(i6)'))//" lines")
 
   lcmin = lmin
   lmin_next = 0d0
@@ -97,7 +97,7 @@ subroutine RaytraceLines()
     nltot = nltot + Bl%n
     if (iblends < nblends) Bl => Bl%next
   end do
-  call output("Total number of wl/velocity points: "//trim(int2string(nltot, '(i0.10)')))
+  call output("Total number of wl/velocity points: "//trim(int2string(nltot, '(i7)')))
 
   Bl => Blends
   do iblends = 1, nblends
@@ -670,7 +670,7 @@ subroutine DetermineBlends(nv, maxblend, nvmin0, nvmax0)
     nblends = nblends + 1 ! a bit strange, however, it is indeed the case that each line has its own Blend node
   end do
 
-  call output("Number of lines: "//trim(int2string(nlines, '(i0.10)'))//"  Number of blends: "//trim(int2string(nblends, '(i0.10)')))  
+  call output("Number of lines: "//trim(int2string(nlines, '(i7)'))//"  Number of blends: "//trim(int2string(nblends, '(i7)')))  
 
   return
 end subroutine DetermineBlends
