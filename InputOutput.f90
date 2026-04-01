@@ -80,8 +80,8 @@ contains
   ! clock both the CPU-time (t) and user time (ut)
   ! both values will be returned
     implicit none
-    real, intent(out) :: t, ut
-    integer           :: count, count_rate, count_max
+    real(kind=8),intent(out) :: t, ut
+    integer :: count, count_rate, count_max
 
     call CPU_TIME(t)
     call SYSTEM_CLOCK(count, count_rate, count_max)
