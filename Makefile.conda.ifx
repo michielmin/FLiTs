@@ -2,27 +2,26 @@
 # This makefile is useful in combination with a conda environment
 
 # Change here the compiler if you want to use a different one
-# TODO: currently this makefile only supports gfortran
-FC     = gfortran
-LINKER = gfortran
+FC     = ifx
+LINKER = ifx
 
 # Required libraries, nothing to change if installed with conda
 LIBS     = -lcfitsio
 
 ##$(info $$debug is [${debug}])
-FLAGS= -fdefault-real-8 -fdefault-double-8 -finit-local-zero -cpp
+FLAGS= -fp-model strict -zero -r8 -fpp 
 
 ifeq ($(debug),true)
-  FLAGS += -fbacktrace -g -Og -fcheck=all --warn-all 
+  FLAGS += -traceback -g -O0 -check all,noarg_temp_created -fpe0 -ftrapuv -gen-interfaces -warn interfaces
 else  
-  FLAGS += -O3 -march=native 
+  FLAGS += -O3 -march=native
 endif
 
-# by default use openmp, 
+# by default use openmp
 # enforce single core compilation with:
 # cl> make multi=false
 ifneq ($(multi),false)
-  FLAGS += -fopenmp
+  FLAGS += -fopenmp 
 endif
 
 # files to make
@@ -63,7 +62,7 @@ install:	version $(PROGRAM)
 
 # how to compile program 
 $(PROGRAM):     $(OBJS)
-		$(LINKER) $(FLAGS) Version.f90 $(OBJS) $(LIBS) -o $(PROGRAM)
+		$(LINKER) $(FLAGS) Version.f90 $(OBJS) $(LIBS) -rpath ${CONDA_PREFIX}/lib -o $(PROGRAM)
 
 # recompile everything if some modules changed
 $(OBJS):	Modules.f90 InputOutput.f90

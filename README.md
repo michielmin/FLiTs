@@ -12,34 +12,44 @@ If you use FLiTs for you research, please cite [Woitke P., Min M. et al. (2018)]
 
 ## Installation
 
-Below you find instructions on how to install FLiTs. The easiest is to use an existing conda environment for ProDiMo, but you can also create a separate conda environment for FLiTs. Currently the conda way of installing works only with `gfortran` as a Fortran compiler, but otherwise it should work for both MAC OS X and Linux in the same way. If you have a different Fortran compiler, you can use the manual installation method.
+Below you find instructions on how to install ``FLiTs``. The easiest is to use an existing conda environment for ``ProDiMo``, but you can also create a separate conda environment. The installation should work for Linux (gfortran, ifx) and Mac OS X (gfortran). Please use recent versions of the compilers. The following instructions are tested with gfortran 15.2 and ifx 2025.3.2.
 
 ### Existing conda environment for ProDiMo
 
-If you use `ProDiMo` already, and you used `conda` to install and setup `ProDiMo` with `gfortran`, all you need to do is to activate your ProDiMo conda environment, clone this repository (see the green Code button) into a directory of your choice and
+If you used `conda` to install and setup `ProDiMo`, all you need to do is to activate your ProDiMo conda environment, clone this repository (see the green Code button) into a directory of your choice and do the following steps:
 
 ```bash
 cd TO_YOURFLITS_DIRECTORY
 cp Makefile.conda Makefile
 make
 make install 
+conda activate YOUR_PRODIMO_ENVIRONMENT
 FLiTs
 ```
 
-The last command is just to check if the compilation works. You should see some welcome message and some information on the compiler etc., and an error message at the end. That means the compilation was successful, the error message is expected as no input file was provided.
+If you use `ifx` as a Fortran compiler, use the `Makefile.conda.ifx` instead of `Makefile.conda`. It is important to re-activate your conda environment after the `make install` step, otherwise the changes to the environment variables are not applied.
+
+The last command (`FLiTs`) is just to check if the compilation works. You should see some welcome message and some information on the compiler etc., and an error message at the end. That means the compilation was successful, the error message is expected as no input file was provided.
 
 Whenever you update FLiTs, you need to compile the code with `make` again. It is best to use `make clean` first. The `make install` step does not need to be repeated.
 
 ### Separate conda environment
 
-If you prefer to have a separate conda environment for FLiTs, you can create one with
+If you prefer to have a separate conda environment for FLiTs, you can create one via
 
 ```bash
 conda create -n flits gfortran cfitsio git
 conda activate flits
 ```
 
-Then you can follow the same steps as above (git clone, make etc.).
+for gfortran. For ifx you can use:
+
+```bash
+conda create -n flits.ifx python cfitsio git ifx_linux-64 mkl 
+conda activate flits.ifx
+```
+
+Then follow the same steps as above (git clone, make etc.).
 
 ### Manual installation
 
