@@ -1,0 +1,69 @@
+# makefile for FLiTs (with comments!)
+# This makefile is useful in combination with a conda environment
+
+# Change here the compiler if you want to use a different one
+# TODO: currently this makefile only supports gfortran
+FC     = gfortran
+LINKER = gfortran
+
+# Required libraries, nothing to change if installed with conda
+LIBS     = -lcfitsio
+
+##$(info $$debug is [${debug}])
+FLAGS= -fdefault-real-8 -fdefault-double-8 -finit-local-zero -cpp
+
+ifeq ($(debug),true)
+  FLAGS += -fbacktrace -g -Og -fcheck=all --warn-all 
+else  
+  FLAGS += -O3 -march=native 
+endif
+
+# by default use openmp, 
+# enforce single core compilation with:
+# cl> make multi=false
+ifneq ($(multi),false)
+  FLAGS += -fopenmp
+endif
+
+# files to make
+OBJS	= Modules.o \
+		InputOutput.o \
+		Main.o \
+		Subroutines.o \
+		Init.o \
+		ReadLambdaFiles.o \
+		ReadForFLiTs.o \
+		ComputeLTE.o \
+		PrepareStructure.o \
+		SetupPaths.o \
+		SortLines.o \
+		RaytraceContinuum.o \
+		RaytraceLines.o \
+		writeFITS.o \
+		delaunay_lmap_2d.o
+
+# program name and install location
+PROGRAM     = FLiTs
+
+.SUFFIXES : .o .f .f90 .F
+
+%.o : %.mod
+
+# make actions 
+all:		version $(PROGRAM)
+version:;	echo "#define gitversion \"$(shell git describe), git build $(shell git rev-parse HEAD)\"" > gitversion.h
+clean:;		rm -f $(OBJS) $(PROGRAM) *_genmod.* *.mod
+
+# install just creates a link to the executable, so make install is required only once
+install:	version $(PROGRAM)
+		ln -sf ${PWD}/$(PROGRAM) $(CONDA_PREFIX)/bin/$(PROGRAM)
+
+.f90.o:
+	$(FC) $(FLAGS) -c $<
+
+# how to compile program 
+$(PROGRAM):     $(OBJS)
+		$(LINKER) $(FLAGS) Version.f90 $(OBJS) $(LIBS) -o $(PROGRAM)
+
+# recompile everything if some modules changed
+$(OBJS):	Modules.f90 InputOutput.f90
