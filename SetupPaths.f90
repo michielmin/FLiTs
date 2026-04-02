@@ -162,7 +162,7 @@ subroutine SetupPaths()
     do k = 1, nR - 1
       if (imR(i) > R(k) .and. imR(i) < R(k + 1)) exit
     end do
-    nImPhi(i) = abs(sin(inc*pi/180d0))*(C(k, nTheta)%v/vresolution)*res_inc
+    nImPhi(i) = int(abs(sin(inc*pi/180d0))*(C(k, nTheta)%v/vresolution)*res_inc)
     if (nImPhi(i) < nPhiMin) nImPhi(i) = nPhiMin
     if (nImPhi(i) > nPhiMax) nImPhi(i) = nPhiMax
     if (startphi(i) == 1) then
@@ -198,8 +198,8 @@ subroutine SetupPaths()
   k = 0
   do i = 1, ngrids
     do j = 1, npoints_temp
-      ir = ran1(idum)*real(nR)
-      it = ran1(idum)*real(nTheta)
+      ir = int(ran1(idum)*real(nR))
+      it = int(ran1(idum)*real(nTheta))
       rr = ran1(idum)
       rr = sqrt(R(ir)**2*rr + R(ir + 1)**2*(1d0 - rr))
       tt = ran1(idum)
@@ -240,7 +240,17 @@ subroutine SetupPaths()
   vmaxgrid = 0.d0
 
   do i = 1, ngrids
+    ! do allocate outside of openmp loop, ifx might have problems with that
+    do j = 1, npoints(i)
+      allocate (P(i, j)%vmin(nmol))
+      allocate (P(i, j)%vmax(nmol))
+      allocate (P(i, j)%npopmax(nmol))
+      P(i, j)%vmin(1:nmol) = 1d30
+      P(i, j)%vmax(1:nmol) = -1d30
+      P(i, j)%npopmax(1:nmol) = 0
+    end do
     ! for some reason I need to use static, dynamic does not work with ifx
+    ! but maybe that was also related to the allocate stuff, anyway it is fast enough with static.
 !$OMP PARALLEL DO SCHEDULE(static,1) &
 !$OMP DEFAULT(NONE) &
 !$OMP PRIVATE(PP,trac,trac_count,rr,ct,k,imol) &
@@ -273,13 +283,6 @@ subroutine SetupPaths()
       trac%vy = 0d0
       trac%vz = -1d0
       call rotate(trac%vx, trac%vy, trac%vz, 0d0, 1d0, 0d0, inc*pi/180d0)
-
-      allocate (P(i, j)%vmin(nmol))
-      allocate (P(i, j)%vmax(nmol))
-      allocate (P(i, j)%npopmax(nmol))
-      P(i, j)%vmin(1:nmol) = 1d30
-      P(i, j)%vmax(1:nmol) = -1d30
-      P(i, j)%npopmax(1:nmol) = 0
 
       trac_count = trac
       call tracepath(trac_count, PP, .true.)
@@ -397,10 +400,10 @@ subroutine tracepath(trac, PP, onlycount)
 
     nk = 1
     do imol = 1, nmol
-      i = abs(v1 - v2)*5d0/C(trac%i, trac%j)%line_width(imol)
+      i = int(abs(v1 - v2)*5d0/C(trac%i, trac%j)%line_width(imol))
       if (i > nk) nk = i
     end do
-    i = abs(v1 - v2)/(vres_profile) + 1
+    i = int(abs(v1 - v2)/(vres_profile) + 1)
     if (nk > i) nk = i
 
     x = trac%x
@@ -501,16 +504,16 @@ subroutine Trace2edge(trac, v, inext, jnext)
 
   if (.not. trac%onEdge) then
     if (cylindrical .and. trac%i > 0 .and. trac%j > 0) then
-      hitR1 = hitR(trac, R1, rcyl, bcyl, vR1)
+      hitR1 = hitR(R1, rcyl, bcyl, vR1)
       vR1 = vR1/sqrt(trac%vx**2 + trac%vy**2)
     else
-      hitR1 = hitR(trac, R1s, rr, b, vR1)
+      hitR1 = hitR(R1s, rr, b, vR1)
     end if
     if (cylindrical .and. trac%i < nR .and. trac%j > 0) then
-      hitR2 = hitR(trac, R2, rcyl, bcyl, vR2)
+      hitR2 = hitR(R2, rcyl, bcyl, vR2)
       vR2 = vR2/sqrt(trac%vx**2 + trac%vy**2)
     else
-      hitR2 = hitR(trac, R2s, rr, b, vR2)
+      hitR2 = hitR(R2s, rr, b, vR2)
     end if
     hitT1 = hitT(trac, T1, rr, b, vT1)
     hitT2 = hitT(trac, T2, rr, b, vT2)
@@ -519,19 +522,19 @@ subroutine Trace2edge(trac, v, inext, jnext)
       hitR1 = .false.
       vR1 = 1d200
       if (cylindrical .and. trac%i < nR .and. trac%j > 0) then
-        hitR2 = hitR(trac, R2, rcyl, bcyl, vR2)
+        hitR2 = hitR(R2, rcyl, bcyl, vR2)
         vR2 = vR2/sqrt(trac%vx**2 + trac%vy**2)
       else
-        hitR2 = hitR(trac, R2s, rr, b, vR2)
+        hitR2 = hitR(R2s, rr, b, vR2)
       end if
       hitT1 = hitT(trac, T1, rr, b, vT1)
       hitT2 = hitT(trac, T2, rr, b, vT2)
     else if (trac%edgeNr == 2) then
       if (cylindrical .and. trac%i > 0 .and. trac%j > 0) then
-        hitR1 = hitR(trac, R1, rcyl, bcyl, vR1)
+        hitR1 = hitR(R1, rcyl, bcyl, vR1)
         vR1 = vR1/sqrt(trac%vx**2 + trac%vy**2)
       else
-        hitR1 = hitR(trac, R1s, rr, b, vR1)
+        hitR1 = hitR(R1s, rr, b, vR1)
       end if
       hitR2 = .true.
       if (cylindrical .and. trac%i < nR .and. trac%j > 0) then
@@ -544,16 +547,16 @@ subroutine Trace2edge(trac, v, inext, jnext)
       hitT2 = hitT(trac, T2, rr, b, vT2)
     else if (trac%edgeNr == 3) then
       if (cylindrical .and. trac%i > 0 .and. trac%j > 0) then
-        hitR1 = hitR(trac, R1, rcyl, bcyl, vR1)
+        hitR1 = hitR(R1, rcyl, bcyl, vR1)
         vR1 = vR1/sqrt(trac%vx**2 + trac%vy**2)
       else
-        hitR1 = hitR(trac, R1s, rr, b, vR1)
+        hitR1 = hitR(R1s, rr, b, vR1)
       end if
       if (cylindrical .and. trac%i < nR .and. trac%j > 0) then
-        hitR2 = hitR(trac, R2, rcyl, bcyl, vR2)
+        hitR2 = hitR(R2, rcyl, bcyl, vR2)
         vR2 = vR2/sqrt(trac%vx**2 + trac%vy**2)
       else
-        hitR2 = hitR(trac, R2s, rr, b, vR2)
+        hitR2 = hitR(R2s, rr, b, vR2)
       end if
       hitT1 = .false.
       vT1 = 1d200
@@ -569,16 +572,16 @@ subroutine Trace2edge(trac, v, inext, jnext)
       end if
     else if (trac%edgeNr == 4) then
       if (cylindrical .and. trac%i > 0 .and. trac%j > 0) then
-        hitR1 = hitR(trac, R1, rcyl, bcyl, vR1)
+        hitR1 = hitR(R1, rcyl, bcyl, vR1)
         vR1 = vR1/sqrt(trac%vx**2 + trac%vy**2)
       else
-        hitR1 = hitR(trac, R1s, rr, b, vR1)
+        hitR1 = hitR(R1s, rr, b, vR1)
       end if
       if (cylindrical .and. trac%i < nR .and. trac%j > 0) then
-        hitR2 = hitR(trac, R2, rcyl, bcyl, vR2)
+        hitR2 = hitR(R2, rcyl, bcyl, vR2)
         vR2 = vR2/sqrt(trac%vx**2 + trac%vy**2)
       else
-        hitR2 = hitR(trac, R2s, rr, b, vR2)
+        hitR2 = hitR(R2s, rr, b, vR2)
       end if
       if (trac%j /= 0) then
         hitT1 = hitT(trac, T1, rr, b, vT1)
@@ -587,7 +590,7 @@ subroutine Trace2edge(trac, v, inext, jnext)
         vT1 = 1d200
       end if
       if (trac%j /= nTheta) then
-        hitT2 = hitTsame(trac, T2, rr, b, vT2)
+        hitT2 = hitTsame(trac, T2, b, vT2)
       else
         hitT2 = .false.
         vT2 = 1d200
@@ -660,10 +663,9 @@ end subroutine Trace2edge
 
 !-----------------------------------------------------------------------
 
-logical function hitR(trac, Rad, rr, b, v)
+logical function hitR(Rad, rr, b, v)
   use GlobalSetup
   implicit none
-  type(Tracer)     :: trac
   double precision :: Rad, rr, b, cc, discr, vr1, vr2, v, q
 
   hitR = .false.
@@ -730,11 +732,11 @@ end function hitT
 
 !-----------------------------------------------------------------------
 
-logical function hitTsame(trac, Thet, rr, b, v)
+logical function hitTsame(trac, Thet, b, v)
   use GlobalSetup
   implicit none
   type(Tracer)     :: trac
-  double precision :: Thet, rr, b, at, bt, v
+  double precision :: Thet, b, at, bt, v
 
   hitTsame = .true.
   v = 1d200
