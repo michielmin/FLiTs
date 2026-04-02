@@ -41,9 +41,11 @@ subroutine RaytraceContinuum()
     call tellertje(ilam - ilamstart + 1, ilamend - ilamstart)
     flux = 0d0
     do i = 1, ngrids
-!$OMP PARALLEL DO DEFAULT(NONE) REDUCTION(+:flux) &
-!$OMP& PRIVATE(j) &
-!$OMP& SHARED(i, ilam, npoints, P, ngrids)
+!$OMP PARALLEL DO SCHEDULE(static,1) &
+!$OMP DEFAULT(NONE) &
+!$OMP PRIVATE(j) &
+!$OMP SHARED(i, ilam, npoints, P, ngrids) &
+!$OMP REDUCTION(+:flux)
       do j = 1, npoints(i)
         call TraceFluxCont(P(i, j), ilam, P(i, j)%flux_cont(ilam))
         flux = flux + P(i, j)%flux_cont(ilam)*P(i, j)%A/real(ngrids)
@@ -63,9 +65,11 @@ subroutine TraceFluxCont(p0, ilam, flux)
   use GlobalSetup
   use Constants
   implicit none
-  integer          :: i, j, k, ilam
-  double precision :: tau, exptau, flux, fact, S
-  type(Path)       :: p0
+  type(Path), intent(in) :: p0
+  integer, intent(in) :: ilam
+  real(kind=8), intent(out) :: flux
+  integer          :: i, j, k
+  double precision :: tau, exptau, fact, S
 
   fact = 1d0
   flux = 0d0
@@ -95,9 +99,11 @@ subroutine Trace2StarCont(p0, ilam, flux)
   use GlobalSetup
   use Constants
   implicit none
-  integer          :: i, j, k, ilam
-  double precision :: tau, flux
-  type(Path)       :: p0
+  type(Path), intent(in) :: p0
+  integer, intent(in) :: ilam
+  real(kind=8), intent(out) :: flux
+  integer          :: i, j, k
+  double precision :: tau
 
   tau = 0d0
   do k = 1, p0%n
