@@ -9,7 +9,7 @@ subroutine RaytraceLines()
   integer, external :: OMP_GET_THREAD_NUM
   integer, allocatable :: imol_blend(:), count(:)
   real(kind=8), allocatable :: v_blend(:), flux4(:)
-  real(kind=8) :: lam, wl1, wl2, flux0, starttime, stoptime, fact, lcmin
+  real(kind=8) :: lam, flux0, starttime, stoptime, fact, lcmin
   real(kind=8) :: lmin_next, lam_velo
   real(kind=8), allocatable :: flux(:), flux_cont(:)
   type(Path), pointer :: PP
@@ -164,7 +164,7 @@ subroutine RaytraceLines()
 !$OMP PARALLEL IF(.true.) &
 !$OMP DEFAULT(NONE) &
 !$OMP PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,flux4,doit,flux_c,doit_ib,doit_ib0,lam_velo) &
-!$OMP SHARED(i,P,ngrids,npoints,nb,LL,nv,Bl,vresolution,wl1,wl2,imol_blend,v_blend,flux,ilam) &
+!$OMP SHARED(i,P,ngrids,npoints,nb,LL,nv,Bl,vresolution,imol_blend,v_blend,flux,ilam) &
 !$OMP SHARED(iblends,flux2,maxblend,lam,lmin_next,imagecube,nvmin,nvmax)
       allocate (doit_ib0(maxblend))
       allocate (doit_ib(maxblend))
