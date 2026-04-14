@@ -18,6 +18,7 @@
     logical :: gas, doit
     logical, allocatable :: doit_ib(:), doit_ib0(:)
     real(kind=8) :: flux1, flux2, flux3, fc, f, dnu, lam_w, lam_w_min, lam_w_max
+    real(kind=8) :: vlo_eff, vhi_eff
     real(kind=8) :: wl11, wl21, wl13, wl23, flux_l1, flux_l2, flux_c
     character(len=1000) :: comment
     character(len=500) :: imcubename
@@ -130,6 +131,7 @@
       LL = Bl%L(1)
       lam = Bl%lam
 
+      ! Only do the requested lines, lmin,lmax are set in the input file.
       if (lam > lmin .and. lam < lmax) then
         nl = nl + nb
 
@@ -180,7 +182,7 @@
         ! FIXME: check parallel implementation for imagecube
 !$OMP PARALLEL IF(.true.) &
 !$OMP DEFAULT(NONE) &
-!$OMP PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,flux4,doit,flux_c,doit_ib,doit_ib0,lam_velo,callerstr) &
+!$OMP PRIVATE(j,PP,iv,vmult,ib0,nb0,gas,ib,imol,flux0,flux4,doit,flux_c,doit_ib,doit_ib0,lam_velo,callerstr,vlo_eff,vhi_eff) &
 !$OMP SHARED(i,P,ngrids,npoints,nb,LL,nv,Bl,vresolution,imol_blend,v_blend,flux,ilam) &
 !$OMP SHARED(iblends,flux2,maxblend,lam,lmin_next,imagecube,nvmin,nvmax)
         allocate (doit_ib0(maxblend))
@@ -220,45 +222,43 @@
                 if (nb > 1) then
                   ib0 = Bl%ib0(iv)
                   nb0 = Bl%nb0(iv)
-                  vmult = -1
-                  doit_ib(1:nb) = doit_ib0(1:nb)
-                  gas = .false.
-                  do ib = ib0, ib0 + nb0 - 1
-                    imol = Bl%L(ib)%imol
-                    if (((real(iv) - 0.5d0)*vresolution - Bl%v(ib)) < -PP%vmin(imol) &
-                        .and. ((real(iv) + 0.5d0)*vresolution - Bl%v(ib)) > -PP%vmax(imol)) then
-                      gas = .true.
-                      exit
+                  ! The disk is axisymmetric: each randomly-sampled path PP also represents its
+                  ! mirror-image on the opposite side of the disk, which has all line-of-sight
+                  ! velocities sign-flipped. We therefore trace the path twice -- once for each
+                  ! side -- each weighted by half the solid-angle area (PP%A/2).
+                  !   vmult = -1 : approaching (blueshifted) side, gas velocities in [-vmax, -vmin]
+                  !   vmult = +1 : receding  (redshifted)  side, gas velocities in [ vmin,  vmax]
+                  ! Thanks to Claude
+                  do vmult = -1, 1, 2
+                    doit_ib(1:nb) = doit_ib0(1:nb)
+                    gas = .false.
+                    do ib = ib0, ib0 + nb0 - 1
+                      imol = Bl%L(ib)%imol
+                      ! Check whether channel iv (corrected for blend velocity offset Bl%v(ib))
+                      ! overlaps the gas velocity range of this side. If not, skip line RT and
+                      ! fall back to the cached continuum flux.
+                      if (vmult == -1) then
+                        vlo_eff = -PP%vmax(imol)   ! approaching side: velocity range is [-vmax, -vmin]
+                        vhi_eff = -PP%vmin(imol)
+                      else
+                        vlo_eff = PP%vmin(imol)    ! receding side: velocity range is [vmin, vmax]
+                        vhi_eff = PP%vmax(imol)
+                      end if
+                      if (((real(iv) - 0.5d0)*vresolution - Bl%v(ib)) < vhi_eff &
+                          .and. ((real(iv) + 0.5d0)*vresolution - Bl%v(ib)) > vlo_eff) then
+                        gas = .true.
+                        exit
+                      end if
+                    end do
+                    if (gas) then
+                      call TraceFluxLines(PP, flux0, iv, vmult, imol_blend(ib0), v_blend(ib0), doit_ib(ib0), nb0, ib0)
+                    else
+                      flux0 = flux_c
                     end if
+                    flux4(iv) = flux4(iv) + flux0*PP%A/2d0
+                    if (imagecube) call AddImage(iv, flux0*PP%A/2d0, PP, vmult, "call nb")
                   end do
-                  if (gas) then
-                    call TraceFluxLines(PP, flux0, iv, vmult, imol_blend(ib0), v_blend(ib0), doit_ib(ib0), nb0, ib0)
-                  else
-                    flux0 = flux_c
-                  end if
-                  flux4(iv) = flux4(iv) + flux0*PP%A/2d0
-                  if (imagecube) call AddImage(iv, flux0*PP%A/2d0, PP, vmult, "call nb 1")
-                  vmult = 1
-                  doit_ib(1:nb) = doit_ib0(1:nb)
-                  gas = .false.
-                  do ib = ib0, ib0 + nb0 - 1
-                    imol = Bl%L(ib)%imol
-                    if (((real(iv) - 0.5d0)*vresolution - Bl%v(ib)) < PP%vmax(imol) &
-                        .and. ((real(iv) + 0.5d0)*vresolution - Bl%v(ib)) > PP%vmin(imol)) then
-                      gas = .true.
-                      exit
-                    end if
-                  end do
-                  if (gas) then
-                    call TraceFluxLines(PP, flux0, iv, vmult, imol_blend(ib0), v_blend(ib0), doit_ib(ib0), nb0, ib0)
-                  else
-                    flux0 = flux_c
-                  end if
-                  flux4(iv) = flux4(iv) + flux0*PP%A/2d0
-                  ! FIXME: I think here  times vmult is required, but then it should also be in the line above ? or maybe not
-                  ! or maybe in that case vmult also needs to be ignored for the imagecube
-                  if (imagecube) call AddImage(iv, flux0*PP%A/2d0, PP, vmult, "call nb 2")
-
+                ! channel fully outside the line, so just add the continuum contribution 
                 else if (((real(iv) + 0.5d0)*vresolution > PP%vmax(LL%imol) .and. &
                           (real(iv) - 0.5d0)*vresolution > PP%vmax(LL%imol)) &
                          .or. ((real(iv) + 0.5d0)*vresolution < PP%vmin(LL%imol) .and. &
@@ -273,6 +273,7 @@
                       call AddImage(iv*vmult, flux0*PP%A/2d0, PP, vmult, callerstr)
                     end if
                   end do
+                ! channel covers single line (not blended)
                 else
                   doit_ib = .true.
                   call TraceFluxLines(PP, flux0, iv, vmult, imol_blend, v_blend, doit_ib, nb, 1)
@@ -306,8 +307,7 @@
 !$OMP FLUSH
 !$OMP END PARALLEL
         PP => path2star
-        ! FIXME: whatever is done here is not considered for the Images
-        ! I guess it is for the star ... need to check what are the coordinates, then one might just need to calls AddImage again
+        ! do the star 
         if (.not. allocated(PP%im_ixy)) allocate (PP%im_ixy(2, 1))
         do iv = Bl%nvmin, Bl%nvmax
           if (nb > 1) then  ! FIXME: this if seems to be unnecessary
@@ -413,7 +413,7 @@
           end do
           !write(*,*) iv,Bl%nvmax,nvmin,nvmax,lmin_next,lam_velo
           imcubename = "imcube"//trim(int2string(iblends, '(i0.10)'))//".fits"
-          write (*, *) "Writing image cube to file ", trim(imcubename)
+          call output("Writing image cube to file " // trim(imcubename))
           !write(*,*) imcube(12,60,-1),imcube(12,42,-1),imcube(12,60,1),imcube(12,42,1)
           ! currently this is per blend
           !call writefitsfile(imcubename,imcube*1e23/(distance*parsec)**2,nvmax-nvmin+1,npix)
@@ -781,18 +781,22 @@ subroutine InterpolateLam(lam0, ilam)
   subroutine map_pixels_to_path(igrid, npath)
     use GlobalSetup
     use Constants
+    use InOut    
     implicit none
     integer, intent(in) :: igrid, npath
     real(kind=8) :: px(npath), py(npath), dist(npath), im_x, im_y
     real(kind=8) :: maxx, maxr, maxrxp, maxrxm, pixA
     type(Path), pointer :: p0
+    real(kind=8) :: time, utime
 
     integer :: i, j, ipath, iminpath, maxnpixpath
     
+    call clock(time,utime)
+
     ! If already allocated this was done already (same grid igrid is used again), no need to map things again
     if (allocated(P(igrid, 1)%im_ixy)) return
 
-    write (*,*) "Mapping pixels to path igrid,npath", igrid, npath
+    call output("Mapping pixels to path igrid,npath:"//trim(int2string(igrid, '(i7)'))//" "//trim(int2string(npath, '(i7)')))
 
     ! area of one pixel cm^2
     pixA = (im_coord(2) - im_coord(1))**2
@@ -836,8 +840,8 @@ subroutine InterpolateLam(lam0, ilam)
         P(igrid, iminpath)%im_npix = P(igrid, iminpath)%im_npix + 1
 
         if (P(igrid, iminpath)%im_npix > maxnpixpath) then
-          write (*,*) 'Problem found to many pixels for path'
-          write (*,*) P(igrid, iminpath)%x/AU, P(igrid, iminpath)%y/AU, P(igrid, iminpath)%im_npix
+          call output('Problem found to many pixels for path')
+          call output(dbl2string(P(igrid, iminpath)%x/AU) // ' ' // dbl2string(P(igrid, iminpath)%y/AU) // ' ' // int2string(int(P(igrid, iminpath)%im_npix,kind=4), '(i7)'))
           stop
         end if
         P(igrid, iminpath)%im_ixy(1, P(igrid, iminpath)%im_npix) = i
@@ -870,19 +874,21 @@ subroutine InterpolateLam(lam0, ilam)
       !write (*, *) path2star%x, path2star%y, path2star%im_ixy(:, 1)
     end if
 
+    call clock_write(time, utime, "map_pixels_to_path:")
     ! some log output and set the correction factor
 
-    p0 => path2star
-    write (99, *) p0%x/AU, p0%y/AU, p0%A/AU/AU, p0%im_ixy(:, 1), p0%im_npix, p0%im_npix*pixA/AU/AU
+    ! p0 => path2star
+    ! write (99, *) p0%x/AU, p0%y/AU, p0%A/AU/AU, p0%im_ixy(:, 1), p0%im_npix, p0%im_npix*pixA/AU/AU
 
-    do ipath = 1, npath
-      p0 => P(igrid, ipath)
-      write (99, *) p0%x/AU, p0%y/AU, p0%A/AU/AU, p0%im_ixy(:, 1), p0%im_npix, p0%im_npix*pixA/AU/AU
-    end do
+    ! do ipath = 1, npath
+    !   p0 => P(igrid, ipath)
+    !   write (99, *) p0%x/AU, p0%y/AU, p0%A/AU/AU, p0%im_ixy(:, 1), p0%im_npix, p0%im_npix*pixA/AU/AU
+    ! end do
 
   end subroutine map_pixels_to_path
 
-  subroutine AddImage(iv, flux0, p0, vmult, caller) ! FIXME: don't need i, j anymore
+  subroutine AddImage(iv, flux0, p0, vmult, caller) 
+    ! properly adds the flux to the image cube, i.e. takes care of the pixel mapping and the mirroring if needed
     use GlobalSetup
     use Constants
     implicit none
