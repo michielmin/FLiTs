@@ -778,98 +778,6 @@ subroutine InterpolateLam(lam0, ilam)
     return
   end subroutine InterpolateLam
     
-  subroutine DetermineBlendsOld(nv, maxblend, nvmin0, nvmax0)
-    use GlobalSetup
-    use Constants
-    integer ilines, ilines0, i, maxblend, nv, nvmax, iv, nvmin0, nvmax0
-    real(kind=8) maxvshift, maxmult, v
-    type(Blend), pointer :: Bl
-
-    maxvshift = 2d0*real(nv)*vresolution
-    maxmult = sqrt((1d0 + maxvshift/clight)/(1d0 - maxvshift/clight))
-
-    Bl => Blends
-
-    ilines = 2
-    ilines0 = 1
-    nblends = 0
-    maxblend = 0
-    nvmin0 = -nv
-    nvmax0 = 0
-    do while (ilines0 <= nlines)
-      Bl%n = 1
-      if (doblend) then
-        do while ((Lines(ilines)%lam/Lines(ilines - 1)%lam) < maxmult .and. ilines <= nlines)
-          Bl%n = Bl%n + 1
-          ilines = ilines + 1
-          if (ilines > nlines) exit
-        end do
-      end if
-      allocate (Bl%L(Bl%n))
-      allocate (Bl%v(Bl%n))
-      if (Bl%n > maxblend) maxblend = Bl%n
-      do i = 1, Bl%n
-        Bl%L(i) = Lines(ilines0 + i - 1)
-        if (i == 1) then
-          Bl%v(i) = 0d0
-        else
-          f = (Bl%L(i)%lam/Bl%L(1)%lam)**2
-          Bl%v(i) = clight*(f - 1d0)/(f + 1d0)
-        end if
-      end do
-      nvmax = nv + int(Bl%v(Bl%n)/vresolution)
-      if (nvmax > nvmax0) nvmax0 = nvmax
-      Bl%nvmin = -nv
-      Bl%nvmax = nvmax
-      allocate (Bl%ib0(-nv:nvmax))
-      allocate (Bl%nb0(-nv:nvmax))
-      do iv = -nv, nvmax
-        do i = 1, Bl%n
-          if (real(iv - nv)*vresolution <= Bl%v(i)) exit
-        end do
-        Bl%ib0(iv) = i
-        do i = Bl%n, 1, -1
-          if (real(iv + nv)*vresolution >= Bl%v(i)) exit
-        end do
-        Bl%nb0(iv) = i - Bl%ib0(iv) + 1
-      end do
-
-      v = -real(nv)*vresolution
-      Bl%lmin = Bl%L(1)%lam*sqrt((1d0 + v/clight)/(1d0 - v/clight))
-      v = real(nvmax)*vresolution
-      Bl%lmax = Bl%L(1)%lam*sqrt((1d0 + v/clight)/(1d0 - v/clight))
-
-      Bl%lam = Bl%L(1)%lam
-
-      ilines0 = ilines
-      ilines = ilines + 1
-      allocate (Bl%next)
-      Bl => Bl%next
-      nblends = nblends + 1
-    end do
-
-    return
-  end subroutine DetermineBlendsOld
-
-  ! ! create a regular pixel coordinate system in the image (fits) plane
-  ! ! with the center pixel being (0,0) x is the horizontal axis and y the vertical one
-  ! ! the x,y coordinates correspond to the center of the grid
-  ! subroutine Imcoords(npix,Rout,im_coord)
-  ! use GlobalSetup
-  ! use Constants
-  ! integer, intent(in) :: npix
-  ! real(kind=8), intent(in) :: Rout
-  ! real(kind=8), intent(inout) :: im_coord(npix,npix) ! should be already allocated
-  ! real(kind=8) :: delpix
-
-  ! delpix=2.d0*Rout*AU/real(npix)
-  ! ! create the coordinates for the pixels
-  ! do i=1,npix ! center coordinates of pixels in cm
-  !         im_coord(:,:)=delpix/2d0+delpix*(i-1)-Rout*AU
-  ! end do
-
-  ! end subroutine im_coords
-
   subroutine map_pixels_to_path(igrid, npath)
     use GlobalSetup
     use Constants
@@ -884,7 +792,7 @@ subroutine InterpolateLam(lam0, ilam)
     ! If already allocated this was done already (same grid igrid is used again), no need to map things again
     if (allocated(P(igrid, 1)%im_ixy)) return
 
-    write (*, *) "Mapping pixels to path igrid,npath", igrid, npath
+    write (*,*) "Mapping pixels to path igrid,npath", igrid, npath
 
     ! area of one pixel cm^2
     pixA = (im_coord(2) - im_coord(1))**2
@@ -928,8 +836,8 @@ subroutine InterpolateLam(lam0, ilam)
         P(igrid, iminpath)%im_npix = P(igrid, iminpath)%im_npix + 1
 
         if (P(igrid, iminpath)%im_npix > maxnpixpath) then
-          write (*, *) 'Problem found to many pixels for path'
-          write (*, *) P(igrid, iminpath)%x/AU, P(igrid, iminpath)%y/AU, P(igrid, iminpath)%im_npix
+          write (*,*) 'Problem found to many pixels for path'
+          write (*,*) P(igrid, iminpath)%x/AU, P(igrid, iminpath)%y/AU, P(igrid, iminpath)%im_npix
           stop
         end if
         P(igrid, iminpath)%im_ixy(1, P(igrid, iminpath)%im_npix) = i
@@ -959,7 +867,7 @@ subroutine InterpolateLam(lam0, ilam)
       path2star%im_npix = 1
       path2star%im_ixy(1, 1) = minloc(abs(im_coord - path2star%x), dim=1)
       path2star%im_ixy(2, 1) = minloc(abs(im_coord - path2star%y), dim=1)
-      write (*, *) path2star%x, path2star%y, path2star%im_ixy(:, 1)
+      !write (*, *) path2star%x, path2star%y, path2star%im_ixy(:, 1)
     end if
 
     ! some log output and set the correction factor

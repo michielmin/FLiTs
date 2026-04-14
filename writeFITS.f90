@@ -36,7 +36,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   blocksize = 1
   call ftinit(unit, filename, blocksize, status)
 
-!     initialize parameters about the FITS image (IMDIM x IMDIM 64-bit reals)
+  ! initialize parameters about the FITS image (IMDIM x IMDIM 64-bit reals)
   simple = .true.
   !bitpix=-64
   bitpix = -32 ! single precision should be enough
@@ -51,7 +51,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   end if
   extend = .true.
 
-!     write the required header keywords
+  ! write the required header keywords
   call ftphpr(unit, simple, bitpix, naxis, naxes, 0, 1, extend, status)
 
   degree = pi/180.0           ! one degree in rad
@@ -116,7 +116,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   ! write the array to the FITS file
   group = 1
   fpixel = 1
-  nelements = naxes(1)*naxes(2)*naxes(3)  
+  nelements = naxes(1)*naxes(2)*naxes(3)
   call ftpprd(unit, group, fpixel, nelements, im, status)
 
   ! close the file and free the unit number
