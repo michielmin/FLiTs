@@ -3,7 +3,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   use Constants, only: pi, clight, parsec, AU
   use InOut
   IMPLICIT NONE
-  character(len=500) filename
+  character(len=500),intent(in) :: filename
   integer, intent(in) :: nv, n
   double precision, intent(in) :: restlam, reflam
   logical, intent(in) :: specunitwl
@@ -22,13 +22,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
     open (unit=90, file=filename)
     close (unit=90, status='delete')
   end if
-
-  status = 0
-  ! Get an unused Logical Unit Number to use to create the FITS file
-  call ftgiou(unit, status)
-  ! create the new empty FITS file
-  blocksize = 1
-  call ftinit(unit, filename, blocksize, status)
+  
   status = 0
   ! Get an unused Logical Unit Number to use to create the FITS file
   call ftgiou(unit, status)
@@ -108,9 +102,13 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
     call ftpkys(unit, 'timesys', 'UTC     ', '', status)
     call ftpkys(unit, 'cellscal', 'CONSTANT', '', status)
     ! Restfrequency
-    call ftpkyd(unit, 'RESTFREQ', restFrqHz, 12, '', status) ! this means first spectral axis point would give v=0
+    call ftpkyd(unit, 'RESTFREQ', restFrqHz, 12, '', status) ! this means first spectral axis point would give v=0    
   end if
 
+  if (status /= 0) then
+    call output("Error writing header to FITS file: "//trim(filename)//". Status: "//int2string(status))
+  end if
+  
   call ftpkys(unit, 'origin', 'FLiTs/ProDiMo model', '', status)
 
   ! write the array to the FITS file
@@ -118,6 +116,9 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   fpixel = 1
   nelements = naxes(1)*naxes(2)*naxes(3)
   call ftpprd(unit, group, fpixel, nelements, im, status)
+  if (status /= 0) then
+    call output("Error writing data to FITS file: "//trim(filename)//". Status: "//int2string(status))    
+  end if
 
   ! close the file and free the unit number
   call ftclos(unit, status)
