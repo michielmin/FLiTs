@@ -42,7 +42,7 @@ module GlobalSetup
   integer :: structtype
 
   ! the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
-  real(kind=8), allocatable :: R(:), theta(:,:), R_av(:), theta_av(:,:)
+  real(kind=8), allocatable :: R(:), theta(:, :), R_av(:), theta_av(:, :)
   real(kind=8), allocatable :: R_sphere(:), R_av_sphere(:)
   integer :: nR, nTheta, nlam, ilam1, ilam2, nmol, nlines, nblends, nspec
   real(kind=8) :: Rin, Rout, inc, Fstar_l
@@ -53,11 +53,12 @@ module GlobalSetup
   integer, allocatable :: nImPhi(:), npoints(:)
   real(kind=8) :: vmax
 
-  ! the image cube
-  real(kind=8), allocatable :: x_im(:,:,:), y_im(:,:,:)
-  real(kind=8), allocatable :: imcube(:,:,:)
-  integer :: nint, npix, nvim
-  logical :: imagecube
+! the image cube
+  double precision, allocatable :: x_im(:, :, :), y_im(:, :, :), im_coord(:)
+  double precision, allocatable :: imcube(:, :, :)
+  integer nint, npix, nvim
+  integer(kind=4), allocatable :: imcube_hit(:, :, :)
+  logical imagecube
 
   ! store all the blackbodies
   integer :: MAXT
@@ -121,7 +122,7 @@ module GlobalSetup
     real(kind=8), allocatable :: S(:) ! dimension is wavelength
   end type Cell
 
-  type(Cell), allocatable, target :: C(:,:)  ! dimension nR,nTheta
+  type(Cell), allocatable, target :: C(:, :)  ! dimension nR,nTheta
 
   type Path
     ! minimum and maximum velocity encountered in this path
@@ -135,6 +136,9 @@ module GlobalSetup
 
     real(kind=8), allocatable :: v(:), d(:), v1(:), v2(:)
     integer, allocatable :: i(:), j(:)
+    integer*2, allocatable :: im_ixy(:, :) ! first axis =2 (x,y), second axis can theoretically go to npix*2 (all pixels),
+    ! but is likely much smaller FIXME don't know to estimate that, take npix for now
+    integer*2 :: im_npix    ! nubmer of pixels associated to that path
 
     real(kind=8), allocatable :: flux_cont(:)  !continuum contribution at each wavelength
     real(kind=8), allocatable :: cont_contr(:) !continuum contribution at each path element
@@ -150,7 +154,7 @@ module GlobalSetup
 
   !==============================
 
-  type(Path), allocatable, target :: P(:,:)
+  type(Path), allocatable, target :: P(:, :)
   type(Path), target :: path2star
   type(Molecule), allocatable :: Mol(:)
   type(Line), allocatable :: Lines(:)

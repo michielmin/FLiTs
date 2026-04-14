@@ -209,7 +209,13 @@ subroutine SetupPaths()
       imx = rr*cos(ph)*sin(tt)
       imy = rr*sin(ph)*sin(tt)
       imz = rr*cos(tt)
-      call rotate(imx, imy, imz, 0d0, 1d0, 0d0, -inc*pi/180d0)
+      ! CHR: my guess is that this rotate is done to optimize the path grid
+      ! however, because of this rotate the outer edge of the disk is not sampled on
+      ! the far side of the disk. To be backward compatible still do the rotation if
+      ! imagecube is not used
+      if (.not. imagecube) then
+        call rotate(imx, imy, imz, 0d0, 1d0, 0d0, -inc*pi/180d0)
+      end if
       xy(1, j) = imx
       xy(2, j) = imy
     end do
