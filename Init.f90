@@ -107,6 +107,8 @@ subroutine Initialize()
     read (value, *) idum
   case ("ngrids")  ! number of grids to use for the line RT, Default is 5
     read (value, *) ngrids
+  case ("regular_grid")
+    read (value, *) regular_grid
   case default
     call output("Unknown keyword: "//trim(key))
     stop
@@ -123,6 +125,11 @@ subroutine Initialize()
   if (abs(inc) .lt. 1d0) then
     call output("Increasing inclination to 1 degrees")
     inc = 1
+  end if
+
+  if (regular_grid) then 
+    call output("Using a regular grid and set ngrids=1")
+    ngrids = 1
   end if
 
   call output("==================================================================")
@@ -178,6 +185,7 @@ subroutine SetDefaults()
   cylindrical = .true.
   doblend = .true.
   imagecube = .false.
+  regular_grid = .false.
   npix=0 ! FIXME: no check yet for the case of imagecube=true
   ngrids = 5
   return

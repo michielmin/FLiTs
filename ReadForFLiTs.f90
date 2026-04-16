@@ -46,7 +46,7 @@ subroutine ReadForFLiTs()
   call system_clock(count_rate=count_rate)
 
   ! Use unformatted exchange file if present
-  ! FIXME: this is not used anymore, ProDiMo can only write the fits file now.
+  ! FIXME: this is not used any more, ProDiMo can only write the fits file now.
   inquire(file="ProDiMoForFLiTs.dat", exist=exdat)
 
   !------------------------------------------------------------------------

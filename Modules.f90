@@ -58,7 +58,11 @@ module GlobalSetup
   double precision, allocatable :: imcube(:, :, :)
   integer nint, npix, nvim
   integer(kind=4), allocatable :: imcube_hit(:, :, :)
+  ! produce an image cube
   logical imagecube
+  ! use a more regular grid in the image planet (i.e. no random sampling)
+  logical regular_grid
+
 
   ! store all the blackbodies
   integer :: MAXT

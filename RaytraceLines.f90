@@ -57,20 +57,20 @@
       allocate (imcube(npix, npix, nvmin:nvmax))
       allocate (imcube_hit(npix, npix, nvmin:nvmax))
       allocate (im_coord(npix))
+      write(*,*) "Rout",Rout
       delpix = 2.d0*Rout*AU/real(npix)
       ! create the center coordinates for the pixels
       do i = 1, npix ! center coordinates of pixels in cm
         im_coord(i) = delpix/2d0 + delpix*(i - 1) - Rout*AU
       end do
-      !write(*,*) im_coord/AU
-
     end if
-
+    
     lam = lmin
     ilam1 = 1
     do while (lam > lam_cont(ilam1 + 1) .and. ilam1 < nlam)
       ilam1 = ilam1 + 1
     end do
+
     allocate (profile(-nvprofile:nvprofile))
     allocate (profile_nz(-nvprofile:nvprofile))
     do i = 0, nR
@@ -115,7 +115,7 @@
     Bl => Blends
     do iblends = 1, nblends
       if (imagecube) then
-        imcube = 0d0 ! FIXME: in the end I want only one cube, not for each blend, I think that shoulbe be moved outside of the blends loop (like flux)
+        imcube = 0d0 ! FIXME: in the end I want only one cube, not for each blend, I think that should be moved outside of the blends loop (like flux)
         imcube_hit = 0
       end if
       flux = 0d0
@@ -141,7 +141,7 @@
           if (ilam == nlam) exit
         end do
 
-        ! CHR: What is this doing ?
+        ! that writes out continuum only points for the spectrum.
         if (ilam > ilam1) then
           do k = ilam1 + 1, ilam
             if (lam_cont(k) > lcmin .and. lam_cont(k) < Bl%lmin) then
@@ -900,7 +900,7 @@ subroutine InterpolateLam(lam0, ilam)
     integer ix, iy, ipix
     real(kind=8) :: fluxperpix, pixA
 
-    pixA = (im_coord(2) - im_coord(1))**2
+    !pixA = (im_coord(2) - im_coord(1))**2
     ! simply distribute the flux for the path over all pixels equally
     fluxperpix = flux0/p0%im_npix
     !fluxperpix=(flux0/p0%A)*pixA
