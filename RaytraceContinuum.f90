@@ -22,19 +22,19 @@ subroutine RaytraceContinuum()
 
   do i = 1, ngrids
     do j = 1, npoints(i)
-      allocate (P(i, j)%flux_cont(nlam))
+      allocate (P(i, j)%flux_cont(nlamCont))
     end do
   end do
-  allocate (path2star%flux_cont(nlam))
+  allocate (path2star%flux_cont(nlamCont))
 
-  do ilamstart = 1, nlam - 1
+  do ilamstart = 1, nlamCont - 1
     if (lam_cont(ilamstart + 1) > lmin) exit
   end do
 
-  do ilamend = ilamstart, nlam
+  do ilamend = ilamstart, nlamCont
     if (lam_cont(ilamend) > lmax) exit
   end do
-  ilamend = min(ilamend, nlam) ! case of last point
+  ilamend = min(ilamend, nlamCont) ! case of last point
 
   call output("Raytracing the continuum for "//trim(int2string(ilamend - ilamstart, '(i5)'))//" wavelengths")
   do ilam = ilamstart, ilamend

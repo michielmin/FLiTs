@@ -19,12 +19,19 @@ subroutine SetupPaths()
   double precision :: time, utime
   real(kind=8) :: vmaxgrid
 
+  call clock(time, utime)
+  call output("==================================================================")
+  call output("Setup up the paths for raytracing")
+
   ilam1 = 1
-  ilam2 = nlam
-  do ilam = 1, nlam
+  ilam2 = nlamCont
+  do ilam = 1, nlamCont
     if (lam_cont(ilam) < lmin) ilam1 = ilam
-    if (lam_cont(nlam + 1 - ilam) > lmax) ilam2 = nlam + 1 - ilam
+    if (lam_cont(nlamCont + 1 - ilam) > lmax) ilam2 = nlamCont + 1 - ilam
   end do
+  call output("Considered continuum range: points"//int2string(ilam2-ilam1+1, '(i5)')// &
+              " from "//dbl2string(lam_cont(ilam1), '(F10.3)')// &
+              " to " //dbl2string(lam_cont(ilam2), '(F10.3)')//" micron")
 
   ! increase the resolution in velocity by this factor
 
@@ -65,11 +72,6 @@ subroutine SetupPaths()
     nPhiMax = 270
   end if
 
-  call output("==================================================================")
-  call output("Setup up the paths for raytracing")
-
-  call clock(time, utime)
-
   do while (nR/nrReduce < 40 .and. nrReduce > 1)
     nrReduce = nrReduce - 1
   end do
@@ -93,7 +95,6 @@ subroutine SetupPaths()
   ! FIXME: Somehow it would make more sense to just provide a total number of grid points for the 
   ! random grid generation
   nImR = ir + int(abs(sin(inc*pi/180d0))*(C(1, nTheta)%v/vresolution)*res_inc/2d0) + (nTheta - 1)*2 + 100
-
   
   allocate (imR(nImR))
 

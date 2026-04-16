@@ -67,7 +67,7 @@
     
     lam = lmin
     ilam1 = 1
-    do while (lam > lam_cont(ilam1 + 1) .and. ilam1 < nlam)
+    do while (lam > lam_cont(ilam1 + 1) .and. ilam1 < nlamCont)
       ilam1 = ilam1 + 1
     end do
 
@@ -136,9 +136,9 @@
         nl = nl + nb
 
         ilam = ilam1
-        do while (lam > lam_cont(ilam + 1) .and. ilam < nlam)
+        do while (lam > lam_cont(ilam + 1) .and. ilam < nlamCont)
           ilam = ilam + 1
-          if (ilam == nlam) exit
+          if (ilam == nlamCont) exit
         end do
 
         ! that writes out continuum only points for the spectrum.
@@ -444,7 +444,7 @@
     end do
 
     ilam = ilam + 1
-    do while (ilam <= nlam)
+    do while (ilam <= nlamCont)
       if (lam_cont(ilam) < lmax) then
         flux0 = 0d0
         do j = 1, npoints(i)

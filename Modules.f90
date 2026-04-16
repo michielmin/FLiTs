@@ -44,7 +44,7 @@ module GlobalSetup
   ! the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
   real(kind=8), allocatable :: R(:), theta(:, :), R_av(:), theta_av(:, :)
   real(kind=8), allocatable :: R_sphere(:), R_av_sphere(:)
-  integer :: nR, nTheta, nlam, ilam1, ilam2, nmol, nlines, nblends, nspec
+  integer :: nR, nTheta, nlamCont, ilam1, ilam2, nmol, nlines, nblends, nspec
   real(kind=8) :: Rin, Rout, inc, Fstar_l
   real(kind=8), allocatable :: lam_cont(:), Fstar(:)
 
