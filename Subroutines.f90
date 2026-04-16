@@ -112,13 +112,25 @@ end function ran1
 subroutine tellertje(i, n)
   use InOut
   implicit none
-  integer :: i, n, f
+  integer,intent(in) :: i, n 
+  integer :: f,j
+  real(kind=8) :: npoints
+  character(len=20) :: str
+  
+  npoints=min(20.0, real(n,kind=8))
 
-  if (i == 1) call output("....................")
-  f = int(20d0*dble(i)/dble(n))
+  str=""
+  if (i == 1) then 
+    do j = 1, npoints
+      str = trim(str)//"."
+    enddo
+    call output(str)
+  endif
+  
+  f = int(npoints*dble(i)/dble(n))    
 
-  if (20d0*real(i-1)/real(n) < real(f) &
-      .and. 20d0*real(i+1)/real(n) > real(f)) then
+  if (npoints*real(i-1)/real(n) < real(f) &
+      .and. npoints*real(i+1)/real(n) > real(f)) then
     call outputform(".", '(a1,$)')
     flush(6)
   endif

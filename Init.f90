@@ -120,6 +120,11 @@ subroutine Initialize()
 30 continue
   close (unit=20)
 
+  if (imagecube .and. (npix .eq. 0 .or. mod(npix, 2) == 0)) then
+    call output("Error: if imagecube is true, npix must be set to a positive and odd integer value")
+    stop
+  end if
+
   vres_mult = vresolution/vres_profile
 
   if (abs(inc) .lt. 1d0) then

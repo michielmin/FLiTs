@@ -300,9 +300,9 @@ subroutine SetupPaths()
 
   call output("Number of image gridpoints: "//trim(int2string(k, '(i7)')))
   ! calculate the total area covered by the paths, for checking
-  do  i = 1, ngrids
-    call output("Area of grid"//trim(int2string(i, '(i3)'))//": "//trim(dbl2string(sum(P(i, 1:npoints(i))%A/AU**2), '(F10.3)'))//" AU^2")
-  end do
+  ! do  i = 1, ngrids
+  !   call output("Area of grid"//trim(int2string(i, '(i3)'))//": "//trim(dbl2string(sum(P(i, 1:npoints(i))%A/AU**2), '(F10.3)'))//" AU^2")
+  ! end do
 
   vmax = 0d0
   icount = 0
