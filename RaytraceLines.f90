@@ -66,9 +66,9 @@
     end if
     
     lam = lmin
-    ilam1 = 1
-    do while (lam > lam_cont(ilam1 + 1) .and. ilam1 < nlamCont)
-      ilam1 = ilam1 + 1
+    ilam1Cont = 1
+    do while (lam > lam_cont(ilam1Cont + 1) .and. ilam1Cont < nlamCont)
+      ilam1Cont = ilam1Cont + 1
     end do
 
     allocate (profile(-nvprofile:nvprofile))
@@ -135,15 +135,15 @@
       if (lam > lmin .and. lam < lmax) then
         nl = nl + nb
 
-        ilam = ilam1
+        ilam = ilam1Cont
         do while (lam > lam_cont(ilam + 1) .and. ilam < nlamCont)
           ilam = ilam + 1
           if (ilam == nlamCont) exit
         end do
 
         ! that writes out continuum only points for the spectrum.
-        if (ilam > ilam1) then
-          do k = ilam1 + 1, ilam
+        if (ilam > ilam1Cont) then
+          do k = ilam1Cont + 1, ilam
             if (lam_cont(k) > lcmin .and. lam_cont(k) < Bl%lmin) then
               flux0 = 0d0
               do i = 1, ngrids
@@ -157,7 +157,7 @@
                 flux0*1e23/(distance*parsec)**2, 0.0, flux0*1e23/(distance*parsec)**2, "continuum"
             end if
           end do
-          ilam1 = ilam
+          ilam1Cont = ilam
         end if
         lcmin = Bl%lmax
 

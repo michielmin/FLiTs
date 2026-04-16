@@ -121,7 +121,7 @@ subroutine tellertje(i, n)
 
   str=""
   if (i == 1) then 
-    do j = 1, npoints
+    do j = 1, int(npoints)
       str = trim(str)//"."
     enddo
     call output(str)

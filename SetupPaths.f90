@@ -23,15 +23,15 @@ subroutine SetupPaths()
   call output("==================================================================")
   call output("Setup up the paths for raytracing")
 
-  ilam1 = 1
-  ilam2 = nlamCont
+  ilam1Cont = 1
+  ilam2Cont = nlamCont
   do ilam = 1, nlamCont
-    if (lam_cont(ilam) < lmin) ilam1 = ilam
-    if (lam_cont(nlamCont + 1 - ilam) > lmax) ilam2 = nlamCont + 1 - ilam
+    if (lam_cont(ilam) < lmin) ilam1Cont = ilam
+    if (lam_cont(nlamCont + 1 - ilam) > lmax) ilam2Cont = nlamCont + 1 - ilam
   end do
-  call output("Considered continuum range: points"//int2string(ilam2-ilam1+1, '(i5)')// &
-              " from "//dbl2string(lam_cont(ilam1), '(F10.3)')// &
-              " to " //dbl2string(lam_cont(ilam2), '(F10.3)')//" micron")
+  call output("Considered continuum range: points"//int2string(ilam2Cont-ilam1Cont+1, '(i5)')// &
+              " from "//dbl2string(lam_cont(ilam1Cont), '(F10.3)')// &
+              " to " //dbl2string(lam_cont(ilam2Cont), '(F10.3)')//" micron")
 
   ! increase the resolution in velocity by this factor
 
@@ -524,7 +524,7 @@ subroutine tracepath(trac, PP, onlycount)
     trac%y = trac%y + trac%vy*d
     trac%z = trac%z + trac%vz*d
 
-    if (trac%i > 0) taumin = taumin + minval(C(trac%i, trac%j)%kext(ilam1:ilam2))*d
+    if (trac%i > 0) taumin = taumin + minval(C(trac%i, trac%j)%kext(ilam1Cont:ilam2Cont))*d
 
     if (inext > nR) return
     if (inext < 0) return
