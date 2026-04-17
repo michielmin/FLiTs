@@ -5,6 +5,9 @@ subroutine PrepareStructure()
   implicit none
   integer :: i, j, imol, ispec(nmol), ipop
 
+  call output("==================================================================")
+  call output("PrepareStructure ...")
+
   do i = 0, nR
     C(i, 0)%dens = 1d-50
   end do
@@ -31,6 +34,7 @@ subroutine PrepareStructure()
     end if
   end do
 
+  call output("Rearranging data and determine line_width ...") 
   do i = 0, nR
     call tellertje(i + 1, nR + 1)
     do j = 0, nTheta
@@ -48,6 +52,7 @@ subroutine PrepareStructure()
     end do
   end do
 
+  call output("Rearranging data and computing maximum population levels ...")
   do i = 0, nR
     call tellertje(i + 1, nR + 1)
     do j = 0, nTheta

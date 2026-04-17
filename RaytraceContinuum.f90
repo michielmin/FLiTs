@@ -3,7 +3,7 @@ subroutine RaytraceContinuum()
   use Constants
   use InOut
   implicit none
-  integer          :: i, j, ilam, ilamstart, ilamend
+  integer          :: i, j, ilam
   double precision :: flux
   double precision :: time, utime
 
@@ -22,23 +22,14 @@ subroutine RaytraceContinuum()
 
   do i = 1, ngrids
     do j = 1, npoints(i)
-      allocate (P(i, j)%flux_cont(nlam))
+      allocate (P(i, j)%flux_cont(nlamCont))
     end do
   end do
-  allocate (path2star%flux_cont(nlam))
+  allocate (path2star%flux_cont(nlamCont))
 
-  do ilamstart = 1, nlam - 1
-    if (lam_cont(ilamstart + 1) > lmin) exit
-  end do
-
-  do ilamend = ilamstart, nlam
-    if (lam_cont(ilamend) > lmax) exit
-  end do
-  ilamend = min(ilamend, nlam) ! case of last point
-
-  call output("Raytracing the continuum for "//trim(int2string(ilamend - ilamstart, '(i5)'))//" wavelengths")
-  do ilam = ilamstart, ilamend
-    call tellertje(ilam - ilamstart + 1, ilamend - ilamstart)
+  call output("Raytracing the continuum for "//int2string(ilam2Cont-ilam1Cont+1, '(i5)')//" wavelengths")
+  do ilam = ilam1Cont, ilam2Cont
+    call tellertje(ilam - ilam1Cont + 1, ilam2Cont - ilam1Cont+1)
     flux = 0d0
     do i = 1, ngrids
 !$OMP PARALLEL DO SCHEDULE(static,1) &

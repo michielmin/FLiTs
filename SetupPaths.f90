@@ -3,7 +3,7 @@ subroutine SetupPaths()
   use Constants
   use InOut
   implicit none
-  integer :: i, j, k, ir, nRreduce, ilam, imol, nImPhi_max, nPhiMin, nPhiMax, it
+  integer :: i, j, k, ir, nRreduce, ilam, imol, nImPhi_max, nPhiMin, nPhiMax, it,ipoint
   integer, allocatable :: startphi(:)
   double precision :: ct, res_inc, rr, tt, ph
   double precision, allocatable :: imR(:), imPhi(:, :)
@@ -19,12 +19,19 @@ subroutine SetupPaths()
   double precision :: time, utime
   real(kind=8) :: vmaxgrid
 
-  ilam1 = 1
-  ilam2 = nlam
-  do ilam = 1, nlam
-    if (lam_cont(ilam) < lmin) ilam1 = ilam
-    if (lam_cont(nlam + 1 - ilam) > lmax) ilam2 = nlam + 1 - ilam
+  call clock(time, utime)
+  call output("==================================================================")
+  call output("Setup up the paths for raytracing")
+
+  ilam1Cont = 1
+  ilam2Cont = nlamCont
+  do ilam = 1, nlamCont
+    if (lam_cont(ilam) < lmin) ilam1Cont = ilam
+    if (lam_cont(nlamCont + 1 - ilam) > lmax) ilam2Cont = nlamCont + 1 - ilam
   end do
+  call output("Considered continuum range: points"//int2string(ilam2Cont-ilam1Cont+1, '(i5)')// &
+              " from "//dbl2string(lam_cont(ilam1Cont), '(F10.3)')// &
+              " to " //dbl2string(lam_cont(ilam2Cont), '(F10.3)')//" micron")
 
   ! increase the resolution in velocity by this factor
 
@@ -65,13 +72,8 @@ subroutine SetupPaths()
     nPhiMax = 270
   end if
 
-  call output("==================================================================")
-  call output("Setup up the paths for raytracing")
-
-  call clock(time, utime)
-
-  do while (nR/nRreduce < 40 .and. nRreduce > 1)
-    nRreduce = nRreduce - 1
+  do while (nR/nrReduce < 40 .and. nrReduce > 1)
+    nrReduce = nrReduce - 1
   end do
 
   ir = 0
@@ -81,15 +83,19 @@ subroutine SetupPaths()
       ir = ir + 3
     end if
   end do
-  do i = 1, nR, nRreduce
+  ! FIXME: what is this? 
+  do i = 1, nR, nrReduce
     ir = ir + 1
     if (cylindrical) then
       ir = ir + 1
     end if
   end do
 
+  ! TODO: the plus 100 looks a bit arbitrary
+  ! FIXME: Somehow it would make more sense to just provide a total number of grid points for the 
+  ! random grid generation
   nImR = ir + int(abs(sin(inc*pi/180d0))*(C(1, nTheta)%v/vresolution)*res_inc/2d0) + (nTheta - 1)*2 + 100
-
+  
   allocate (imR(nImR))
 
   ir = 0
@@ -134,10 +140,12 @@ subroutine SetupPaths()
     imR(ir) = rr*cos(inc*pi/180d0 + (pi/2d0 - theta_av(nR - 1, i)))/ComputeIncFact(imR(ir))
   end do
 
+  write(*,*) "Number of image grid points in R: ", ir,nImR,imR(ir)/AU
   j = (nImR - ir)
   do i = 1, j
     ir = ir + 1
-    imR(ir) = 10d0**(log10(Rstar*Rsun) + log10(R_sphere(nR + 1)/(Rstar*Rsun))*(real(i) - 0.1)/real(j))
+    ! Do not know why there are two lines
+    ! imR(ir) = 10d0**(log10(Rstar*Rsun) + log10(R_sphere(nR + 1)/(Rstar*Rsun))*(real(i) - 0.1)/real(j))
     imR(ir) = 10d0**(log10(R(nR)) + log10(R_sphere(nR + 1)/R(nR))*(real(i) - 0.1)/real(j))
   end do
 
@@ -145,18 +153,31 @@ subroutine SetupPaths()
 
   call sort(imR, nImR)
 
+! FIXME: don't understand the griddgin for R, it is also ignored for the random grid generation
+! but use it for the regular grid, but limit it to the actual size.
+! For the random grid onl nImR is relevant, so keep it 
+
+  if (regular_grid) then
+    nImR = minloc(abs(imR(:) - R(nR))/AU,1)
+  endif
+
   open (unit=20, file='imagegrid.out', RECL=1000)
   do i = 1, nImR
     write (20, *) imR(i)/AU, R_sphere(nR + 1)/AU
   end do
-  close (unit=20)
+  close (unit=20)    
 
+
+  ! This block calculate the number of phi points for each r point
   allocate (nImPhi(nImR))
   allocate (startphi(nImR + 1))
 
   nImPhi_max = 1
   startphi(1) = 1
 
+  ! So points in the radial grid are used to determine the number of phi points for each radius
+  ! however, all that counts later on for the random grid is the total number of points. It is a rather complicated
+  ! way to calculate that.
   npoints_temp = 0
   do i = 1, nImR
     do k = 1, nR - 1
@@ -174,20 +195,24 @@ subroutine SetupPaths()
     if (nImPhi(i) > nImPhi_max) nImPhi_max = nImPhi(i)
     npoints_temp = npoints_temp + nImPhi(i)
   end do
+  
 
-  allocate (imPhi(nImR, nImPhi_max))
+  ! again imPhi, is only needed for the regular grid
+  if (regular_grid) then 
+    allocate (imPhi(nImR, nImPhi_max))
 
-  do i = 1, nImR
-    if (startphi(i) == 1) then
-      do j = 1, nImPhi(i)
-        ImPhi(i, j) = pi*(real(j) - 0.5)/real(nImPhi(i))
-      end do
-    else
-      do j = 1, nImPhi(i)
-        ImPhi(i, j) = pi*real(j - 1)/real(nImPhi(i) - 1)
-      end do
-    end if
-  end do
+    do i = 1, nImR
+      if (startphi(i) == 1) then
+        do j = 1, nImPhi(i)
+          ImPhi(i, j) = pi*(real(j) - 0.5)/real(nImPhi(i))
+        end do
+      else
+        do j = 1, nImPhi(i)
+          ImPhi(i, j) = pi*real(j - 1)/real(nImPhi(i) - 1)
+        end do
+      end if
+    end do
+  end if
 
   allocate (xy(2, npoints_temp))
   allocate (npoints(ngrids))
@@ -195,24 +220,42 @@ subroutine SetupPaths()
   allocate (P(ngrids, matri))
   allocate (t_node(3, matri))
   allocate (t_neighbor(3, matri))
-  k = 0
   do i = 1, ngrids
-    do j = 1, npoints_temp
-      ir = int(ran1(idum)*real(nR))
-      it = int(ran1(idum)*real(nTheta))
-      rr = ran1(idum)
-      rr = sqrt(R(ir)**2*rr + R(ir + 1)**2*(1d0 - rr))
-      tt = ran1(idum)
-      tt = Theta(ir, it)*tt + Theta(ir, it + 1)*(1d0 - tt)
-      tt = acos(tt)
-      ph = ran1(idum)*pi*2d0
-      imx = rr*cos(ph)*sin(tt)
-      imy = rr*sin(ph)*sin(tt)
-      imz = rr*cos(tt)
-      call rotate(imx, imy, imz, 0d0, 1d0, 0d0, -inc*pi/180d0)
-      xy(1, j) = imx
-      xy(2, j) = imy
-    end do
+    ! try a more regular grid, might work better 
+    ! for line cubes
+    if (regular_grid) then
+      ipoint = 0
+      do ir = 1, nImR
+        do j = 1, nImPhi(ir)
+          ipoint = ipoint + 1
+          xy(1, ipoint) = imR(ir) * cos(imPhi(ir, j))
+          xy(2, ipoint) = imR(ir) * sin(imPhi(ir, j))
+        end do
+      end do
+    else
+      do j = 1, npoints_temp
+        ir = int(ran1(idum)*real(nR))
+        it = int(ran1(idum)*real(nTheta))
+        rr = ran1(idum)
+        rr = sqrt(R(ir)**2*rr + R(ir + 1)**2*(1d0 - rr))
+        tt = ran1(idum)
+        tt = Theta(ir, it)*tt + Theta(ir, it + 1)*(1d0 - tt)
+        tt = acos(tt)
+        ph = ran1(idum)*pi*2d0
+        imx = rr*cos(ph)*sin(tt)
+        imy = rr*sin(ph)*sin(tt)
+        imz = rr*cos(tt)
+        ! CHR: my guess is that this rotate is done to optimize the path grid
+        ! however, because of this rotate the outer edge of the disk is not sampled on
+        ! the far side of the disk. To be backward compatible still do the rotation if
+        ! imagecube is not used
+        if (.not. imagecube) then
+          call rotate(imx, imy, imz, 0d0, 1d0, 0d0, -inc*pi/180d0)
+        end if
+        xy(1, j) = imx
+        xy(2, j) = imy
+      end do
+    endif
     matrix(1, 1) = 1d0
     matrix(1, 2) = 0d0
     matrix(2, 1) = 0d0
@@ -221,19 +264,46 @@ subroutine SetupPaths()
     do j = 1, npoints(i)
       P(i, j)%x = (xy(1, t_node(1, j)) + xy(1, t_node(2, j)) + xy(1, t_node(3, j)))/3d0
       P(i, j)%y = (xy(2, t_node(1, j)) + xy(2, t_node(2, j)) + xy(2, t_node(3, j)))/3d0
+      ! this is because we assume the paths are symmetric with respect to the midplane
       P(i, j)%y = abs(P(i, j)%y)
       r1 = sqrt((xy(1, t_node(1, j)) - xy(1, t_node(2, j)))**2 + (xy(2, t_node(1, j)) - xy(2, t_node(2, j)))**2)
       r2 = sqrt((xy(1, t_node(1, j)) - xy(1, t_node(3, j)))**2 + (xy(2, t_node(1, j)) - xy(2, t_node(3, j)))**2)
       r3 = sqrt((xy(1, t_node(3, j)) - xy(1, t_node(2, j)))**2 + (xy(2, t_node(3, j)) - xy(2, t_node(2, j)))**2)
       s = (r1 + r2 + r3)/2d0
       P(i, j)%A = sqrt(s*(s - r1)*(s - r2)*(s - r3))
+      ! FIXME: not sure why that is, but for a regular grid I need to double the area
+      if (regular_grid) P(i,j)%A=2.*P(i,j)%A
     end do
+
+    ! Write Delaunay triangulation to file for plotting (e.g. matplotlib triplot).
+    ! File format:
+    !   line 1 : npoints_temp  npoints(i)         (number of vertices, number of triangles)
+    !   next npoints_temp lines : x[AU]  y[AU]     (vertex coordinates)
+    !   next npoints(i) lines   : n0  n1  n2       (0-based triangle node indices)
+    !   next npoints(i) lines   : cx[AU]  cy[AU]   (triangle centroid = P(i,j)%x/y)
+    open(unit=30, file='triangulation_'//trim(int2string(i,'(i2.2)'))//'.txt', status='replace')
+    write(30, '(2(i8,1x))') npoints_temp, npoints(i)
+    do j = 1, npoints_temp
+      write(30, '(2(es16.8,1x))') xy(1,j)/AU, xy(2,j)/AU
+    end do
+    do j = 1, npoints(i)
+      write(30, '(3(i8,1x))') t_node(1,j)-1, t_node(2,j)-1, t_node(3,j)-1
+    end do
+    do j = 1, npoints(i)
+      write(30, '(2(es16.8,1x))') P(i,j)%x/AU, P(i,j)%y/AU
+    end do
+    close(unit=30)
+
     k = k + npoints(i)
   end do
   ncount = k
   k = k/ngrids
 
   call output("Number of image gridpoints: "//trim(int2string(k, '(i7)')))
+  ! calculate the total area covered by the paths, for checking
+  ! do  i = 1, ngrids
+  !   call output("Area of grid"//trim(int2string(i, '(i3)'))//": "//trim(dbl2string(sum(P(i, 1:npoints(i))%A/AU**2), '(F10.3)'))//" AU^2")
+  ! end do
 
   vmax = 0d0
   icount = 0
@@ -455,7 +525,7 @@ subroutine tracepath(trac, PP, onlycount)
     trac%y = trac%y + trac%vy*d
     trac%z = trac%z + trac%vz*d
 
-    if (trac%i > 0) taumin = taumin + minval(C(trac%i, trac%j)%kext(ilam1:ilam2))*d
+    if (trac%i > 0) taumin = taumin + minval(C(trac%i, trac%j)%kext(ilam1Cont:ilam2Cont))*d
 
     if (inext > nR) return
     if (inext < 0) return
