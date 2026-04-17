@@ -264,7 +264,8 @@ subroutine SetupPaths()
     do j = 1, npoints(i)
       P(i, j)%x = (xy(1, t_node(1, j)) + xy(1, t_node(2, j)) + xy(1, t_node(3, j)))/3d0
       P(i, j)%y = (xy(2, t_node(1, j)) + xy(2, t_node(2, j)) + xy(2, t_node(3, j)))/3d0
-      !P(i, j)%y = abs(P(i, j)%y)
+      ! this is because we assume the paths are symmetric with respect to the midplane
+      P(i, j)%y = abs(P(i, j)%y)
       r1 = sqrt((xy(1, t_node(1, j)) - xy(1, t_node(2, j)))**2 + (xy(2, t_node(1, j)) - xy(2, t_node(2, j)))**2)
       r2 = sqrt((xy(1, t_node(1, j)) - xy(1, t_node(3, j)))**2 + (xy(2, t_node(1, j)) - xy(2, t_node(3, j)))**2)
       r3 = sqrt((xy(1, t_node(3, j)) - xy(1, t_node(2, j)))**2 + (xy(2, t_node(3, j)) - xy(2, t_node(2, j)))**2)
