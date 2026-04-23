@@ -489,7 +489,7 @@
     if (imagecube) then
       call output("")
       call output("Writing image cube to file imcube.fits ...")
-      call writefitsfile(imagecube_filename, imcube*1e23/(distance*parsec)**2, nlam_cube, npix, lmin+dlam_cube/2d0, lmin+dlam_cube/2d0, .true.)
+      call writefitsfile(trim(imagecube_filename), imcube*1e23/(distance*parsec)**2, nlam_cube, npix, lmin+dlam_cube/2d0, lmin+dlam_cube/2d0, .true.)
       call output("")      
     end if
 

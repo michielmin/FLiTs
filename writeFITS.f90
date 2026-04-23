@@ -3,7 +3,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   use Constants, only: pi, clight, parsec, AU
   use InOut
   IMPLICIT NONE
-  character(len=500),intent(in) :: filename
+  character(len=*),intent(in) :: filename
   integer, intent(in) :: nv, n
   double precision, intent(in) :: restlam, reflam
   logical, intent(in) :: specunitwl
