@@ -3,7 +3,7 @@
     use Constants
     use InOut
     implicit none
-    integer :: i, j, ilam, k, iblends, vmult, iv, nv, nl, imol, maxblend, ilines, nvmax, nvmin
+    integer :: i, j,igrid, ilam, k, iblends, vmult, iv, nv, nl, imol, maxblend, ilines, nvmax, nvmin
     integer :: nb, ib0, nb0, ib, nltot
     integer(kind=4) :: counts, count_rate, count_max
     integer, external :: OMP_GET_THREAD_NUM
@@ -25,7 +25,7 @@
     character(len=500) :: imcubename
     character(len=40) :: callerstr
     real(kind=8) :: imcube_size
-    real(kind=8) :: delpix
+    real(kind=8) :: delpix,starcorr    
     real(kind=8) :: time, utime, timegap, utimegap
 
     call output("==================================================================")
@@ -73,6 +73,8 @@
       imcube = 0d0      
       allocate (im_coord(npix))
       delpix = 2.d0*Rout*AU/real(npix)
+      pixA=delpix**2
+      starcorr=path2star%A/pixA
       ! create the center coordinates for the pixels
       do i = 1, npix ! center coordinates of pixels in cm
         im_coord(i) = delpix/2d0 + delpix*(i - 1) - Rout*AU
@@ -154,7 +156,7 @@
       if (lam > lmin .and. lam < lmax) then
         nl = nl + nb
 
-        ! make sure that we do not end up with empy channels.
+        ! make sure that we do not end up with empty channels.
         if (imagecube) then
           ilam_cube_start = nlam_cube
           ilam_cube_end = 0
@@ -178,22 +180,27 @@
                   ilam_cube_gap = ilam_cube_gap + 1
                 end do
                 call InterpolateLam(lam_cube(i), ilam_cube_gap)
+                do igrid = 1,ngrids
 !$OMP PARALLEL DEFAULT(NONE) &
-!$OMP PRIVATE(j, PP, flux0) &
-!$OMP SHARED(P, npoints, lam_cube, i)
+!$OMP PRIVATE(j,PP, flux0,vmult) &
+!$OMP SHARED(P, npoints, lam_cube, i, igrid, ngrids)
 !$OMP DO SCHEDULE(dynamic,1)
-                do j = 1, npoints(1)  ! just do it for the first grid
-                  PP => P(1, j)
-                  call ContContrPath(PP, flux0)
-                  call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, 1, "continuum in gap")
-                  ! because of symmetry
-                  call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, -1, "continuum in gap")
-                end do
+                  do j = 1, npoints(igrid)  ! just do it for the first grid
+                    PP => P(igrid, j)
+                    call ContContrPath(PP, flux0)
+                    flux0=flux0/real(ngrids)
+                    do vmult=-1,1,2
+                      call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, vmult, "continuum in gap")                  
+                    end do
+                  end do
 !$OMP END DO
 !$OMP END PARALLEL
-                PP => path2star
-                call ContContrPath(PP, flux0)
-                call AddImage(0, lam_cube(i), flux0*PP%A, PP, 1, "star in gap")
+                enddo
+                ! do the star, as there are no lines, nb = 0
+                PP => path2star                
+                call Trace2StarLines(PP, flux0, iv, imol_blend, v_blend, 0)    
+                ! for the star we correct the area as the pixel is usuall much larger than the star            
+                call AddImage(0, lam_cube(i), flux0*PP%A*starcorr, PP, 1, "trace star")
               end if
             end do
             call clock_write(timegap, utimegap,"  Fill imcube gap: ")
@@ -210,7 +217,7 @@
           ilam = ilam + 1
           if (ilam == nlamCont) exit
         end do
-        ! that writes out continuum only points for the spectrum, however, onlz the points available
+        ! that writes out continuum only points for the spectrum, however, only the points available
         ! which could be only 1
         if (ilam > ilam1Cont) then
           do k = ilam1Cont + 1, ilam
@@ -359,11 +366,14 @@
               end if
             end do
           else
+            !write(*,*) "call not dotit"
             flux0 = flux_c
             flux4(Bl%nvmin:Bl%nvmax) = flux4(Bl%nvmin:Bl%nvmax) + flux0*PP%A
             if (imagecube) then
               do iv = Bl%nvmin, Bl%nvmax
-                call AddImage(iv, lam, flux0*PP%A, PP, 1, "call not doit")
+                do vmult = -1,1,2
+                  call AddImage(iv, lam, flux0*PP%A, PP, vmult, "call not doit")
+                enddo
               end do
             end if
           end if
@@ -388,7 +398,7 @@
             call Trace2StarLines(PP, flux0, iv, imol_blend, v_blend, nb)
             flux(iv) = flux(iv) + flux0*PP%A
           end if
-          if (imagecube) call AddImage(iv, lam, flux0*PP%A, PP, 1, "trace star")
+          if (imagecube) call AddImage(iv, lam, flux0*PP%A*starcorr, PP, 1, "trace star")
         end do
         flux2 = flux2 + flux0*PP%A
 
@@ -525,7 +535,7 @@
     return
   end subroutine RaytraceLines
 
-  subroutine ContContrPath(p0, flux)!
+  subroutine ContContrPath(p0, flux)
 !   Compute the continuum flux along path p0 at the current line-center
 !   wavelength (set by the last call to InterpolateLam). Integrates the
 !   formal RT solution cell by cell using the pre-interpolated dust opacity
@@ -843,7 +853,7 @@
     implicit none
     integer, intent(in) :: igrid, npath
     real(kind=8) :: px(npath), py(npath), dist(npath), im_x, im_y
-    real(kind=8) :: maxx, maxr, maxrxp, maxrxm, pixA
+    real(kind=8) :: maxx, maxr, maxrxp, maxrxm !pixA
     type(Path), pointer :: p0
     real(kind=8) :: time, utime
 
@@ -857,7 +867,7 @@
     !call output("Mapping pixels to path igrid,npath:"//trim(int2string(igrid, '(i7)'))//" "//trim(int2string(npath, '(i7)')))
 
     ! area of one pixel cm^2
-    pixA = (im_coord(2) - im_coord(1))**2
+    !pixA = (im_coord(2) - im_coord(1))**2
 
     ! the paths do not sample the whole image (just the disk)
     ! In theory this could be different (e.g. if not a disk)
@@ -883,8 +893,8 @@
       ! only care about the positive half
       do j = int(npix/2 + 1), npix
         im_y = im_coord(j)
-        ! the Path grid does not cover a circel (due to inclination)
-        ! along the x is the minor axis, which has differen Rmax depending on sign
+        ! the Path grid does not cover a circle (due to inclination)
+        ! along the x is the minor axis, which has different Rmax depending on sign
         if (sqrt((im_x)**2 + (im_y)**2) > maxr) cycle
         !if ((im_x<0).and.im_x<maxrxm) cycle FIXME: doesn't really work
         !if ((im_x>0).and.im_x>maxrxp) cycle
@@ -958,7 +968,7 @@
     type(Path), intent(in) :: p0
     character(len=*), intent(in) :: caller        ! just for logging, can be removed
     integer :: ix, iy, ipix, ivcube
-    real(kind=8) :: fluxperpix, lam_velo
+    real(kind=8) :: fluxperpix, lam_velo,singlepixcorr
 
     ! compute absolute wavelength for this channel and map to global cube index
     lam_velo = lam_blend*sqrt((1d0 + real(iv)*vresolution/clight)/ &
@@ -967,8 +977,7 @@
     !write(*,*) caller," ", lam_blend,lam_velo,lmin,ivcube
     if (ivcube < 1 .or. ivcube > nlam_cube) return
 
-    ! simply distribute the flux for the path over all pixels equally
-    fluxperpix = flux0/p0%im_npix
+    fluxperpix = flux0/p0%im_npix    
 
     do ipix = 1, p0%im_npix
 
