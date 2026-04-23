@@ -280,18 +280,18 @@ subroutine SetupPaths()
     !   next npoints_temp lines : x[AU]  y[AU]     (vertex coordinates)
     !   next npoints(i) lines   : n0  n1  n2       (0-based triangle node indices)
     !   next npoints(i) lines   : cx[AU]  cy[AU]   (triangle centroid = P(i,j)%x/y)
-    open(unit=30, file='triangulation_'//trim(int2string(i,'(i2.2)'))//'.txt', status='replace')
-    write(30, '(2(i8,1x))') npoints_temp, npoints(i)
-    do j = 1, npoints_temp
-      write(30, '(2(es16.8,1x))') xy(1,j)/AU, xy(2,j)/AU
-    end do
-    do j = 1, npoints(i)
-      write(30, '(3(i8,1x))') t_node(1,j)-1, t_node(2,j)-1, t_node(3,j)-1
-    end do
-    do j = 1, npoints(i)
-      write(30, '(2(es16.8,1x))') P(i,j)%x/AU, P(i,j)%y/AU
-    end do
-    close(unit=30)
+    ! open(unit=30, file='triangulation_'//trim(int2string(i,'(i2.2)'))//'.txt', status='replace')
+    ! write(30, '(2(i8,1x))') npoints_temp, npoints(i)
+    ! do j = 1, npoints_temp
+    !   write(30, '(2(es16.8,1x))') xy(1,j)/AU, xy(2,j)/AU
+    ! end do
+    ! do j = 1, npoints(i)
+    !   write(30, '(3(i8,1x))') t_node(1,j)-1, t_node(2,j)-1, t_node(3,j)-1
+    ! end do
+    ! do j = 1, npoints(i)
+    !   write(30, '(2(es16.8,1x))') P(i,j)%x/AU, P(i,j)%y/AU
+    ! end do
+    ! close(unit=30)
 
     k = k + npoints(i)
   end do
