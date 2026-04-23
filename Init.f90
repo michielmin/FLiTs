@@ -103,6 +103,8 @@ subroutine Initialize()
     read (value, *) imagecube
   case("imagecube_npix","imcube_npix")
     read(value,*) npix
+  case("imagecube_filename","imcube_filename")
+    read(value,*) imagecube_filename
   case ("idum", "seed")
     read (value, *) idum
   case ("ngrids")  ! number of grids to use for the line RT, Default is 5
@@ -190,6 +192,7 @@ subroutine SetDefaults()
   cylindrical = .true.
   doblend = .true.
   imagecube = .false.
+  imagecube_filename = "imcube.fits"
   regular_grid = .false.
   npix=0 ! FIXME: no check yet for the case of imagecube=true
   ngrids = 5

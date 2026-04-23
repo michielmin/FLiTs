@@ -83,7 +83,7 @@
         call map_pixels_to_path(i, npoints(i))
       end do
 
-      call output("Image cube has "//trim(int2string(nlam_cube, '(i7)'))//" channels and "//trim(int2string(npix*npix, '(i7)'))//" pixels.")
+      call output("Image cube has "//trim(int2string(nlam_cube, '(i7)'))//" channels (dlam="//trim(dbl2string(dlam_cube, '(F11.4)'))//") and "//trim(int2string(npix*npix, '(i7)'))//" pixels.")
       call output("Image cube size: "//trim(dbl2string(sizeof(imcube)/1.e9, '(F11.4)'))//" GB")
       call clock_write(time, utime, "Prepare image cube: ")
     end if
@@ -489,7 +489,7 @@
     if (imagecube) then
       call output("")
       call output("Writing image cube to file imcube.fits ...")
-      call writefitsfile("imcube.fits", imcube*1e23/(distance*parsec)**2, nlam_cube, npix, lmin+dlam_cube/2d0, lmin+dlam_cube/2d0, .true.)
+      call writefitsfile(imagecube_filename, imcube*1e23/(distance*parsec)**2, nlam_cube, npix, lmin+dlam_cube/2d0, lmin+dlam_cube/2d0, .true.)
       call output("")      
     end if
 

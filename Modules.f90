@@ -64,6 +64,7 @@ module GlobalSetup
   logical imagecube
   ! use a more regular grid in the image planet (i.e. no random sampling)
   logical regular_grid
+  character(len=100) :: imagecube_filename
 
 
   ! store all the blackbodies
