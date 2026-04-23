@@ -139,8 +139,7 @@ subroutine SetupPaths()
     imR(ir) = rr*cos(inc*pi/180d0 + (pi/2d0 - theta_av(nR - 1, i)))/ComputeIncFact(imR(ir))
     imR(ir) = rr*cos(inc*pi/180d0 + (pi/2d0 - theta_av(nR - 1, i)))/ComputeIncFact(imR(ir))
   end do
-
-  write(*,*) "Number of image grid points in R: ", ir,nImR,imR(ir)/AU
+  
   j = (nImR - ir)
   do i = 1, j
     ir = ir + 1
@@ -161,11 +160,11 @@ subroutine SetupPaths()
     nImR = minloc(abs(imR(:) - R(nR))/AU,1)
   endif
 
-  open (unit=20, file='imagegrid.out', RECL=1000)
-  do i = 1, nImR
-    write (20, *) imR(i)/AU, R_sphere(nR + 1)/AU
-  end do
-  close (unit=20)    
+  ! open (unit=20, file='imagegrid.out', RECL=1000)
+  ! do i = 1, nImR
+  !   write (20, *) imR(i)/AU, R_sphere(nR + 1)/AU
+  ! end do
+  ! close (unit=20)    
 
 
   ! This block calculate the number of phi points for each r point
@@ -299,7 +298,9 @@ subroutine SetupPaths()
   ncount = k
   k = k/ngrids
 
-  call output("Number of image gridpoints: "//trim(int2string(k, '(i7)')))
+  call output("Number of image gridpoints: "//int2string(k, '(i8)')// &
+              " (ngrids="//int2string(ngrids, '(i2)')//", nR="// &
+              int2string(nImR, '(i4)')//")")
   ! calculate the total area covered by the paths, for checking
   ! do  i = 1, ngrids
   !   call output("Area of grid"//trim(int2string(i, '(i3)'))//": "//trim(dbl2string(sum(P(i, 1:npoints(i))%A/AU**2), '(F10.3)'))//" AU^2")

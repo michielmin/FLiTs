@@ -117,5 +117,6 @@ contains
     end if
     call output(outstr)
     call output("")
+    flush(6)
   end subroutine clock_write
 end MODULE InOut

@@ -53,11 +53,13 @@ module GlobalSetup
   integer, allocatable :: nImPhi(:), npoints(:)
   real(kind=8) :: vmax
 
-! the image cube
-  double precision, allocatable :: x_im(:, :, :), y_im(:, :, :), im_coord(:)
-  double precision, allocatable :: imcube(:, :, :)
-  integer nint, npix, nvim
-  integer(kind=4), allocatable :: imcube_hit(:, :, :)
+  ! the image cube
+  real(kind=8), allocatable :: x_im(:, :, :), y_im(:, :, :), im_coord(:)
+  ! FIXME: single precision should do it, to safe memory
+  real(kind=8), allocatable :: imcube(:, :, :)
+  integer npix, nvim, nlam_cube
+  real(kind=8) :: dlam_cube ! the width of the channels in the image cube
+  real(kind=8), allocatable :: lam_cube(:) ! the center wl, of the cube channels  
   ! produce an image cube
   logical imagecube
   ! use a more regular grid in the image planet (i.e. no random sampling)

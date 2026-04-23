@@ -1,5 +1,5 @@
 subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
-  use GlobalSetup, only: Rout, distance, lmin, vresolution
+  use GlobalSetup, only: Rout, distance, lmin, vresolution, dlam_cube
   use Constants, only: pi, clight, parsec, AU
   use InOut
   IMPLICIT NONE
@@ -85,9 +85,10 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
     call ftpkys(unit, 'CTYPE3', 'WAVE', '[micron]', status)
     call ftpkys(unit, 'cunit3', 'um      ', '', status)
     call ftpkyd(unit, 'crval3', reflam, 12, 'Reference wl', status)
-    call ftpkyd(unit, 'CDELT3', delwl, 12, 'd_wl (channel width)', status)
+    call ftpkyd(unit, 'CDELT3', dlam_cube, 12, 'd_wl (channel width)', status)
     call ftpkyd(unit, 'crpix3', 1.0, 12, 'Reference channel', status)
   else
+    ! FIXME: not really supported at the momement
     !----- spectral axis -----
     ! Frequency/Spectral coordinate
     ! the first channel (velo) point is the reference
