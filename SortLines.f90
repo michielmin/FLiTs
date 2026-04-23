@@ -55,9 +55,9 @@ subroutine LineList()
 
   call output("Writing line list")
 
-  open(unit=20, file='LineList.txt', RECL=1000)
+  open(unit=20, file='LineListFLiTs.out', RECL=1000)
   do i = 1, nlines
-    write(20,'(f16.8,"  ",a8,"  ",i8,i8)') Lines(i)%lam, trim(Mol(Lines(i)%imol)%name), Lines(i)%jup, Lines(i)%jlow
+    write(20,'(f16.8,"  ",a10,"  ",i8,i8)') Lines(i)%lam, trim(Mol(Lines(i)%imol)%name), Lines(i)%jup, Lines(i)%jlow
   enddo
   close(unit=20)
 
