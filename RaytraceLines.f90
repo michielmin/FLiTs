@@ -60,8 +60,7 @@
       call output("")
       call output("Preparing the image cube ...")
       call output("Allocating the image cube ...")
-      dlam_cube = 0.5d0*(lmin + lmax)*vresolution/clight
-      write(*,*) "dlam_cube: ", dlam_cube
+      dlam_cube = 0.5d0*(lmin + lmax)*vresolution/clight      
       nlam_cube = int((lmax - lmin)/dlam_cube) ! number of center wl-points
       allocate (imcube(npix, npix, nlam_cube))      
       allocate (lam_cube(nlam_cube))
@@ -76,9 +75,6 @@
       do i = 1, nlam_cube+1
         lamb_cube(i) = (lmin - dlam_cube/2d0) + dlam_cube*(i-1)
       end do
-      write(*,*) lam_cube
-      write(*,*) lamb_cube
-
 
       imcube = 0d0      
       allocate (im_coord(npix))
