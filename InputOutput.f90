@@ -11,6 +11,7 @@ contains
     else
       write (*, '(a)') trim(string)
     end if
+    flush(6)
 
   end subroutine outputform
 
@@ -21,6 +22,7 @@ contains
     character(len=*), intent(in) :: string
 
     write (*, '(a)') trim(string)
+    flush(6)
 
   end subroutine output
 

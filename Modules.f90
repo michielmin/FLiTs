@@ -61,6 +61,7 @@ module GlobalSetup
   real(kind=8) :: pixA ! pixel area in the image plane in cgs units
   real(kind=8) :: dlam_cube ! the width of the channels in the image cube
   real(kind=8), allocatable :: lam_cube(:) ! the center wl, of the cube channels  
+  real(kind=8), allocatable :: lamb_cube(:)
   ! produce an image cube
   logical imagecube
   ! use a more regular grid in the image planet (i.e. no random sampling)
@@ -146,7 +147,7 @@ module GlobalSetup
     integer, allocatable :: i(:), j(:)
     integer*2, allocatable :: im_ixy(:, :) ! first axis =2 (x,y), second axis can theoretically go to npix*2 (all pixels),
     ! but is likely much smaller FIXME don't know to estimate that, take npix for now
-    integer*2 :: im_npix    ! number of pixels associated to that path
+    integer :: im_npix    ! number of pixels associated to that path
 
     real(kind=8), allocatable :: flux_cont(:)  !continuum contribution at each wavelength
     real(kind=8), allocatable :: cont_contr(:) !continuum contribution at each path element

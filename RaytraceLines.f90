@@ -22,11 +22,9 @@
     real(kind=8) :: vlo_eff, vhi_eff
     real(kind=8) :: wl11, wl21, wl13, wl23, flux_l1, flux_l2, flux_c
     character(len=1000) :: comment
-    character(len=500) :: imcubename
-    character(len=40) :: callerstr
-    real(kind=8) :: imcube_size
-    real(kind=8) :: delpix,starcorr    
-    real(kind=8) :: time, utime, timegap, utimegap
+    character(len=200) :: callerstr
+    real(kind=8) :: delpix,starcorr,lamgapmax    
+    real(kind=8) :: time, utime, timegap, utimegap    
 
     call output("==================================================================")
     call output("Preparing the profiles")
@@ -61,14 +59,26 @@
       call clock(time, utime)
       call output("")
       call output("Preparing the image cube ...")
+      call output("Allocating the image cube ...")
       dlam_cube = 0.5d0*(lmin + lmax)*vresolution/clight
+      write(*,*) "dlam_cube: ", dlam_cube
       nlam_cube = int((lmax - lmin)/dlam_cube) ! number of center wl-points
       allocate (imcube(npix, npix, nlam_cube))      
       allocate (lam_cube(nlam_cube))
+      allocate (lamb_cube(nlam_cube+1))
       ! for convenience store the center wl points
+      ! lmin should be the first center
       do i = 1, nlam_cube
-        lam_cube(i) = lmin + dlam_cube*(i - 1) + dlam_cube/2.
+        lam_cube(i) = lmin + dlam_cube*(i - 1)
       end do
+
+      ! store the edge wl points      
+      do i = 1, nlam_cube+1
+        lamb_cube(i) = (lmin - dlam_cube/2d0) + dlam_cube*(i-1)
+      end do
+      write(*,*) lam_cube
+      write(*,*) lamb_cube
+
 
       imcube = 0d0      
       allocate (im_coord(npix))
@@ -76,14 +86,16 @@
       pixA=delpix**2
       starcorr=path2star%A/pixA
       ! create the center coordinates for the pixels
+      call output("Calculate pixel coordinates ...")
       do i = 1, npix ! center coordinates of pixels in cm
         im_coord(i) = delpix/2d0 + delpix*(i - 1) - Rout*AU
       end do
             
       ! map the paths to the pixel, need to do it for each grid
-      do i = 1, ngrids
-        call map_pixels_to_path(i, npoints(i))
-      end do
+      !do i = 1, ngrids
+      call output("map grid "//int2string(1, '(i7)')//" to pixels")
+      call map_pixels_to_path(1, npoints(1))
+      !end do
 
       call output("Image cube has "//trim(int2string(nlam_cube, '(i7)'))//" channels (dlam="//trim(dbl2string(dlam_cube, '(F11.4)'))//") and "//trim(int2string(npix*npix, '(i7)'))//" pixels.")
       call output("Image cube size: "//trim(dbl2string(sizeof(imcube)/1.e9, '(F11.4)'))//" GB")
@@ -162,46 +174,48 @@
           ilam_cube_end = 0
 
           call clock(timegap, utimegap)
-          do i = 1, nlam_cube
-            if ((lam_cube(i) > lcmin .and. lam_cube(i) < Bl%lmin) .or. &
-                (iblends == nblends .and. lam_cube(i) > Bl%lmax)) then ! this is for the end
+
+          ! here lcmin is the wl that was done in the last blend, 
+          ! Something is fishy here, bzt Bl%lmax is not the maximum wavelength that is actually done
+          lamgapmax=lam*sqrt((1d0 + real(Bl%nvmax)*vresolution/clight)/(1d0 - real(Bl%nvmax)*vresolution/clight))
+          do i = 1, nlam_cube ! check if lcmin is  not in the current cube bin            
+            if ((lamb_cube(i+1) > lcmin .and. lamb_cube(i+1) < Bl%lmin) .or. &
+                (iblends == nblends .and. lamb_cube(i) > lamgapmax)) then ! this is for the end
               ilam_cube_start = min(ilam_cube_start, i)
               ilam_cube_end = max(ilam_cube_end, i)
             end if
           end do
-          ! I have some gap
-          if (ilam_cube_start <= ilam_cube_end) then
+          ! I have some gap          
+          if (ilam_cube_start <= ilam_cube_end) then            
             call output("  Fill imcube gap from lam "//dbl2string(lam_cube(ilam_cube_start))//" to"//dbl2string(lam_cube(ilam_cube_end))//" with continuum.")          
+            !write(*,*) Bl%lmin, Bl%lmax,lamgapmax, lcmin, lamb_cube(ilam_cube_start),lam_cube(ilam_cube_start),lam_cube(ilam_cube_end)
             do i = ilam_cube_start, ilam_cube_end
-              if ((lam_cube(i) > lcmin .and. lam_cube(i) < Bl%lmin) .or. &
-                  (iblends == nblends .and. lam_cube(i) > Bl%lmax)) then ! this is for the end
+              !if ((lam_cube(i) > lcmin .and. lam_cube(i) < Bl%lmin) .or. &
+              !    (iblends == nblends .and. lam_cube(i) > Bl%lmax)) then ! this is for the end
                 ilam_cube_gap = 1
                 do while (lam_cube(i) > lam_cont(ilam_cube_gap + 1) .and. ilam_cube_gap < nlamCont)
                   ilam_cube_gap = ilam_cube_gap + 1
                 end do
                 call InterpolateLam(lam_cube(i), ilam_cube_gap)
-                do igrid = 1,ngrids
 !$OMP PARALLEL DEFAULT(NONE) &
 !$OMP PRIVATE(j,PP, flux0,vmult) &
 !$OMP SHARED(P, npoints, lam_cube, i, igrid, ngrids)
 !$OMP DO SCHEDULE(dynamic,1)
-                  do j = 1, npoints(igrid)  ! just do it for the first grid
-                    PP => P(igrid, j)
-                    call ContContrPath(PP, flux0)
-                    flux0=flux0/real(ngrids)
-                    do vmult=-1,1,2
-                      call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, vmult, "continuum in gap")                  
-                    end do
+                do j = 1, npoints(1)  ! just do it for the first grid for imagecube
+                  PP => P(1, j)
+                  call ContContrPath(PP, flux0)
+                  do vmult=-1,1,2
+                    call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, vmult, "continuum in gap")                  
                   end do
+                end do
 !$OMP END DO
 !$OMP END PARALLEL
-                enddo
                 ! do the star, as there are no lines, nb = 0
                 PP => path2star                
-                call Trace2StarLines(PP, flux0, iv, imol_blend, v_blend, 0)    
-                ! for the star we correct the area as the pixel is usuall much larger than the star            
-                call AddImage(0, lam_cube(i), flux0*PP%A*starcorr, PP, 1, "trace star")
-              end if
+                call Trace2StarLines(PP, flux0, 0, imol_blend, v_blend, 0)    
+                ! for the star we correct the area as the pixel is usually much larger than the star            
+                call AddImage(0, lam_cube(i), flux0*PP%A*starcorr, PP, 1, "trace star gap")
+              !end if
             end do
             call clock_write(timegap, utimegap,"  Fill imcube gap: ")
           end if
@@ -210,7 +224,7 @@
         if (iblends == 1) then
           call output("  First line blend ("//trim(int2string(nb, '(i4)'))//" lines at lamcenter="//(dbl2string(Bl%lam, '(F10.3)'))//" micron)")
         end if
-
+        
 
         ilam = ilam1Cont
         do while (lam > lam_cont(ilam + 1) .and. ilam < nlamCont)
@@ -237,7 +251,10 @@
           ilam1Cont = ilam
         end if
 
+        write(*,*) "Blend: ",iblends,lcmin, Bl%lmin, Bl%lmax, lam, nb,lmin_next
+
         lcmin = Bl%lmax
+        write(*,*) "Blend: ",iblends,lcmin, Bl%lmin, Bl%lmax, lam, nb,lmin_next
 
         call InterpolateLam(lam, ilam)
         do i = 0, nR
@@ -254,7 +271,12 @@
         flux2 = 0d0
 
         ! randomly select a grid.
-        i = int(ran1(idum)*real(ngrids) + 1)
+        if (imagecube) then 
+          i=1
+        else
+          i = int(ran1(idum)*real(ngrids) + 1)
+        endif
+        
 
         ! FIXME: check parallel implementation for imagecube
 !$OMP PARALLEL IF(.true.) &
@@ -330,11 +352,17 @@
                     end do
                     if (gas) then
                       call TraceFluxLines(PP, flux0, iv, vmult, imol_blend(ib0), v_blend(ib0), doit_ib(ib0), nb0, ib0)
+                      if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, callerstr)
                     else
                       flux0 = flux_c
+                      !write (callerstr, "(A,' ' ,i5,A,F10.3,A,F10.3)") "call nb ", iblends,"lmin:",lmin_next,"lv:",lam_velo
+                      ! FIXME: It cann happen hat somehoe a iv of several blends produces a continuum in the same imcube channel
+                      ! hence the continuum is contouned multipe times, the reason is the if (gas) thingy  
+                      if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, "cont")
                     end if
                     flux4(iv) = flux4(iv) + flux0*PP%A/2d0
-                    if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, "call nb")
+                    !write (callerstr, "(A,' ' ,i5,A,F10.3,A,F10.3)") "call nb ", iblends,"lmin:",lmin_next,"lv:",lam_velo
+                    !if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, callerstr)
                   end do
                   ! channel fully outside the line, so just add the continuum contribution
                 else if (((real(iv) + 0.5d0)*vresolution > PP%vmax(LL%imol) .and. &
@@ -348,7 +376,7 @@
                     ! FIXME: callerstring is only for debugging, remove it
                     write (callerstr, "(A,' ' ,i5,' ',i2)") "call nb else if", iv, vmult
                     if (imagecube) then
-                      call AddImage(iv*vmult, lam, flux0*PP%A/2d0, PP, vmult, callerstr)
+                      call AddImage(iv*vmult, lam, flux0*PP%A/2d0, PP, vmult, "cont")
                     end if
                   end do
                   ! channel covers single line (not blended)
@@ -366,15 +394,19 @@
               end if
             end do
           else
-            !write(*,*) "call not dotit"
+            !write(*,*) "call not doit", not populated
+            ! not sure why here we do not use vmult treatment
             flux0 = flux_c
             flux4(Bl%nvmin:Bl%nvmax) = flux4(Bl%nvmin:Bl%nvmax) + flux0*PP%A
-            if (imagecube) then
-              do iv = Bl%nvmin, Bl%nvmax
-                do vmult = -1,1,2
-                  call AddImage(iv, lam, flux0*PP%A, PP, vmult, "call not doit")
-                enddo
-              end do
+            if (imagecube.and..false.) then ! do the vmult treatment for the image cube, important where the flux is
+              do vmult = -1, 1, 2
+                do iv = Bl%nvmin, Bl%nvmax
+                  lam_velo = lam*sqrt((1d0 + real(iv)*vresolution/clight)/(1d0 - real(iv)*vresolution/clight))
+                  if (lam_velo > lmin_next) then
+                    call AddImage(iv, lam, flux0*PP%A, PP, vmult, "call not doit")
+                  endif
+                end do
+              end do 
             end if
           end if
         end do
@@ -405,42 +437,42 @@
         flux1 = 0d0
         flux3 = 0d0
 
-        f = sqrt((1d0 + real(Bl%nvmin)*vresolution/clight)/(1d0 - real(Bl%nvmin)*vresolution/clight))
-        wl11 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
-        ! wl11 can be > 1 if nv*vresolution is wider than the spacing between the continuum points.
-        ! So the continuum grid is too fine, just assume the nearest continuum point then.
-        ! > 1 would mean extrapolation, but in some cases that ends in NaN, limiting it to 1 means, no extrapolation
-        wl11 = min(1d0, max(0d0, wl11))
-        wl21 = 1d0 - wl11
+        ! f = sqrt((1d0 + real(Bl%nvmin)*vresolution/clight)/(1d0 - real(Bl%nvmin)*vresolution/clight))
+        ! wl11 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
+        ! ! wl11 can be > 1 if nv*vresolution is wider than the spacing between the continuum points.
+        ! ! So the continuum grid is too fine, just assume the nearest continuum point then.
+        ! ! > 1 would mean extrapolation, but in some cases that ends in NaN, limiting it to 1 means, no extrapolation
+        ! wl11 = min(1d0, max(0d0, wl11))
+        ! wl21 = 1d0 - wl11
 
-        f = sqrt((1d0 + real(Bl%nvmax)*vresolution/clight)/(1d0 - real(Bl%nvmax)*vresolution/clight))
-        wl13 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
-        ! see above wl11
-        wl13 = min(1d0, max(0d0, wl13))
-        wl23 = 1d0 - wl13
+        ! f = sqrt((1d0 + real(Bl%nvmax)*vresolution/clight)/(1d0 - real(Bl%nvmax)*vresolution/clight))
+        ! wl13 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
+        ! ! see above wl11
+        ! wl13 = min(1d0, max(0d0, wl13))
+        ! wl23 = 1d0 - wl13
 
-        flux_l1 = 0d0
-        flux_l2 = 0d0
-        do k = 1, ngrids
-          do j = 1, npoints(k)
-            PP => P(k, j)
-            flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A/real(ngrids)
-            flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A/real(ngrids)
-          end do
-        end do
-        PP => path2star
+        ! flux_l1 = 0d0
+        ! flux_l2 = 0d0
+        ! do k = 1, ngrids
+        !   do j = 1, npoints(k)
+        !     PP => P(k, j)
+        !     flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A/real(ngrids)
+        !     flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A/real(ngrids)
+        !   end do
+        ! end do
+        ! PP => path2star
 
-        flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A
-        flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A
+        ! flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A
+        ! flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A
 
-        flux1 = flux_l1**wl11*flux_l2**wl21
-        flux3 = flux_l1**wl13*flux_l2**wl23
+        ! flux1 = flux_l1**wl11*flux_l2**wl21
+        ! flux3 = flux_l1**wl13*flux_l2**wl23
 
-        do iv = Bl%nvmin, Bl%nvmax
-          fc = flux1 + (flux3 - flux1)*real(iv - Bl%nvmin)/real(Bl%nvmax - Bl%nvmin)
-          flux(iv) = flux(iv) - flux2 + fc
-          flux_cont(iv) = fc
-        end do
+        ! do iv = Bl%nvmin, Bl%nvmax
+        !   fc = flux1 + (flux3 - flux1)*real(iv - Bl%nvmin)/real(Bl%nvmax - Bl%nvmin)
+        !   flux(iv) = flux(iv) - flux2 + fc
+        !   flux_cont(iv) = fc
+        ! end do
 
         if (Bl%n == 1) then
           comment = trim(Mol(Bl%L(1)%imol)%name)//"  up: "//trim(int2string(Bl%L(1)%jup, '(i5)')) &
@@ -485,7 +517,6 @@
         Bl%F = Bl%F*1d-3/(distance*parsec)**2
         write (21, *) lam_w, Bl%F, lam_w_min, lam_w_max, trim(comment)
 
-        ! has to be here, (i.e. before lmin_next is set, and beofre BL%next is done)
         lmin_next = max(lmin_next, lam_velo)
 
       end if ! if(lam>lmin.and.lam<lmax)
@@ -499,7 +530,7 @@
     if (imagecube) then
       call output("")
       call output("Writing image cube to file imcube.fits ...")
-      call writefitsfile(trim(imagecube_filename), imcube*1e23/(distance*parsec)**2, nlam_cube, npix, lmin+dlam_cube/2d0, lmin+dlam_cube/2d0, .true.)
+      call writefitsfile(trim(imagecube_filename), imcube*1e23/(distance*parsec)**2, nlam_cube, npix, lmin, lmin, .true.)
       call output("")      
     end if
 
@@ -808,6 +839,7 @@
   subroutine InterpolateLam(lam0, ilam)
     use GlobalSetup
     use Constants
+    use InOut
     implicit none
     real(kind=8), intent(in) :: lam0
     integer, intent(in) :: ilam
@@ -815,6 +847,10 @@
     real(kind=8) :: wl1, wl2, w1, w2, x1, x2
     integer :: i, j
 
+    if (lam0 < lam_cont(ilam) .or. lam0 > lam_cont(ilam + 1)) then
+      call output("Error: InterpolateLam called with lam0 outside the range of the continuum grid points. This should not happen. Check the code.")
+      stop
+    end if
     w1 = (lam_cont(ilam + 1) - lam0)/(lam_cont(ilam + 1) - lam_cont(ilam))
     w2 = 1d0 - w1
     wl1 = log10(lam_cont(ilam + 1)/lam0)/log10(lam_cont(ilam + 1)/lam_cont(ilam))
@@ -859,7 +895,7 @@
 
     integer :: i, j, ipath, iminpath, maxnpixpath
 
-    !call clock(time, utime)
+    call clock(time, utime)
 
     ! If already allocated this was done already (same grid igrid is used again), no need to map things again
     if (allocated(P(igrid, 1)%im_ixy)) return
@@ -889,6 +925,7 @@
     end do
 
     do i = 1, npix
+      call tellertje(i,npix)
       im_x = im_coord(i)
       ! only care about the positive half
       do j = int(npix/2 + 1), npix
@@ -919,7 +956,7 @@
 
     ! now there will be paths with no pixel assigned as in case for Paths being
     ! close to each other the pixel is only assigned to the closest one
-    ! so simply go through the paths without pixels, and assign the closest one.
+    ! so simply go through the paths without pixels, and assign the closest pixel .
 
     do ipath = 1, npath
       p0 => P(igrid, ipath)
@@ -942,7 +979,7 @@
       !write (*, *) path2star%x, path2star%y, path2star%im_ixy(:, 1)
     end if
 
-    !call clock_write(time, utime, "map_pixels_to_path:")
+    call clock_write(time, utime, "map_pixels_to_path:")
     ! some log output and set the correction factor
 
     ! p0 => path2star
@@ -960,6 +997,7 @@
     ! wavelength grid and accumulates flux into imcube.
     use GlobalSetup
     use Constants
+    use InOut
     implicit none
     integer, intent(in) :: iv
     real(kind=8), intent(in) :: lam_blend
@@ -968,21 +1006,37 @@
     type(Path), intent(in) :: p0
     character(len=*), intent(in) :: caller        ! just for logging, can be removed
     integer :: ix, iy, ipix, ivcube
-    real(kind=8) :: fluxperpix, lam_velo,singlepixcorr
+    real(kind=8) :: fluxperpix, lam_velo
 
+    ! the cube goes strictly from lmin (channel centers) to lmax, but parts of a bleand can be outside    
     ! compute absolute wavelength for this channel and map to global cube index
     lam_velo = lam_blend*sqrt((1d0 + real(iv)*vresolution/clight)/ &
                               (1d0 - real(iv)*vresolution/clight))
-    ivcube = nint((lam_velo - lam_cube(1))/dlam_cube) + 1
+    if (lam_velo<lamb_cube(1) .or. lam_velo>lamb_cube(nlam_cube+1)) then
+      ! this can happen for the channels at the edge of the blend, just ignore those.
+      return
+    end if
+
+    ivcube = idnint((lam_velo - lam_cube(1))/dlam_cube) + 1
+    ! Sanity check
+    if (lam_velo<lamb_cube(ivcube).or.lam_velo>lamb_cube(ivcube+1)) then
+      write(*,*) ivcube,lam_velo, lamb_cube(ivcube), lam_cube(ivcube),lamb_cube(ivcube+1)
+      call output("Warning: velocity channel iv="//trim(int2string(iv, '(i5)'))// &
+                  " at lam_velo="//trim(dbl2string(lam_velo, '(f15.8)'))// &
+                  " is outside of the cube limits. Skipping this channel for the image cube. Caller: "//trim(caller))
+      stop
+    end if
     !write(*,*) caller," ", lam_blend,lam_velo,lmin,ivcube
+    ! some parts of the line can be outside of the cube limits, we ignore those.
     if (ivcube < 1 .or. ivcube > nlam_cube) return
 
+    
     fluxperpix = flux0/p0%im_npix    
 
     do ipix = 1, p0%im_npix
 
       ix = p0%im_ixy(1, ipix)
-      iy = p0%im_ixy(2, ipix)
+      iy = p0%im_ixy(2, ipix) 
 
       ! assume here x and y = 0 at the center of the image
       if (vmult < 0) then
@@ -991,5 +1045,11 @@
 
       imcube(iy, ix, ivcube) = imcube(iy, ix, ivcube) + fluxperpix ! P%y (Vertical) seems to be along the major axis - make it x
     end do
+
+    ! if (ivcube==57) then
+    !   !write(*,*) lamb_cube(57),lam_cube(57),lamb_cube(58)
+    !   write(*,*) "caller: ", trim(caller), " iv: ", iv, " lam_blend: ", lam_blend, " lam_velo: ", lam_velo, " ivcube: ", ivcube, vmult,p0%im_npix,fluxperpix,p0%x,p0%y,ix,iy      
+    ! end if  
+
     return
   end subroutine AddImage
