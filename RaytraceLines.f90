@@ -260,10 +260,7 @@
           ilam1Cont = ilam
         end if
 
-        write(*,*) "Blend: ",iblends,lcmin, Bl%lmin, Bl%lmax, lam, nb,lmin_next
-
         lcmin = Bl%lmax
-        write(*,*) "Blend: ",iblends,lcmin, Bl%lmin, Bl%lmax, lam, nb,lmin_next
 
         call InterpolateLam(lam, ilam)
         do i = 0, nR
