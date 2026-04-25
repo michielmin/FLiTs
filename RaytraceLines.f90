@@ -398,7 +398,7 @@
             ! not sure why here we do not use vmult treatment
             flux0 = flux_c
             flux4(Bl%nvmin:Bl%nvmax) = flux4(Bl%nvmin:Bl%nvmax) + flux0*PP%A
-            if (imagecube.and..false.) then ! do the vmult treatment for the image cube, important where the flux is
+            if (imagecube) then ! do the vmult treatment for the image cube, important where the flux is
               do vmult = -1, 1, 2
                 do iv = Bl%nvmin, Bl%nvmax
                   lam_velo = lam*sqrt((1d0 + real(iv)*vresolution/clight)/(1d0 - real(iv)*vresolution/clight))
@@ -437,42 +437,42 @@
         flux1 = 0d0
         flux3 = 0d0
 
-        ! f = sqrt((1d0 + real(Bl%nvmin)*vresolution/clight)/(1d0 - real(Bl%nvmin)*vresolution/clight))
-        ! wl11 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
-        ! ! wl11 can be > 1 if nv*vresolution is wider than the spacing between the continuum points.
-        ! ! So the continuum grid is too fine, just assume the nearest continuum point then.
-        ! ! > 1 would mean extrapolation, but in some cases that ends in NaN, limiting it to 1 means, no extrapolation
-        ! wl11 = min(1d0, max(0d0, wl11))
-        ! wl21 = 1d0 - wl11
+        f = sqrt((1d0 + real(Bl%nvmin)*vresolution/clight)/(1d0 - real(Bl%nvmin)*vresolution/clight))
+        wl11 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
+        ! wl11 can be > 1 if nv*vresolution is wider than the spacing between the continuum points.
+        ! So the continuum grid is too fine, just assume the nearest continuum point then.
+        ! > 1 would mean extrapolation, but in some cases that ends in NaN, limiting it to 1 means, no extrapolation
+        wl11 = min(1d0, max(0d0, wl11))
+        wl21 = 1d0 - wl11
 
-        ! f = sqrt((1d0 + real(Bl%nvmax)*vresolution/clight)/(1d0 - real(Bl%nvmax)*vresolution/clight))
-        ! wl13 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
-        ! ! see above wl11
-        ! wl13 = min(1d0, max(0d0, wl13))
-        ! wl23 = 1d0 - wl13
+        f = sqrt((1d0 + real(Bl%nvmax)*vresolution/clight)/(1d0 - real(Bl%nvmax)*vresolution/clight))
+        wl13 = log10(lam_cont(ilam + 1)/(lam*f))/log10(lam_cont(ilam + 1)/lam_cont(ilam))
+        ! see above wl11
+        wl13 = min(1d0, max(0d0, wl13))
+        wl23 = 1d0 - wl13
 
-        ! flux_l1 = 0d0
-        ! flux_l2 = 0d0
-        ! do k = 1, ngrids
-        !   do j = 1, npoints(k)
-        !     PP => P(k, j)
-        !     flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A/real(ngrids)
-        !     flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A/real(ngrids)
-        !   end do
-        ! end do
-        ! PP => path2star
+        flux_l1 = 0d0
+        flux_l2 = 0d0
+        do k = 1, ngrids
+          do j = 1, npoints(k)
+            PP => P(k, j)
+            flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A/real(ngrids)
+            flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A/real(ngrids)
+          end do
+        end do
+        PP => path2star
 
-        ! flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A
-        ! flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A
+        flux_l1 = flux_l1 + PP%flux_cont(ilam)*PP%A
+        flux_l2 = flux_l2 + PP%flux_cont(ilam + 1)*PP%A
 
-        ! flux1 = flux_l1**wl11*flux_l2**wl21
-        ! flux3 = flux_l1**wl13*flux_l2**wl23
+        flux1 = flux_l1**wl11*flux_l2**wl21
+        flux3 = flux_l1**wl13*flux_l2**wl23
 
-        ! do iv = Bl%nvmin, Bl%nvmax
-        !   fc = flux1 + (flux3 - flux1)*real(iv - Bl%nvmin)/real(Bl%nvmax - Bl%nvmin)
-        !   flux(iv) = flux(iv) - flux2 + fc
-        !   flux_cont(iv) = fc
-        ! end do
+        do iv = Bl%nvmin, Bl%nvmax
+          fc = flux1 + (flux3 - flux1)*real(iv - Bl%nvmin)/real(Bl%nvmax - Bl%nvmin)
+          flux(iv) = flux(iv) - flux2 + fc
+          flux_cont(iv) = fc
+        end do
 
         if (Bl%n == 1) then
           comment = trim(Mol(Bl%L(1)%imol)%name)//"  up: "//trim(int2string(Bl%L(1)%jup, '(i5)')) &
