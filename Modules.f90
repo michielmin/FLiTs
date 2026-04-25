@@ -153,6 +153,10 @@ module GlobalSetup
     real(kind=8), allocatable :: cont_contr(:) !continuum contribution at each path element
     real(kind=8), allocatable :: exptau_dust(:) !dust optical depth at each path element
     real(kind=8), allocatable :: S_dust(:) !dust source function at each path element
+    ! imagecube: tracks which (cube_bin, vmult-side) have already received a continuum-only
+    ! contribution for this path, to prevent double-counting when multiple blend velocity
+    ! channels map to the same cube bin.  Dim1=nlam_cube, Dim2: 1=vmult-1, 2=vmult+1.
+    logical, allocatable :: imcube_cont_done(:,:)
   end type Path
 
   type Tracer

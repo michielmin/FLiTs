@@ -97,6 +97,15 @@
       call map_pixels_to_path(1, npoints(1))
       !end do
 
+      ! Allocate per-path, per-(cube-bin, vmult-side) continuum-done flags.
+      ! Dim2: 1 = vmult=-1 side, 2 = vmult=+1 side.
+      do j = 1, npoints(1)
+        allocate(P(1,j)%imcube_cont_done(nlam_cube, 2))
+        P(1,j)%imcube_cont_done = .false.
+      end do
+      allocate(path2star%imcube_cont_done(nlam_cube, 2))
+      path2star%imcube_cont_done = .false.
+
       call output("Image cube has "//trim(int2string(nlam_cube, '(i7)'))//" channels (dlam="//trim(dbl2string(dlam_cube, '(F11.4)'))//") and "//trim(int2string(npix*npix, '(i7)'))//" pixels.")
       call output("Image cube size: "//trim(dbl2string(sizeof(imcube)/1.e9, '(F11.4)'))//" GB")
       call clock_write(time, utime, "Prepare image cube: ")
@@ -205,7 +214,7 @@
                   PP => P(1, j)
                   call ContContrPath(PP, flux0)
                   do vmult=-1,1,2
-                    call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, vmult, "continuum in gap")                  
+                    call AddImage(0, lam_cube(i), flux0*PP%A/2d0, PP, vmult, "continuum in gap", .true.)                  
                   end do
                 end do
 !$OMP END DO
@@ -214,7 +223,7 @@
                 PP => path2star                
                 call Trace2StarLines(PP, flux0, 0, imol_blend, v_blend, 0)    
                 ! for the star we correct the area as the pixel is usually much larger than the star            
-                call AddImage(0, lam_cube(i), flux0*PP%A*starcorr, PP, 1, "trace star gap")
+                call AddImage(0, lam_cube(i), flux0*PP%A*starcorr, PP, 1, "trace star gap", .true.)
               !end if
             end do
             call clock_write(timegap, utimegap,"  Fill imcube gap: ")
@@ -352,13 +361,13 @@
                     end do
                     if (gas) then
                       call TraceFluxLines(PP, flux0, iv, vmult, imol_blend(ib0), v_blend(ib0), doit_ib(ib0), nb0, ib0)
-                      if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, callerstr)
+                      if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, callerstr, .false.)
                     else
                       flux0 = flux_c
                       !write (callerstr, "(A,' ' ,i5,A,F10.3,A,F10.3)") "call nb ", iblends,"lmin:",lmin_next,"lv:",lam_velo
-                      ! FIXME: It cann happen hat somehoe a iv of several blends produces a continuum in the same imcube channel
-                      ! hence the continuum is contouned multipe times, the reason is the if (gas) thingy  
-                      if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, "cont")
+                      ! Fixed: imcube_cont_done flag in AddImage prevents double-counting when multiple
+                      ! blend channels map to the same cube bin with no gas.
+                      if (imagecube) call AddImage(iv, lam, flux0*PP%A/2d0, PP, vmult, "cont", .true.)
                     end if
                     flux4(iv) = flux4(iv) + flux0*PP%A/2d0
                     !write (callerstr, "(A,' ' ,i5,A,F10.3,A,F10.3)") "call nb ", iblends,"lmin:",lmin_next,"lv:",lam_velo
@@ -376,7 +385,7 @@
                     ! FIXME: callerstring is only for debugging, remove it
                     write (callerstr, "(A,' ' ,i5,' ',i2)") "call nb else if", iv, vmult
                     if (imagecube) then
-                      call AddImage(iv*vmult, lam, flux0*PP%A/2d0, PP, vmult, "cont")
+                      call AddImage(iv*vmult, lam, flux0*PP%A/2d0, PP, vmult, "cont", .true.)
                     end if
                   end do
                   ! channel covers single line (not blended)
@@ -387,7 +396,7 @@
                     flux4(iv*vmult) = flux4(iv*vmult) + flux0*PP%A/2d0
                     write (callerstr, "(A,' ' ,i5,' ',i2)") "call nb else", iv, vmult
                     if (imagecube) then
-                      call AddImage(iv*vmult, lam, flux0*PP%A/2d0, PP, vmult, callerstr)
+                      call AddImage(iv*vmult, lam, flux0*PP%A/2d0, PP, vmult, callerstr, .false.)
                     end if
                   end do
                 end if
@@ -403,7 +412,7 @@
                 do iv = Bl%nvmin, Bl%nvmax
                   lam_velo = lam*sqrt((1d0 + real(iv)*vresolution/clight)/(1d0 - real(iv)*vresolution/clight))
                   if (lam_velo > lmin_next) then
-                    call AddImage(iv, lam, flux0*PP%A, PP, vmult, "call not doit")
+                    call AddImage(iv, lam, flux0*PP%A, PP, vmult, "call not doit", .true.)
                   endif
                 end do
               end do 
@@ -430,7 +439,7 @@
             call Trace2StarLines(PP, flux0, iv, imol_blend, v_blend, nb)
             flux(iv) = flux(iv) + flux0*PP%A
           end if
-          if (imagecube) call AddImage(iv, lam, flux0*PP%A*starcorr, PP, 1, "trace star")
+          if (imagecube) call AddImage(iv, lam, flux0*PP%A*starcorr, PP, 1, "trace star", .false.)
         end do
         flux2 = flux2 + flux0*PP%A
 
@@ -992,9 +1001,12 @@
 
   end subroutine map_pixels_to_path
 
-  subroutine AddImage(iv, lam_blend, flux0, p0, vmult, caller)
+  subroutine AddImage(iv, lam_blend, flux0, p0, vmult, caller, is_cont)
     ! Maps velocity channel iv (relative to lam_blend) to the global linear
     ! wavelength grid and accumulates flux into imcube.
+    ! is_cont=.true. marks a pure-continuum contribution: the call is skipped if this
+    ! (cube_bin, vmult-side) has already been filled for this path, preventing double-counting
+    ! when multiple blend channels map to the same cube bin.
     use GlobalSetup
     use Constants
     use InOut
@@ -1003,9 +1015,10 @@
     real(kind=8), intent(in) :: lam_blend
     real(kind=8), intent(in) :: flux0
     integer, intent(in) :: vmult
-    type(Path), intent(in) :: p0
+    type(Path), intent(inout) :: p0
     character(len=*), intent(in) :: caller        ! just for logging, can be removed
-    integer :: ix, iy, ipix, ivcube
+    logical, intent(in) :: is_cont
+    integer :: ix, iy, ipix, ivcube, ivmult_idx
     real(kind=8) :: fluxperpix, lam_velo
 
     ! the cube goes strictly from lmin (channel centers) to lmax, but parts of a bleand can be outside    
@@ -1030,7 +1043,15 @@
     ! some parts of the line can be outside of the cube limits, we ignore those.
     if (ivcube < 1 .or. ivcube > nlam_cube) return
 
-    
+    ! Guard continuum-only contributions: each (cube_bin, vmult-side) must be filled at most once
+    ! per path to prevent double-counting when multiple blend channels map to the same bin.
+    ! ivmult_idx: 1 = vmult=-1, 2 = vmult=+1
+    ivmult_idx = (vmult + 3) / 2
+    if (is_cont) then
+      if (p0%imcube_cont_done(ivcube, ivmult_idx)) return
+      p0%imcube_cont_done(ivcube, ivmult_idx) = .true.
+    end if
+
     fluxperpix = flux0/p0%im_npix    
 
     do ipix = 1, p0%im_npix
