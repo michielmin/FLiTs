@@ -42,9 +42,9 @@ module GlobalSetup
   integer :: structtype
 
   ! the grid setup. Note that we store cos(theta) in theta, but real theta in theta_av
-  real(kind=8), allocatable :: R(:), theta(:,:), R_av(:), theta_av(:,:)
+  real(kind=8), allocatable :: R(:), theta(:, :), R_av(:), theta_av(:, :)
   real(kind=8), allocatable :: R_sphere(:), R_av_sphere(:)
-  integer :: nR, nTheta, nlam, ilam1, ilam2, nmol, nlines, nblends, nspec
+  integer :: nR, nTheta, nlamCont, ilam1Cont, ilam2Cont, nmol, nlines, nblends, nspec
   real(kind=8) :: Rin, Rout, inc, Fstar_l
   real(kind=8), allocatable :: lam_cont(:), Fstar(:)
 
@@ -54,10 +54,20 @@ module GlobalSetup
   real(kind=8) :: vmax
 
   ! the image cube
-  real(kind=8), allocatable :: x_im(:,:,:), y_im(:,:,:)
-  real(kind=8), allocatable :: imcube(:,:,:)
-  integer :: nint, npix, nvim
-  logical :: imagecube
+  real(kind=8), allocatable :: x_im(:, :, :), y_im(:, :, :), im_coord(:)
+  ! FIXME: single precision should do it, to safe memory
+  real(kind=8), allocatable :: imcube(:, :, :)
+  integer npix, nvim, nlam_cube
+  real(kind=8) :: pixA ! pixel area in the image plane in cgs units
+  real(kind=8) :: dlam_cube ! the width of the channels in the image cube
+  real(kind=8), allocatable :: lam_cube(:) ! the center wl, of the cube channels  
+  real(kind=8), allocatable :: lamb_cube(:)
+  ! produce an image cube
+  logical imagecube
+  ! use a more regular grid in the image planet (i.e. no random sampling)
+  logical regular_grid
+  character(len=100) :: imagecube_filename
+
 
   ! store all the blackbodies
   integer :: MAXT
@@ -121,7 +131,7 @@ module GlobalSetup
     real(kind=8), allocatable :: S(:) ! dimension is wavelength
   end type Cell
 
-  type(Cell), allocatable, target :: C(:,:)  ! dimension nR,nTheta
+  type(Cell), allocatable, target :: C(:, :)  ! dimension nR,nTheta
 
   type Path
     ! minimum and maximum velocity encountered in this path
@@ -135,11 +145,18 @@ module GlobalSetup
 
     real(kind=8), allocatable :: v(:), d(:), v1(:), v2(:)
     integer, allocatable :: i(:), j(:)
+    integer*2, allocatable :: im_ixy(:, :) ! first axis =2 (x,y), second axis can theoretically go to npix*2 (all pixels),
+    ! but is likely much smaller FIXME don't know to estimate that, take npix for now
+    integer :: im_npix    ! number of pixels associated to that path
 
     real(kind=8), allocatable :: flux_cont(:)  !continuum contribution at each wavelength
     real(kind=8), allocatable :: cont_contr(:) !continuum contribution at each path element
     real(kind=8), allocatable :: exptau_dust(:) !dust optical depth at each path element
     real(kind=8), allocatable :: S_dust(:) !dust source function at each path element
+    ! imagecube: tracks which (cube_bin, vmult-side) have already received a continuum-only
+    ! contribution for this path, to prevent double-counting when multiple blend velocity
+    ! channels map to the same cube bin.  Dim1=nlam_cube, Dim2: 1=vmult-1, 2=vmult+1.
+    logical, allocatable :: imcube_cont_done(:,:)
   end type Path
 
   type Tracer
@@ -150,7 +167,7 @@ module GlobalSetup
 
   !==============================
 
-  type(Path), allocatable, target :: P(:,:)
+  type(Path), allocatable, target :: P(:, :)
   type(Path), target :: path2star
   type(Molecule), allocatable :: Mol(:)
   type(Line), allocatable :: Lines(:)

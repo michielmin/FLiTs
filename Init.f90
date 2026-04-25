@@ -101,10 +101,16 @@ subroutine Initialize()
     read (value, *) accuracy
   case ("imagecube", "imcube")
     read (value, *) imagecube
+  case("imagecube_npix","imcube_npix")
+    read(value,*) npix
+  case("imagecube_filename","imcube_filename")
+    read(value,*) imagecube_filename
   case ("idum", "seed")
     read (value, *) idum
   case ("ngrids")  ! number of grids to use for the line RT, Default is 5
     read (value, *) ngrids
+  case ("regular_grid")
+    read (value, *) regular_grid
   case default
     call output("Unknown keyword: "//trim(key))
     stop
@@ -116,11 +122,21 @@ subroutine Initialize()
 30 continue
   close (unit=20)
 
+  if (imagecube .and. (npix .eq. 0 .or. mod(npix, 2) == 0)) then
+    call output("Error: if imagecube is true, npix must be set to a positive and odd integer value")
+    stop
+  end if
+
   vres_mult = vresolution/vres_profile
 
   if (abs(inc) .lt. 1d0) then
     call output("Increasing inclination to 1 degrees")
     inc = 1
+  end if
+
+  if (regular_grid) then 
+    call output("Using a regular grid and set ngrids=1")
+    ngrids = 1
   end if
 
   call output("==================================================================")
@@ -176,6 +192,9 @@ subroutine SetDefaults()
   cylindrical = .true.
   doblend = .true.
   imagecube = .false.
+  imagecube_filename = "imcube.fits"
+  regular_grid = .false.
+  npix=0 ! FIXME: no check yet for the case of imagecube=true
   ngrids = 5
   return
 end subroutine SetDefaults

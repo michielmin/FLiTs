@@ -46,7 +46,7 @@ subroutine ReadForFLiTs()
   call system_clock(count_rate=count_rate)
 
   ! Use unformatted exchange file if present
-  ! FIXME: this is not used anymore, ProDiMo can only write the fits file now.
+  ! FIXME: this is not used any more, ProDiMo can only write the fits file now.
   inquire(file="ProDiMoForFLiTs.dat", exist=exdat)
 
   !------------------------------------------------------------------------
@@ -65,7 +65,7 @@ subroutine ReadForFLiTs()
     read(1) nR
     read(1) nTheta
     read(1) nspec
-    read(1) nlam
+    read(1) nlamCont
   else
     ! Get an unused Logical Unit Number to use to open the FITS file.
     status = 0
@@ -342,7 +342,7 @@ subroutine ReadForFLiTs()
   ! HDU 4 : Lambda
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,1,1,1))
+    allocate(array_d(nlamCont,1,1,1))
     read(1) array_d
   else
     ! move to next hdu
@@ -354,7 +354,7 @@ subroutine ReadForFLiTs()
     naxis = 1
     ! Check dimensions
     call ftgknj(unit, 'NAXIS', 1, naxis, naxes, nfound, status)
-    nlam = naxes(1)
+    nlamCont = naxes(1)
     do i = naxis+1, 4
       naxes(i) = 1
     enddo
@@ -366,18 +366,18 @@ subroutine ReadForFLiTs()
 
   do i = 0, nR
     do j = 0, nTheta
-      allocate(C(i,j)%kabs(nlam))
-      allocate(C(i,j)%albedo(nlam))
-      allocate(C(i,j)%kext(nlam))
-      allocate(C(i,j)%LRF(nlam))
-      allocate(C(i,j)%S(nlam))
+      allocate(C(i,j)%kabs(nlamCont))
+      allocate(C(i,j)%albedo(nlamCont))
+      allocate(C(i,j)%kext(nlamCont))
+      allocate(C(i,j)%LRF(nlamCont))
+      allocate(C(i,j)%S(nlamCont))
     enddo
   enddo
 
-  allocate(lam_cont(nlam))
-  allocate(Fstar(nlam))
+  allocate(lam_cont(nlamCont))
+  allocate(Fstar(nlamCont))
 
-  do i = 1, nlam
+  do i = 1, nlamCont
     lam_cont(i) = array_d(i,1,1,1)*1d4
   enddo
 
@@ -390,12 +390,12 @@ subroutine ReadForFLiTs()
     call output("Adjusting lambda_min to "//trim(dbl2string(lmin,'(f10.4)')))
   endif
 
-  if (lam_cont(nlam) < lmax) then
-    if (lam_cont(nlam) < lmin) then
+  if (lam_cont(nlamCont) < lmax) then
+    if (lam_cont(nlamCont) < lmin) then
       call output("Wavelength interval not in FLiTs file")
       stop
     endif
-    lmax = lam_cont(nlam)
+    lmax = lam_cont(nlamCont)
     call output("Adjusting lambda_max to "//trim(dbl2string(lmax,'(f10.4)')))
   endif
 
@@ -405,7 +405,7 @@ subroutine ReadForFLiTs()
   ! HDU 5 : Star spectrum
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,1,1,1))
+    allocate(array_d(nlamCont,1,1,1))
     read(1) array_d
   else
     ! read next hdu
@@ -416,7 +416,7 @@ subroutine ReadForFLiTs()
     endif
   endif
 
-  do i = 1, nlam
+  do i = 1, nlamCont
     Fstar(i) = array_d(i,1,1,1)
   enddo
 
@@ -426,7 +426,7 @@ subroutine ReadForFLiTs()
   ! HDU 6 : ISM spectrum
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,1,1,1))
+    allocate(array_d(nlamCont,1,1,1))
     read(1) array_d
     deallocate(array_d)
   else
@@ -443,7 +443,7 @@ subroutine ReadForFLiTs()
   ! HDU 7 : Opacites (abs)
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,nR-1,nTheta-1,1))
+    allocate(array_d(nlamCont,nR-1,nTheta-1,1))
     read(1) array_d
   else
     ! read next hdu
@@ -456,11 +456,11 @@ subroutine ReadForFLiTs()
 
   do i = 1, nR-1
     do j = 2, nTheta
-      do l = 1, nlam
+      do l = 1, nlamCont
         C(i,j)%kabs(l) = array_d(l,i,nTheta+1-j,1)
       enddo
     enddo
-    C(i,1)%kabs(1:nlam) = C(i,2)%kabs(1:nlam)/1d20
+    C(i,1)%kabs(1:nlamCont) = C(i,2)%kabs(1:nlamCont)/1d20
   enddo
 
   deallocate(array_d)
@@ -469,7 +469,7 @@ subroutine ReadForFLiTs()
   ! HDU 8 : Opacites (ext)
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,nR-1,nTheta-1,1))
+    allocate(array_d(nlamCont,nR-1,nTheta-1,1))
     read(1) array_d
   else
     ! read next hdu
@@ -482,7 +482,7 @@ subroutine ReadForFLiTs()
 
   do i = 1, nR-1
     do j = 2, nTheta
-      do l = 1, nlam
+      do l = 1, nlamCont
         C(i,j)%kext(l) = array_d(l,i,nTheta+1-j,1)
         if (C(i,j)%kext(l) > 1d-150) then
           C(i,j)%albedo(l) = (C(i,j)%kext(l)-C(i,j)%kabs(l))/C(i,j)%kext(l)
@@ -491,8 +491,8 @@ subroutine ReadForFLiTs()
         endif
       enddo
     enddo
-    C(i,1)%kext(1:nlam) = C(i,2)%kext(1:nlam)/1d20
-    C(i,1)%albedo(1:nlam) = C(i,2)%albedo(1:nlam)
+    C(i,1)%kext(1:nlamCont) = C(i,2)%kext(1:nlamCont)/1d20
+    C(i,1)%albedo(1:nlamCont) = C(i,2)%albedo(1:nlamCont)
   enddo
 
   deallocate(array_d)
@@ -501,7 +501,7 @@ subroutine ReadForFLiTs()
   ! HDU 9 : Internal field
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,nR-1,nTheta-1,1))
+    allocate(array_d(nlamCont,nR-1,nTheta-1,1))
     read(1) array_d
   else
     ! read next hdu
@@ -514,12 +514,12 @@ subroutine ReadForFLiTs()
 
   do i = 1, nR-1
     do j = 2, nTheta
-      do l = 1, nlam
+      do l = 1, nlamCont
         C(i,j)%LRF(l) = array_d(l,i,nTheta+1-j,1)
 !       C(i,j)%LRF(l)=C(i,j)%LRF(l)*lam_cont(l)*1d3*1d-4/clight
       enddo
     enddo
-    C(i,1)%LRF(1:nlam) = C(i,2)%LRF(1:nlam)/1d20
+    C(i,1)%LRF(1:nlamCont) = C(i,2)%LRF(1:nlamCont)/1d20
   enddo
 
   deallocate(array_d)
@@ -528,7 +528,7 @@ subroutine ReadForFLiTs()
   ! HDU 10 : Source function
   !------------------------------------------------------------------------------
   if (exdat) then
-    allocate(array_d(nlam,nR-1,nTheta-1,1))
+    allocate(array_d(nlamCont,nR-1,nTheta-1,1))
     read(1) array_d
   else
     ! read next hdu
@@ -541,11 +541,11 @@ subroutine ReadForFLiTs()
 
   do i = 1, nR-1
     do j = 2, nTheta
-      do l = 1, nlam
+      do l = 1, nlamCont
         C(i,j)%S(l) = exp(array_d(l,i,nTheta+1-j,1))
       enddo
     enddo
-    C(i,1)%S(1:nlam) = C(i,2)%S(1:nlam)/1d20
+    C(i,1)%S(1:nlamCont) = C(i,2)%S(1:nlamCont)/1d20
   enddo
   deallocate(array_d)
 
@@ -730,8 +730,8 @@ subroutine ReadForFLiTs()
   enddo
   i = 0
   do j = 0, nTheta
-    C(i,j)%kext(1:nlam) = 1d-70
-    C(i,j)%kabs(1:nlam) = 1d-70
+    C(i,j)%kext(1:nlamCont) = 1d-70
+    C(i,j)%kabs(1:nlamCont) = 1d-70
     xx = R_av(1)
     zz = xx/tan(theta_av(i,j))
     rr = sqrt(xx*xx+zz*zz)
@@ -740,8 +740,8 @@ subroutine ReadForFLiTs()
   enddo
   i = nR
   do j = 0, nTheta
-    C(i,j)%kext(1:nlam) = 1d-70
-    C(i,j)%kabs(1:nlam) = 1d-70
+    C(i,j)%kext(1:nlamCont) = 1d-70
+    C(i,j)%kabs(1:nlamCont) = 1d-70
     xx = R_av(i)
     zz = xx/tan(theta_av(i,j))
     rr = sqrt(xx*xx+zz*zz)
@@ -751,8 +751,8 @@ subroutine ReadForFLiTs()
 
   j = 0
   do i = 1, nR
-    C(i,j)%kext(1:nlam) = 1d-70
-    C(i,j)%kabs(1:nlam) = 1d-70
+    C(i,j)%kext(1:nlamCont) = 1d-70
+    C(i,j)%kabs(1:nlamCont) = 1d-70
     xx = R_av(i)
     zz = xx/tan(theta_av(i,j))
     rr = sqrt(xx*xx+zz*zz)
