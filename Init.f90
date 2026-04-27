@@ -111,6 +111,8 @@ subroutine Initialize()
     read (value, *) ngrids
   case ("regular_grid")
     read (value, *) regular_grid
+  case ("correct_continuum")
+    read (value, *) correct_continuum
   case default
     call output("Unknown keyword: "//trim(key))
     stop
@@ -196,6 +198,7 @@ subroutine SetDefaults()
   regular_grid = .false.
   npix=0 ! FIXME: no check yet for the case of imagecube=true
   ngrids = 5
+  correct_continuum = .true.
   return
 end subroutine SetDefaults
 

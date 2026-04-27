@@ -88,6 +88,7 @@
       delpix = 2.d0*Rout*AU/real(npix)
       pixA = delpix**2
       starcorr = path2star%A/pixA
+      starcorr = 1.0
       write(*,*) "StarCorr: ",Rout,delpix/AU, starcorr
       !starcorr=1.0
       ! create the center coordinates for the pixels
@@ -464,7 +465,7 @@
         ! this adds the flux of the star from the last iv (nvmax), is strange, but does not matter, is removed afterwards anyway.
         flux2 = flux2 + flux0*PP%A
 
-        if (.true.) then
+        if (correct_continuum) then
           flux1 = 0d0
           flux3 = 0d0
 

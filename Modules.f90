@@ -67,7 +67,8 @@ module GlobalSetup
   ! use a more regular grid in the image planet (i.e. no random sampling)
   logical regular_grid
   character(len=100) :: imagecube_filename
-
+  ! should the results from the continuum raytracing be used to correct the continuum for the line spectra. Default= True
+  logical :: correct_continuum
 
   ! store all the blackbodies
   integer :: MAXT
