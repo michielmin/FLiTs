@@ -75,7 +75,7 @@
                    trim(dbl2string(dlam_cube, '(1pE15.7)'))//" micron, nlam_cube: "// &
                    trim(int2string(nlam_cube, '(i7)')))
       
-      size_imcube = real(npix)*real(npix)*real(nlam_cube)*sizeof(real(4))/1.e9  ! size in bytes, 4 bytes per real(4)
+      size_imcube = real(npix)*real(npix)*real(nlam_cube)*sizeof(real(1.0,kind=4))/1.e9  ! size in bytes, 4 bytes per real(4)
       call output("Allocating the image cube with size: "//trim(dbl2string(size_imcube, '(F11.4)'))//" GB")
 
       allocate (imcube(npix, npix, nlam_cube),stat=status)
