@@ -56,7 +56,7 @@ module GlobalSetup
   ! the image cube
   real(kind=8), allocatable :: x_im(:, :, :), y_im(:, :, :), im_coord(:)
   real(kind=4), allocatable :: imcube(:, :, :)
-  integer npix, nvim, nlam_cube
+  integer npix, nlam_cube
   real(kind=8) :: delpix ! pixel size in the image plane in cm
   real(kind=8) :: pixA ! pixel area in the image plane in cgs units
   real(kind=8) :: dlam_cube ! the width of the channels in the image cube
