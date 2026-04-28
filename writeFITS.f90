@@ -1,5 +1,11 @@
 subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
-  use GlobalSetup, only: Rout, distance, lmin, vresolution, dlam_cube
+  ! Write the image cube im, to a fits files with name filename.
+  !
+  ! Please note the flux values are stored in single precision to save disks space.  
+  !
+  ! TODO: activate the option for spectral units in frequency, but currently only wavelength is supported.
+  !
+  use GlobalSetup, only: distance, vresolution, dlam_cube,inc,delpix
   use Constants, only: pi, clight, parsec, AU
   use InOut
   IMPLICIT NONE
@@ -9,10 +15,11 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   logical, intent(in) :: specunitwl
   real centerpix
   double precision im(n, n, nv)
-  double precision degree, delpix, spixdegree
+  real(kind=8) :: degree, spixdegree
+  character(len=500) :: VersionGIT
 
   integer status, unit, blocksize, bitpix, naxis, naxes(3)
-  integer i, j, group, fpixel, nelements
+  integer group, fpixel, nelements
   logical simple, extend, truefalse
   real refFrqHz, delHz, restFrqHz, delwl
 
@@ -32,7 +39,6 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
 
   ! initialize parameters about the FITS image (IMDIM x IMDIM 64-bit reals)
   simple = .true.
-  !bitpix=-64
   bitpix = -32 ! single precision should be enough
   naxes(1) = n
   naxes(2) = n
@@ -51,8 +57,7 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   degree = pi/180.0           ! one degree in rad
 
   !----- constant size of all pixels in [sr] -----
-  ! dist is from Parameter.in (is already converted to cm)
-  delpix = 2.d0*Rout*AU/real(n)        ! this is in cm
+  ! dist is from Parameter.in (is already converted to cm)  
   spixdegree = delpix/(distance*parsec)/degree
 
   ! put some coordinate system
@@ -71,8 +76,6 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   call ftpkyd(unit, 'crota2', 0.0, 12, '', status)
   call ftpkyd(unit, 'crpix2', centerpix, 12, 'center pixel', status)
   call ftpkys(unit, 'RADESYS', 'ICRS', '', status)
-
-  ! the the first point (which should be lmin as the reference
 
   restFrqHz = clight/(restlam/1.e4)
   refFrqHz = clight/(reflam/1.e4)
@@ -111,6 +114,9 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
   end if
   
   call ftpkys(unit, 'origin', 'FLiTs/ProDiMo model', '', status)
+  call ftpkys(unit, 'version', trim(VersionGIT()), 'FLiTs version', status)
+  call ftpkyd(unit, 'incl', inc, 7, 'Inclination', status)
+  call ftpkyd(unit, 'dist', distance, 7, 'Distance', status)
 
   ! write the array to the FITS file
   group = 1

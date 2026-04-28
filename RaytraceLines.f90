@@ -24,8 +24,10 @@
     real(kind=8) :: wl11, wl21, wl13, wl23, flux_l1, flux_l2, flux_c
     character(len=1000) :: comment
     character(len=200) :: callerstr
-    real(kind=8) :: delpix, starcorr, lamgapmax,lamgapmin
+    real(kind=8) :: starcorr, lamgapmax,lamgapmin
     real(kind=8) :: time, utime, timegap, utimegap
+    integer :: status
+    real(kind=8) :: size_imcube
 
     call output("==================================================================")
     call output("Preparing the profiles")
@@ -59,17 +61,28 @@
     if (imagecube) then
       call clock(time, utime)
       call output("")
-      call output("Preparing the image cube ...")
-      call output("Allocating the image cube ...")
+      call output("==================================================================")
+      call output("Preparing the image cube ...")      
 
-      ! FIXME: vresolution does not give a constand dlam_cube, but for now we want that
+      ! FIXME: vresolution does not give a constant dlam_cube, but for now we want that
       ! However, to avoid that a wl bin of the cube is skipped because of a coarser wl resolution of a blend
       ! use dlam corresponding to lmax
-
       !dlam_cube = 0.5d0*(lmin + lmax)*vresolution/clight
       dlam_cube=lamvelo(lmax,1)-lmax
       nlam_cube = int((lmax - lmin)/dlam_cube) ! number of center wl-points
-      allocate (imcube(npix, npix, nlam_cube))
+      call output("Image cube wl grid: "//trim(dbl2string(lmin, '(F10.5)'))//" - "// &
+                   trim(dbl2string(lmax, '(F10.5)'))//" micron, dlam: "// &
+                   trim(dbl2string(dlam_cube, '(1pE15.7)'))//" micron, nlam_cube: "// &
+                   trim(int2string(nlam_cube, '(i7)')))
+      
+      size_imcube = real(npix)*real(npix)*real(nlam_cube)*sizeof(real(4))/1.e9  ! size in bytes, 4 bytes per real(4)
+      call output("Allocating the image cube with size: "//trim(dbl2string(size_imcube, '(F11.4)'))//" GB")
+
+      allocate (imcube(npix, npix, nlam_cube),stat=status)
+      if (status /= 0) then
+        call output("Error allocating imcube! Reducing npix, increasing vresolution or shrinking lmin to lmax, might help.")
+        stop
+      end if
       allocate (lam_cube(nlam_cube))
       allocate (lamb_cube(nlam_cube + 1))
       ! for convenience store the center wl points
@@ -87,9 +100,10 @@
       ! Rout is currently the max radius of the path grid. 
       delpix = 2.d0*Rout*AU/real(npix)
       pixA = delpix**2
-      starcorr = path2star%A/pixA
+      ! FIXM: is not really doing what I want
+      !starcorr = path2star%A/pixA
       starcorr = 1.0
-      write(*,*) "StarCorr: ",Rout,delpix/AU, starcorr
+      !write(*,*) "StarCorr: ",Rout,delpix/AU, starcorr
       !starcorr=1.0
       ! create the center coordinates for the pixels
       call output("Calculate pixel coordinates ...")
@@ -98,8 +112,9 @@
       end do
 
       ! map the paths to the pixel, need to do it for each grid
+      ! FIXME: hardcoded first grid
       !do i = 1, ngrids
-      call output("map grid "//int2string(1, '(i7)')//" to pixels")
+      call output("map path grid "//int2string(1, '(i3)')//" to pixel grid ...")
       call map_pixels_to_path(1, npoints(1))
       !end do
 
@@ -113,7 +128,7 @@
       path2star%imcube_cont_flux = -1.0
 
       call output("Image cube has "//trim(int2string(nlam_cube, '(i7)'))//" channels (dlam="//trim(dbl2string(dlam_cube, '(1pE15.7)'))//") and "//trim(int2string(npix*npix, '(i7)'))//" pixels.")
-      call output("Image cube size: "//trim(dbl2string(sizeof(imcube)/1.e9, '(F11.4)'))//" GB")
+      call output("Allocated image cube size: "//trim(dbl2string(sizeof(imcube)/1.e9, '(F11.4)'))//" GB")
       call clock_write(time, utime, "Prepare image cube: ")
 
     end if
@@ -205,7 +220,7 @@
           !write(*,*) "lamgap: ",lamgapmax,lmin_next,lcmin,Bl%lmin,Bl%lmax,lamb_cube(i+1),ilam_cube_start,ilam_cube_end,lam_cube(ilam_cube_start),lam_cube(ilam_cube_end)
           ! I have some gap
           if (ilam_cube_start <= ilam_cube_end) then
-            call output("  Fill imcube gap from lam "//dbl2string(lam_cube(ilam_cube_start))//" to"//dbl2string(lam_cube(ilam_cube_end))//" with continuum.")          
+            
             !write(*,*) Bl%lmin, Bl%lmax,lamgapmax, lcmin, lamb_cube(ilam_cube_start),lam_cube(ilam_cube_start),lam_cube(ilam_cube_end)
             do i = ilam_cube_start, ilam_cube_end
               !if ((lam_cube(i) > lcmin .and. lam_cube(i) < Bl%lmin) .or. &
@@ -235,7 +250,9 @@
               call AddImage(lam_cube(i), flux0*PP%A*starcorr, flux0*PP%A*starcorr, PP, 1, "star0")
               !end if
             end do
-            call clock_write(timegap, utimegap, "  Fill imcube gap: ")
+            call clock_write(timegap, utimegap, "  Fill imcube gap: ("// &
+                             dbl2string(lam_cube(ilam_cube_start),'(F10.5)')//" -"// &
+                             dbl2string(lam_cube(ilam_cube_end),'(F10.5)')//" micron)")
           end if
         end if
 
@@ -943,7 +960,7 @@
     implicit none
     integer, intent(in) :: igrid, npath
     real(kind=8) :: px(npath), py(npath), dist(npath), im_x, im_y
-    real(kind=8) :: maxx, maxr, maxrxp, maxrxm !pixA
+    real(kind=8) :: maxr
     type(Path), pointer :: p0
     real(kind=8) :: time, utime
 
@@ -1003,8 +1020,8 @@
           call output(dbl2string(P(igrid, iminpath)%x/AU) // ' ' // dbl2string(P(igrid, iminpath)%y/AU) // ' ' // int2string(int(P(igrid, iminpath)%im_npix,kind=4), '(i7)'))
           stop
         end if
-        P(igrid, iminpath)%im_ixy(1, P(igrid, iminpath)%im_npix) = i
-        P(igrid, iminpath)%im_ixy(2, P(igrid, iminpath)%im_npix) = j
+        P(igrid, iminpath)%im_ixy(1, P(igrid, iminpath)%im_npix) = int(i,kind=2) 
+        P(igrid, iminpath)%im_ixy(2, P(igrid, iminpath)%im_npix) = int(j,kind=2)
       end do
     end do
 
@@ -1017,8 +1034,8 @@
       if (p0%im_npix > 0) cycle
       ! find the closest pixel
       p0%im_npix = 1
-      p0%im_ixy(1, 1) = minloc(abs(im_coord - p0%x), dim=1)
-      p0%im_ixy(2, 1) = minloc(abs(im_coord - p0%y), dim=1)
+      p0%im_ixy(1, 1) = int(minloc(abs(im_coord - p0%x), dim=1),kind=2)
+      p0%im_ixy(2, 1) = int(minloc(abs(im_coord - p0%y), dim=1),kind=2)
     end do
 
     ! special treatment for the star
@@ -1028,8 +1045,8 @@
       allocate (path2star%im_ixy(2, 1))
 
       path2star%im_npix = 1
-      path2star%im_ixy(1, 1) = minloc(abs(im_coord - path2star%x), dim=1)
-      path2star%im_ixy(2, 1) = minloc(abs(im_coord - path2star%y), dim=1)
+      path2star%im_ixy(1, 1) = int(minloc(abs(im_coord - path2star%x), dim=1),kind=2)
+      path2star%im_ixy(2, 1) = int(minloc(abs(im_coord - path2star%y), dim=1),kind=2)
       !write (*, *) path2star%x, path2star%y, path2star%im_ixy(:, 1)
     end if
 
@@ -1079,14 +1096,13 @@
 
     ivc = ivcube(lam_velo)
     ivmult_idx = (vmult + 3)/2 ! for symmetry treatment
-    ! FIXME: remove Sanity check, should reall not happen
-    if (lam_velo < lamb_cube(ivc) .or. lam_velo > lamb_cube(ivc + 1)) then
-      write (*, *) ivc, lam_velo, lamb_cube(ivc), lam_cube(ivc), lamb_cube(ivc + 1)
-      call output("Warning: lam_velo="//trim(dbl2string(lam_velo, '(f15.8)'))// &
-                  " is outside of the cube limits. Skipping this channel for the image cube. Caller: "//trim(caller))
-      stop
-    end if
-    !write(*,*) caller," ", lam_blend,lam_velo,lmin,ivcube
+    ! FIXME: remove Sanity check, should really not happen
+    ! if (lam_velo < lamb_cube(ivc) .or. lam_velo > lamb_cube(ivc + 1)) then
+    !   write (*, *) ivc, lam_velo, lamb_cube(ivc), lam_cube(ivc), lamb_cube(ivc + 1)
+    !   call output("Warning: lam_velo="//trim(dbl2string(lam_velo, '(f15.8)'))// &
+    !               " is outside of the cube limits. Skipping this channel for the image cube. Caller: "//trim(caller))
+    !   stop
+    ! end if    
 
     ! FIXME: Assume that continuum can never be < 0
     ! if continuum is still < 0, we add the continuum the first time.
@@ -1098,27 +1114,8 @@
       fluxadd = flux0
     end if
     p0%imcube_cont_flux(ivc, ivmult_idx) = fluxcont
-    ! if (ivc == 873.or.ivc == 875) then
-    !   write(*,*) "AddImage1: ", ivc,trim(caller), lam_velo, lam_cube(ivc), flux0, fluxcont, fluxadd
-    ! end if
-    ! if (ivc == 874) then
-    !   write(*,*) "AddImage2: ", trim(caller), lam_velo, lam_cube(ivc), vmult, flux0, fluxcont, fluxadd
-    ! end if
-
-    ! Guard continuum-only contributions: each (cube_bin, vmult-side) must be filled at most once
-    ! per path to prevent double-counting when multiple blend channels map to the same bin.
-    ! ivmult_idx: 1 = vmult=-1, 2 = vmult=+1
-
-    ! if (is_cont) then
-    !   ivmult_idx = (vmult + 3) / 2
-    !   if (ivc==11) then
-    !      write(*,*) "Check cont guard: ", trim(caller), lam_velo, ivc, vmult, p0%im_npix, p0%im_ixy(:, 1:p0%im_npix),p0%imcube_cont_done(ivc, ivmult_idx)
-    !   end if
-    !   if (p0%imcube_cont_done(ivc, ivmult_idx)) return
-    !   p0%imcube_cont_done(ivc, ivmult_idx) = .true.
-    ! end if
-
-    fluxperpix = fluxadd/p0%im_npix
+   
+    fluxperpix = fluxadd/real(p0%im_npix, kind=8)
 
     do ipix = 1, p0%im_npix
 
@@ -1130,14 +1127,10 @@
         iy = npix - (iy - 1) ! for mirroring the whole thing
       end if
 
-      ! needs atomic as different paths can contribute to the same pixels
+      ! needs atomic as different paths can contribute to the same pixels, and we parallelize over paths.
   !$OMP ATOMIC
-      imcube(iy, ix, ivc) = imcube(iy, ix, ivc) + fluxperpix ! P%y (Vertical) seems to be along the major axis - make it x
+      imcube(iy, ix, ivc) = imcube(iy, ix, ivc) + real(fluxperpix,kind=4) ! P%y (Vertical) seems to be along the major axis - make it x
     end do
-
-    ! if (ivc==11) then
-    !    write(*,*) lamb_cube(11),lam_cube(11),lamb_cube(11+1),"caller: ", trim(caller), " lam_velo: ", lam_velo, " ivc: ", ivc, vmult,p0%im_npix,fluxperpix,p0%x,p0%y,ix,iy
-    ! end if
 
     return
   end subroutine AddImage
