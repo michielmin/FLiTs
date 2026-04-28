@@ -113,11 +113,11 @@ subroutine writefitsfile(filename, im, nv, n, restlam, reflam, specunitwl)
     call output("Error writing header to FITS file: "//trim(filename)//". Status: "//int2string(status))
   end if
   
+  call ftpkyd(unit, 'incl', inc, 7, 'Inclination [deg]', status)
+  call ftpkyd(unit, 'dist', distance, 7, 'Distance [pc]', status)
   call ftpkys(unit, 'origin', 'FLiTs/ProDiMo model', '', status)
   call ftpkys(unit, 'version', trim(VersionGIT()), 'FLiTs version', status)
-  call ftpkyd(unit, 'incl', inc, 7, 'Inclination', status)
-  call ftpkyd(unit, 'dist', distance, 7, 'Distance', status)
-
+  
   ! write the array to the FITS file
   group = 1
   fpixel = 1
