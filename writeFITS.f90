@@ -53,10 +53,13 @@ subroutine write_imcube(filename, specunitwl)
   call FTPHPS(unit,bitpix, naxis, naxes, status)  
 
   degree = pi/180.0           ! one degree in rad
-
   !----- constant size of all pixels in [sr] -----
   ! dist is from Parameter.in (is already converted to cm)  
   spixdegree = delpix/(distance*parsec)/degree
+  ! this is the reference wavelength, which is the first channel in the cube. This is used for the spectral axis keywords in the FITS header.
+  reflam=lam_cube(1) 
+  ! also put the restFrquency in Hz, for reference
+  restFrqHz = clight/(reflam/1.e4)
 
   ! put some coordinate system
   centerpix = npix/2 + 1.0 ! require odd number of pixels
@@ -74,9 +77,7 @@ subroutine write_imcube(filename, specunitwl)
   call ftpkyd(unit, 'crota2', 0.0, 12, '', status)
   call ftpkyd(unit, 'crpix2', centerpix, 12, 'center pixel', status)
   call ftpkys(unit, 'RADESYS', 'ICRS', '', status)
-
-  reflam=lam_cube(1) ! this is the reference wavelength, which is the first channel in the cube. This is used for the spectral axis keywords in the FITS header.
-    
+      
   if (specunitwl) then
     call ftpkys(unit, 'CTYPE3', 'WAVE', '[micron]', status)
     call ftpkys(unit, 'cunit3', 'um      ', '', status)
@@ -85,10 +86,8 @@ subroutine write_imcube(filename, specunitwl)
     call ftpkyd(unit, 'crpix3', 1.0, 12, 'Reference channel', status)
   else
     ! FIXME: not really supported at the momement
-    restFrqHz = clight/(reflam/1.e4)
     refFrqHz = clight/(reflam/1.e4)
     delHz = -restFrqHz*vresolution/clight
-
     !----- spectral axis -----
     ! Frequency/Spectral coordinate
     ! the first channel (velo) point is the reference
@@ -97,16 +96,14 @@ subroutine write_imcube(filename, specunitwl)
     call ftpkyd(unit, 'crval3', refFrqHz, 12, 'Reference FREQ', status)
     call ftpkyd(unit, 'CDELT3', delHz, 12, 'd_Hz (channel width)', status)
     call ftpkyd(unit, 'crpix3', 1.0, 12, 'Reference channel', status)
-    ! this is for velocity spectral units.
-    call ftpkys(unit, 'SPECSYS', 'LSRK', 'Spectral reference frame', status)
-    call ftpkyj(unit, 'VELREF', 257, 'Radio velocity in CASA', status)
-    call ftpkys(unit, 'timesys', 'UTC     ', '', status)
-    call ftpkys(unit, 'cellscal', 'CONSTANT', '', status)
-    ! Restfrequency
-    call ftpkyd(unit, 'RESTFREQ', restFrqHz, 12, '', status) ! this means first spectral axis point would give v=0    
   end if
 
+  call ftpkys(unit, 'SPECSYS', 'LSRK', 'Spectral reference frame', status)
+  call ftpkys(unit, 'timesys', 'UTC     ', '', status)  
   call ftpkys(unit, 'BUNIT', 'Jy/pixel', 'Flux density per pixel', status)  
+  ! Restfrequency for the first spectral channel 
+  call ftpkyd(unit, 'RESTFREQ', restFrqHz, 12, '', status) 
+
   call ftpkyd(unit, 'incl', inc, 7, 'Inclination [deg]', status)
   call ftpkyd(unit, 'dist', distance, 7, 'Distance [pc]', status)
   call ftpkys(unit, 'origin', 'FLiTs/ProDiMo model', '', status)
